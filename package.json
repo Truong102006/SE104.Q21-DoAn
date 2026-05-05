@@ -1,0 +1,16 @@
+{
+  "name": "gold-jewelry-store-management",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev:frontend": "npm --prefix frontend run dev",
+    "build:frontend": "npm --prefix frontend run build",
+    "lint:frontend": "npm --prefix frontend run lint",
+    "type-check:frontend": "npm --prefix frontend run type-check",
+    "test:e2e": "npm --prefix frontend run test:e2e",
+    "dev:backend": "mvn -f backend/pom.xml spring-boot:run",
+    "test:backend": "mvn -f backend/pom.xml test",
+    "db:up": "docker compose up -d postgres",
+    "db:down": "docker compose down"
+  }
+}
