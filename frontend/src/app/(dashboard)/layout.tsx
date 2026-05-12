@@ -63,10 +63,7 @@ export default function DashboardLayout({
           collapsed ? "lg:ml-[68px]" : "lg:ml-64",
         )}
       >
-        <Header
-          sidebarCollapsed={collapsed}
-          onSidebarToggle={() => setCollapsed((c) => !c)}
-        />
+        <Header />
 
         <main className="flex-1 p-6">{children}</main>
       </div>

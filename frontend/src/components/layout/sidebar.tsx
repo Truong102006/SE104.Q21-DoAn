@@ -13,9 +13,10 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import type { NavGroup, UserRole } from "@/types";
 import {
+  Bell,
   LayoutDashboard,
   Package,
-  Tags,
+  Wrench,
   Users,
   ShoppingCart,
   UserRound,
@@ -43,6 +44,12 @@ const NAV_GROUPS: NavGroup[] = [
         icon: LayoutDashboard,
         roles: ["ADMIN", "STAFF"],
       },
+      {
+        title: "Thong bao",
+        href: "/dashboard/notifications",
+        icon: Bell,
+        roles: ["ADMIN", "STAFF"],
+      },
     ],
   },
   {
@@ -55,17 +62,23 @@ const NAV_GROUPS: NavGroup[] = [
         roles: ["ADMIN", "STAFF"],
       },
       {
-        title: "Danh mục",
-        href: "/dashboard/categories",
-        icon: Tags,
+        title: "Dich vu",
+        href: "/dashboard/services",
+        icon: Wrench,
         roles: ["ADMIN", "STAFF"],
       },
-      {
-        title: "Đơn hàng",
+            {
+        title: "Don hang",
         href: "/dashboard/orders",
         icon: ShoppingCart,
         roles: ["ADMIN", "STAFF"],
         badge: "3",
+      },
+      {
+        title: "Phieu dich vu",
+        href: "/dashboard/service-orders",
+        icon: ClipboardList,
+        roles: ["ADMIN", "STAFF"],
       },
       {
         title: "Khách hàng",
@@ -248,3 +261,6 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     </aside>
   );
 }
+
+
+
