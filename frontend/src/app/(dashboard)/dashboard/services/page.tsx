@@ -1,23 +1,14 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatVND } from "@/lib/mock-data";
-import {
-  CircleDollarSign,
-  Pencil,
-  Plus,
-  Search,
-  Sparkles,
-  Trash2,
-  Wrench,
-  X,
-} from "lucide-react";
+import { Pencil, Plus, Search, Trash2, X } from "lucide-react";
 
 interface ServiceItem {
   id: number;
@@ -37,21 +28,21 @@ type FormMode = "create" | "edit";
 const INITIAL_SERVICES: ServiceItem[] = [
   {
     id: 1,
-    serviceType: "Danh bong trang suc",
+    serviceType: "Đánh bóng trang sức",
     unitPrice: 120_000,
-    note: "Bao gom ve sinh va danh bong",
+    note: "Bao gồm vệ sinh và đánh bóng",
   },
   {
     id: 2,
-    serviceType: "Thu mua vang cu",
+    serviceType: "Thu mua vàng cũ",
     unitPrice: 80_000,
-    note: "Phi kiem dinh moi giao dich",
+    note: "Phí kiểm định mỗi giao dịch",
   },
   {
     id: 3,
-    serviceType: "Khac ten tren nhan",
+    serviceType: "Khắc tên trên nhẫn",
     unitPrice: 150_000,
-    note: "Co the lay trong ngay",
+    note: "Có thể lấy trong ngày",
   },
 ];
 
@@ -103,7 +94,6 @@ export default function ServicesPage() {
     });
   }, [searchQuery, services]);
 
-  const totalServices = services.length;
   const shownServices = filteredServices.length;
 
   const averagePrice = useMemo(() => {
@@ -158,13 +148,13 @@ export default function ServicesPage() {
 
   function validateDraft(): { valid: boolean; price: number } {
     if (!draft.serviceType.trim()) {
-      setErrorMessage("Vui long nhap loai dich vu.");
+      setErrorMessage("Vui lòng nhập loại dịch vụ.");
       return { valid: false, price: 0 };
     }
 
     const price = parseUnitPrice(draft.unitPrice);
     if (price <= 0) {
-      setErrorMessage("Vui long nhap don gia hop le (> 0).");
+      setErrorMessage("Vui lòng nhập đơn giá hợp lệ (> 0).");
       return { valid: false, price: 0 };
     }
 
@@ -215,7 +205,7 @@ export default function ServicesPage() {
 
   function handleDeleteService(service: ServiceItem) {
     const confirmed = window.confirm(
-      `Xoa loai dich vu "${service.serviceType}"? Hanh dong nay khong the hoan tac.`,
+      `Xóa loại dịch vụ "${service.serviceType}"? Hành động này không thể hoàn tác.`,
     );
     if (!confirmed) {
       return;
@@ -225,73 +215,37 @@ export default function ServicesPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Dich vu</h1>
-          <p className="mt-1 text-muted-foreground">
-            Danh sach loai dich vu theo BM4, toi uu cho them, sua, xoa nhanh.
-          </p>
-        </div>
-        <Button
-          onClick={handleOpenCreateModal}
-          className="cursor-pointer bg-gradient-to-r from-gold to-amber-400 text-gold-foreground ring-1 ring-gold/50 shadow-lg shadow-gold/35 transition-all hover:-translate-y-0.5 hover:from-amber-400 hover:to-gold hover:shadow-xl hover:shadow-gold/45"
-        >
-          <span className="mr-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-black/10">
-            <Plus className="h-3.5 w-3.5" />
-          </span>
-          Them dich vu
-        </Button>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Card>
-          <CardContent className="flex items-center gap-3 pt-6">
-            <div className="rounded-lg bg-gold/10 p-2 text-gold">
-              <Wrench className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Tong loai dich vu</p>
-              <p className="text-xl font-semibold">{totalServices}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center gap-3 pt-6">
-            <div className="rounded-lg bg-emerald-500/10 p-2 text-emerald-600">
-              <CircleDollarSign className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Don gia trung binh</p>
-              <p className="text-xl font-semibold">{formatVND(averagePrice)}</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
+    <div className="space-y-3">
       <Card>
-        <CardHeader className="gap-4 border-b">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-gold" />
-                Danh sach loai dich vu
-              </CardTitle>
-              <CardDescription>
-                Cac cot theo bieu mau: Loai dich vu, Don gia (VND), Ghi chu.
-              </CardDescription>
+        <CardHeader className="border-b px-3 py-3">
+          <div className="grid gap-2 xl:grid-cols-[auto_minmax(280px,1fr)_auto] xl:items-center">
+            <div className="flex flex-wrap items-center gap-2">
+              <CardTitle className="text-base">Loại dịch vụ</CardTitle>
+              <Badge variant="outline" className="h-5 border-border/80 bg-card px-2 text-[10px]">
+                BM4
+              </Badge>
+              <Badge variant="outline" className="h-5 border-border/80 bg-card px-2 text-[10px]">
+                {shownServices}/{services.length} bản ghi
+              </Badge>
+              <Badge variant="outline" className="h-5 border-border/80 bg-card px-2 text-[10px]">
+                TB {formatVND(averagePrice)}
+              </Badge>
             </div>
-            <Badge variant="outline">{shownServices} ban ghi</Badge>
-          </div>
 
-          <div className="relative max-w-md">
-            <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder="Tim theo loai dich vu, don gia, ghi chu..."
-              className="pl-9"
-            />
+            <div className="relative">
+              <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Tìm theo loại dịch vụ, đơn giá, ghi chú..."
+                className="pl-9"
+              />
+            </div>
+
+            <Button onClick={handleOpenCreateModal} size="sm" className="h-8 cursor-pointer">
+              <Plus className="mr-1.5 h-3.5 w-3.5" />
+              Thêm dịch vụ
+            </Button>
           </div>
         </CardHeader>
 
@@ -299,26 +253,26 @@ export default function ServicesPage() {
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/40 hover:bg-muted/40">
-                <TableHead className="w-16 pl-6 text-center">STT</TableHead>
-                <TableHead>Loai dich vu</TableHead>
-                <TableHead>Don gia (VND)</TableHead>
-                <TableHead>Ghi chu</TableHead>
-                <TableHead className="w-32 pr-6 text-right">Tac vu</TableHead>
+                <TableHead className="w-14 text-center">STT</TableHead>
+                <TableHead>Loại dịch vụ</TableHead>
+                <TableHead className="text-right">Đơn giá</TableHead>
+                <TableHead>Ghi chú</TableHead>
+                <TableHead className="w-24 text-right">Tác vụ</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredServices.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
-                    Khong tim thay dich vu phu hop.
+                    Không tìm thấy dịch vụ phù hợp.
                   </TableCell>
                 </TableRow>
               ) : (
                 filteredServices.map((service, index) => (
                   <TableRow key={service.id}>
-                    <TableCell className="pl-6 text-center font-medium">{index + 1}</TableCell>
+                    <TableCell className="text-center font-medium">{index + 1}</TableCell>
                     <TableCell className="font-medium">{service.serviceType}</TableCell>
-                    <TableCell>
+                    <TableCell className="text-right">
                       <Badge className="bg-emerald-600 text-white hover:bg-emerald-600">
                         {formatVND(service.unitPrice)}
                       </Badge>
@@ -326,14 +280,14 @@ export default function ServicesPage() {
                     <TableCell className="max-w-[360px] truncate text-muted-foreground">
                       {service.note || "-"}
                     </TableCell>
-                    <TableCell className="pr-6">
+                    <TableCell>
                       <div className="flex justify-end gap-1">
                         <Button
                           variant="outline"
                           size="icon-sm"
                           className="cursor-pointer"
                           onClick={() => handleOpenEditModal(service)}
-                          aria-label="Sua dich vu"
+                          aria-label="Sửa dịch vụ"
                         >
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
@@ -342,7 +296,7 @@ export default function ServicesPage() {
                           size="icon-sm"
                           className="cursor-pointer"
                           onClick={() => handleDeleteService(service)}
-                          aria-label="Xoa dich vu"
+                          aria-label="Xóa dịch vụ"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
@@ -368,10 +322,10 @@ export default function ServicesPage() {
             <div className="flex items-start justify-between border-b px-5 py-4">
               <div>
                 <h2 className="text-lg font-semibold">
-                  {formMode === "create" ? "Them dich vu" : "Cap nhat dich vu"}
+                  {formMode === "create" ? "Thêm dịch vụ" : "Cập nhật dịch vụ"}
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Dien thong tin loai dich vu, don gia va ghi chu.
+                  Điền thông tin loại dịch vụ, đơn giá và ghi chú.
                 </p>
               </div>
               <Button
@@ -379,7 +333,7 @@ export default function ServicesPage() {
                 size="icon-sm"
                 className="cursor-pointer"
                 onClick={handleCloseModal}
-                aria-label="Dong cua so"
+                aria-label="Đóng cửa sổ"
               >
                 <X className="h-4 w-4" />
               </Button>
@@ -387,20 +341,20 @@ export default function ServicesPage() {
 
             <form onSubmit={handleSubmitService} className="space-y-4 px-5 py-4">
               <div className="space-y-2">
-                <Label htmlFor="service-type">Loai dich vu</Label>
+                <Label htmlFor="service-type">Loại dịch vụ</Label>
                 <Input
                   id="service-type"
                   value={draft.serviceType}
                   onChange={(event) =>
                     handleChangeDraft("serviceType", event.target.value)
                   }
-                  placeholder="VD: Danh bong trang suc"
+                  placeholder="VD: Đánh bóng trang sức"
                   autoFocus
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="service-price">Don gia (VND)</Label>
+                <Label htmlFor="service-price">Đơn giá (VND)</Label>
                 <Input
                   id="service-price"
                   value={draft.unitPrice}
@@ -413,12 +367,12 @@ export default function ServicesPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="service-note">Ghi chu</Label>
+                <Label htmlFor="service-note">Ghi chú</Label>
                 <Input
                   id="service-note"
                   value={draft.note}
                   onChange={(event) => handleChangeDraft("note", event.target.value)}
-                  placeholder="Thong tin bo sung (neu co)"
+                  placeholder="Thông tin bổ sung (nếu có)"
                 />
               </div>
 
@@ -435,10 +389,10 @@ export default function ServicesPage() {
                   className="cursor-pointer"
                   onClick={handleCloseModal}
                 >
-                  Huy
+                  Hủy
                 </Button>
                 <Button type="submit" className="cursor-pointer">
-                  {formMode === "create" ? "Them moi" : "Luu thay doi"}
+                  {formMode === "create" ? "Thêm mới" : "Lưu thay đổi"}
                 </Button>
               </div>
             </form>
@@ -448,3 +402,6 @@ export default function ServicesPage() {
     </div>
   );
 }
+
+
+

@@ -10,25 +10,18 @@ interface FeaturePlaceholderProps {
 
 export function FeaturePlaceholder({ title, description }: FeaturePlaceholderProps) {
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-        <p className="mt-1 text-muted-foreground">{description}</p>
-      </div>
-
+    <div className="space-y-3">
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Wrench className="h-5 w-5 text-gold" />
-            Dang phat trien
+        <CardHeader className="border-b px-3 py-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Wrench className="h-4 w-4 text-gold" />
+            {title}
           </CardTitle>
-          <CardDescription>
-            Trang nay da co route va giao dien co ban, san sang de noi API/logic.
-          </CardDescription>
+          <CardDescription>{description}</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="py-3">
           <p className="text-sm text-muted-foreground">
-            Ban da vao dung trang. Hien tai tinh nang chi moi o muc placeholder.
+            Đang phát triển. Trang đã có route và giao diện cơ bản, sẵn sàng để nối API/logic.
           </p>
         </CardContent>
       </Card>

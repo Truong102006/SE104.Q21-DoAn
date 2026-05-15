@@ -1,14 +1,17 @@
-"use client";
+﻿"use client";
 
 import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { SYSTEM_CODE_INPUT_CLASS, SYSTEM_CODE_NOTE_CLASS } from "@/lib/form-styles";
 import { formatVND, MOCK_PRODUCTS } from "@/lib/mock-data";
-import { Package, Pencil, Plus, Search, Trash2, X } from "lucide-react";
+import { STATUS_DOT_CLASS, STATUS_TONE_CLASS, type StatusTone } from "@/lib/status-styles";
+import { cn } from "@/lib/utils";
+import { Pencil, Plus, Search, Trash2, X } from "lucide-react";
 
 interface ProductItem {
   id: number;
@@ -46,6 +49,16 @@ const EMPTY_DRAFT: ProductDraft = {
   stock: "",
 };
 
+function getProductCode(id: number): string {
+  return `SP-${String(id).padStart(3, "0")}`;
+}
+
+function getNextProductId(products: ProductItem[]): number {
+  return products.length === 0
+    ? 1
+    : Math.max(...products.map((product) => product.id)) + 1;
+}
+
 function normalizeText(value: string): string {
   return value.trim().toLowerCase();
 }
@@ -56,6 +69,18 @@ function parseNonNegativeInt(raw: string): number {
     return 0;
   }
   return Number.parseInt(cleaned, 10);
+}
+
+function getStockState(stock: number): { label: string; tone: StatusTone } {
+  if (stock <= 0) {
+    return { label: "Hết hàng", tone: "danger" };
+  }
+
+  if (stock <= 3) {
+    return { label: "Sắp hết", tone: "warning" };
+  }
+
+  return { label: "Còn hàng", tone: "success" };
 }
 
 export default function ProductsPage() {
@@ -86,9 +111,13 @@ export default function ProductsPage() {
   );
 
   function openCreateModal() {
+    const nextId = getNextProductId(products);
     setFormMode("create");
     setEditingId(null);
-    setDraft(EMPTY_DRAFT);
+    setDraft({
+      ...EMPTY_DRAFT,
+      code: getProductCode(nextId),
+    });
     setErrorMessage("");
     setIsModalOpen(true);
   }
@@ -120,22 +149,18 @@ export default function ProductsPage() {
   }
 
   function validateDraft(): { valid: boolean; price: number; stock: number } {
-    if (!draft.code.trim()) {
-      setErrorMessage("Vui long nhap ma san pham.");
-      return { valid: false, price: 0, stock: 0 };
-    }
     if (!draft.name.trim()) {
-      setErrorMessage("Vui long nhap ten san pham.");
+      setErrorMessage("Vui lòng nhập tên sản phẩm.");
       return { valid: false, price: 0, stock: 0 };
     }
     if (!draft.category.trim()) {
-      setErrorMessage("Vui long nhap loai san pham.");
+      setErrorMessage("Vui lòng nhập loại sản phẩm.");
       return { valid: false, price: 0, stock: 0 };
     }
 
     const price = parseNonNegativeInt(draft.price);
     if (price <= 0) {
-      setErrorMessage("Vui long nhap don gia hop le (> 0).");
+      setErrorMessage("Vui lòng nhập đơn giá hợp lệ (> 0).");
       return { valid: false, price: 0, stock: 0 };
     }
 
@@ -151,15 +176,12 @@ export default function ProductsPage() {
     }
 
     if (formMode === "create") {
-      const nextId =
-        products.length === 0
-          ? 1
-          : Math.max(...products.map((product) => product.id)) + 1;
+      const nextId = getNextProductId(products);
       setProducts((previous) => [
         ...previous,
         {
           id: nextId,
-          code: draft.code.trim(),
+          code: getProductCode(nextId),
           name: draft.name.trim(),
           category: draft.category.trim(),
           price,
@@ -175,7 +197,6 @@ export default function ProductsPage() {
         product.id === editingId
           ? {
               ...product,
-              code: draft.code.trim(),
               name: draft.name.trim(),
               category: draft.category.trim(),
               price,
@@ -189,7 +210,7 @@ export default function ProductsPage() {
 
   function removeProduct(product: ProductItem) {
     const confirmed = window.confirm(
-      `Xoa san pham "${product.name}"? Hanh dong nay khong the hoan tac.`,
+      `Xóa sản phẩm "${product.name}"? Hành động này không thể hoàn tác.`,
     );
     if (!confirmed) {
       return;
@@ -198,70 +219,37 @@ export default function ProductsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">San pham</h1>
-          <p className="mt-1 text-muted-foreground">
-            Danh sach san pham theo BM8 voi thao tac them, sua, xoa nhanh.
-          </p>
-        </div>
-        <Button
-          onClick={openCreateModal}
-          className="cursor-pointer bg-gradient-to-r from-gold to-amber-400 text-gold-foreground ring-1 ring-gold/50 shadow-lg shadow-gold/35 transition-all hover:-translate-y-0.5 hover:from-amber-400 hover:to-gold hover:shadow-xl hover:shadow-gold/45"
-        >
-          <span className="mr-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-black/10">
-            <Plus className="h-3.5 w-3.5" />
-          </span>
-          Them san pham
-        </Button>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Card>
-          <CardContent className="flex items-center gap-3 pt-6">
-            <div className="rounded-lg bg-gold/10 p-2 text-gold">
-              <Package className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Tong san pham</p>
-              <p className="text-xl font-semibold">{products.length}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center gap-3 pt-6">
-            <div className="rounded-lg bg-emerald-500/10 p-2 text-emerald-700">
-              <Package className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Tong ton kho</p>
-              <p className="text-xl font-semibold">{totalStock}</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
+    <div className="space-y-3">
       <Card>
-        <CardHeader className="gap-4 border-b">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <CardTitle>Danh sach san pham</CardTitle>
-              <CardDescription>
-                Cot du lieu: STT, Ma san pham, Ten san pham, Loai san pham, Don gia, Ton kho.
-              </CardDescription>
+        <CardHeader className="border-b px-3 py-3">
+          <div className="grid gap-2 xl:grid-cols-[auto_minmax(280px,1fr)_auto] xl:items-center">
+            <div className="flex flex-wrap items-center gap-2">
+              <CardTitle className="text-base">Tra cứu sản phẩm</CardTitle>
+              <Badge variant="outline" className="h-5 border-border/80 bg-card px-2 text-[10px]">
+                BM8
+              </Badge>
+              <Badge variant="outline" className="h-5 border-border/80 bg-card px-2 text-[10px]">
+                {filteredProducts.length}/{products.length} bản ghi
+              </Badge>
+              <Badge variant="outline" className="h-5 border-border/80 bg-card px-2 text-[10px]">
+                Tồn {totalStock}
+              </Badge>
             </div>
-            <Badge variant="outline">{filteredProducts.length} ban ghi</Badge>
-          </div>
 
-          <div className="relative max-w-md">
-            <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder="Tim theo ma, ten, loai san pham..."
-              className="pl-9"
-            />
+            <div className="relative">
+              <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Tìm theo mã, tên, loại sản phẩm..."
+                className="pl-9"
+              />
+            </div>
+
+            <Button onClick={openCreateModal} size="sm" className="h-8 cursor-pointer">
+              <Plus className="mr-1.5 h-3.5 w-3.5" />
+              Thêm sản phẩm
+            </Button>
           </div>
         </CardHeader>
 
@@ -269,57 +257,75 @@ export default function ProductsPage() {
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/40 hover:bg-muted/40">
-                <TableHead className="w-16 pl-6 text-center">STT</TableHead>
-                <TableHead>Ma san pham</TableHead>
-                <TableHead>Ten san pham</TableHead>
-                <TableHead>Loai san pham</TableHead>
-                <TableHead>Don gia</TableHead>
-                <TableHead>Ton kho</TableHead>
-                <TableHead className="w-28 pr-6 text-right">Tac vu</TableHead>
+                <TableHead className="w-14 text-center">STT</TableHead>
+                <TableHead>Mã</TableHead>
+                <TableHead>Tên sản phẩm</TableHead>
+                <TableHead>Loại sản phẩm</TableHead>
+                <TableHead className="text-right">Đơn giá</TableHead>
+                <TableHead className="text-right">Tồn</TableHead>
+                <TableHead className="w-24 text-right">Tác vụ</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredProducts.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
-                    Khong tim thay san pham phu hop.
+                    Không tìm thấy sản phẩm phù hợp.
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredProducts.map((product, index) => (
-                  <TableRow key={product.id}>
-                    <TableCell className="pl-6 text-center font-medium">{index + 1}</TableCell>
-                    <TableCell className="font-mono text-xs text-muted-foreground">
-                      {product.code}
-                    </TableCell>
-                    <TableCell className="font-medium">{product.name}</TableCell>
-                    <TableCell>{product.category}</TableCell>
-                    <TableCell className="font-semibold text-gold">{formatVND(product.price)}</TableCell>
-                    <TableCell>{product.stock}</TableCell>
-                    <TableCell className="pr-6">
-                      <div className="flex justify-end gap-1">
-                        <Button
-                          variant="outline"
-                          size="icon-sm"
-                          className="cursor-pointer"
-                          onClick={() => openEditModal(product)}
-                          aria-label="Sua san pham"
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="icon-sm"
-                          className="cursor-pointer"
-                          onClick={() => removeProduct(product)}
-                          aria-label="Xoa san pham"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
+                filteredProducts.map((product, index) => {
+                  const stockState = getStockState(product.stock);
+
+                  return (
+                    <TableRow key={product.id}>
+                      <TableCell className="text-center font-medium">{index + 1}</TableCell>
+                      <TableCell className="font-mono text-xs text-muted-foreground">
+                        {product.code}
+                      </TableCell>
+                      <TableCell className="max-w-[420px] truncate font-medium">{product.name}</TableCell>
+                      <TableCell>{product.category}</TableCell>
+                      <TableCell className="text-right font-semibold text-gold">{formatVND(product.price)}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <span className="font-medium">{product.stock}</span>
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "h-5 gap-1 px-2 text-[10px]",
+                              STATUS_TONE_CLASS[stockState.tone],
+                            )}
+                          >
+                            <span className={cn("h-1.5 w-1.5 rounded-full", STATUS_DOT_CLASS[stockState.tone])} />
+                            {stockState.label}
+                          </Badge>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            variant="outline"
+                            size="icon-sm"
+                            className="cursor-pointer"
+                            onClick={() => openEditModal(product)}
+                            aria-label="Sửa sản phẩm"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="icon-sm"
+                            className="cursor-pointer"
+                            onClick={() => removeProduct(product)}
+                            aria-label="Xóa sản phẩm"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>
@@ -338,10 +344,10 @@ export default function ProductsPage() {
             <div className="flex items-start justify-between border-b px-5 py-4">
               <div>
                 <h2 className="text-lg font-semibold">
-                  {formMode === "create" ? "Them san pham" : "Cap nhat san pham"}
+                  {formMode === "create" ? "Thêm sản phẩm" : "Cập nhật sản phẩm"}
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Dien day du thong tin san pham va luu thay doi.
+                  Điền đầy đủ thông tin sản phẩm và lưu thay đổi.
                 </p>
               </div>
               <Button
@@ -349,7 +355,7 @@ export default function ProductsPage() {
                 size="icon-sm"
                 className="cursor-pointer"
                 onClick={closeModal}
-                aria-label="Dong cua so"
+                aria-label="Đóng cửa sổ"
               >
                 <X className="h-4 w-4" />
               </Button>
@@ -358,35 +364,39 @@ export default function ProductsPage() {
             <form onSubmit={submitProduct} className="space-y-4 px-5 py-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="product-code">Ma san pham</Label>
+                  <Label htmlFor="product-code">Mã sản phẩm</Label>
                   <Input
                     id="product-code"
                     value={draft.code}
-                    onChange={(event) => updateDraft("code", event.target.value)}
-                    placeholder="VD: SP-010"
-                    autoFocus
+                    readOnly
+                    className={SYSTEM_CODE_INPUT_CLASS}
+                    aria-describedby="product-code-note"
                   />
+                  <p id="product-code-note" className={SYSTEM_CODE_NOTE_CLASS}>
+                    Mã tự phát sinh, không chỉnh sửa thủ công.
+                  </p>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="product-category">Loai san pham</Label>
+                  <Label htmlFor="product-category">Loại sản phẩm</Label>
                   <Input
                     id="product-category"
                     value={draft.category}
                     onChange={(event) => updateDraft("category", event.target.value)}
-                    placeholder="VD: Vang"
+                    placeholder="VD: Vàng"
                   />
                 </div>
                 <div className="space-y-2 sm:col-span-2">
-                  <Label htmlFor="product-name">Ten san pham</Label>
+                  <Label htmlFor="product-name">Tên sản phẩm</Label>
                   <Input
                     id="product-name"
                     value={draft.name}
                     onChange={(event) => updateDraft("name", event.target.value)}
-                    placeholder="VD: Nhan vang 24K"
+                    placeholder="VD: Nhẫn vàng 24K"
+                    autoFocus
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="product-price">Don gia</Label>
+                  <Label htmlFor="product-price">Đơn giá</Label>
                   <Input
                     id="product-price"
                     value={draft.price}
@@ -396,7 +406,7 @@ export default function ProductsPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="product-stock">Ton kho</Label>
+                  <Label htmlFor="product-stock">Tồn kho</Label>
                   <Input
                     id="product-stock"
                     value={draft.stock}
@@ -420,10 +430,10 @@ export default function ProductsPage() {
                   className="cursor-pointer"
                   onClick={closeModal}
                 >
-                  Huy
+                  Hủy
                 </Button>
                 <Button type="submit" className="cursor-pointer">
-                  {formMode === "create" ? "Them moi" : "Luu thay doi"}
+                  {formMode === "create" ? "Thêm mới" : "Lưu thay đổi"}
                 </Button>
               </div>
             </form>
