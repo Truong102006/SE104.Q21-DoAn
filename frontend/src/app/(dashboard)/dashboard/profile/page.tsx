@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useAuthStore } from "@/stores/auth-store";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -16,7 +16,7 @@ import { User } from "lucide-react";
 
 const ROLE_LABELS = {
   ADMIN: "Admin",
-  STAFF: "Nhan vien",
+  STAFF: "Nhân viên",
 } as const;
 
 export default function ProfilePage() {
@@ -34,18 +34,11 @@ export default function ProfilePage() {
     .toUpperCase();
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Ho so ca nhan</h1>
-        <p className="mt-1 text-muted-foreground">
-          Thong tin tai khoan dang dang nhap.
-        </p>
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-3">
+    <div className="space-y-3">
+      <div className="grid gap-3 lg:grid-cols-[320px_1fr]">
         <Card className="lg:col-span-1">
-          <CardHeader className="items-center text-center">
-            <Avatar className="h-16 w-16">
+          <CardHeader className="items-center border-b px-3 py-3 text-center">
+            <Avatar className="h-12 w-12">
               <AvatarFallback className="bg-gold/10 text-gold text-lg font-semibold">
                 {initials}
               </AvatarFallback>
@@ -54,8 +47,8 @@ export default function ProfilePage() {
             <CardDescription>{user.email}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="flex items-center justify-between rounded-lg border bg-muted/30 p-3">
-              <span className="text-xs text-muted-foreground">Vai tro</span>
+            <div className="flex items-center justify-between rounded-lg border bg-muted/30 p-2.5">
+              <span className="text-xs text-muted-foreground">Vai trò</span>
               <Badge variant="outline">{ROLE_LABELS[user.role]}</Badge>
             </div>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -68,20 +61,18 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
 
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Thong tin co ban</CardTitle>
-            <CardDescription>
-              Du lieu hien tai dang lay tu auth-store local.
-            </CardDescription>
+        <Card>
+          <CardHeader className="border-b px-3 py-3">
+            <CardTitle className="text-base">Thông tin cơ bản</CardTitle>
+            <CardDescription>Dữ liệu hiện tại đang lấy từ auth-store local.</CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-2">
+          <CardContent className="grid gap-3 p-3 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="full-name">Ho va ten</Label>
+              <Label htmlFor="full-name">Họ và tên</Label>
               <Input id="full-name" value={user.fullName} readOnly />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="username">Ten dang nhap</Label>
+              <Label htmlFor="username">Tên đăng nhập</Label>
               <Input id="username" value={user.username} readOnly />
             </div>
             <div className="space-y-2 sm:col-span-2">
@@ -94,3 +85,5 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+

@@ -1,11 +1,13 @@
-"use client";
+﻿"use client";
 
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { SYSTEM_CODE_INPUT_CLASS, SYSTEM_CODE_NOTE_CLASS } from "@/lib/form-styles";
 import { formatVND, MOCK_PRODUCTS } from "@/lib/mock-data";
 import { Plus, Save, Trash2 } from "lucide-react";
 
@@ -22,9 +24,9 @@ interface SaleLine {
 }
 
 const CUSTOMERS: CustomerOption[] = [
-  { id: 1, name: "Nguyen Van Minh" },
-  { id: 2, name: "Tran Thi Lan" },
-  { id: 3, name: "Le Quang Huy" },
+  { id: 1, name: "Nguyễn Văn Minh" },
+  { id: 2, name: "Trần Thị Lan" },
+  { id: 3, name: "Lê Quang Huy" },
 ];
 
 function getTodayValue(): string {
@@ -139,7 +141,7 @@ export default function OrdersPage() {
     setCreatedDate(getTodayValue());
     setCustomerId(CUSTOMERS[0].id);
     setLines([buildDefaultLine(1)]);
-    setMessage("Da reset phieu ban hang.");
+    setMessage("Đã reset phiếu bán hàng.");
   }
 
   function handleSaveOrder() {
@@ -148,50 +150,50 @@ export default function OrdersPage() {
     );
 
     if (hasInvalidLine) {
-      setMessage("Vui long nhap so luong va don gia hop le cho tat ca dong.");
+      setMessage("Vui lòng nhập số lượng và đơn giá hợp lệ cho tất cả dòng.");
       return;
     }
 
     if (totalAmount <= 0) {
-      setMessage("Tong tien phai lon hon 0.");
+      setMessage("Tổng tiền phải lớn hơn 0.");
       return;
     }
 
-    setMessage("Da luu phieu ban hang thanh cong (du lieu demo frontend).");
+    setMessage("Đã lưu phiếu bán hàng thành công (dữ liệu demo frontend).");
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Don hang</h1>
-        <p className="mt-1 text-muted-foreground">
-          Tao phieu ban hang voi giao dien gon gang, de nhap lieu va chot don nhanh.
-        </p>
-      </div>
-
+    <div className="space-y-3">
       <Card className="overflow-hidden border-border/70 shadow-sm">
-        <CardHeader className="border-b bg-gradient-to-r from-slate-50 to-emerald-50/70">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+        <CardHeader className="border-b bg-muted/25 px-3 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <CardTitle className="text-xl tracking-tight">Phieu ban hang</CardTitle>
-              <CardDescription>
-                Quan ly thong tin khach hang va danh sach san pham ban.
-              </CardDescription>
+              <CardTitle className="text-base tracking-tight">Phiếu bán hàng</CardTitle>
+              <CardDescription className="text-xs">BM6 - Quản lý khách hàng và sản phẩm bán.</CardDescription>
             </div>
-            <span className="rounded-full border border-emerald-600/30 bg-emerald-600/10 px-3 py-1 text-xs font-semibold text-emerald-700">
-              Ban hang
+            <span className="rounded border border-emerald-600/30 bg-emerald-600/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+              Bán hàng
             </span>
           </div>
         </CardHeader>
 
-        <CardContent className="space-y-6 pt-6">
-          <div className="grid gap-4 md:grid-cols-2">
+        <CardContent className="space-y-3 p-3">
+          <div className="grid gap-3 md:grid-cols-4">
             <div className="space-y-2">
-              <Label htmlFor="voucher-code">So phieu</Label>
-              <Input id="voucher-code" value={voucherCode} readOnly />
+              <Label htmlFor="voucher-code">Số phiếu</Label>
+              <Input
+                id="voucher-code"
+                value={voucherCode}
+                readOnly
+                className={SYSTEM_CODE_INPUT_CLASS}
+                aria-describedby="voucher-code-note"
+              />
+              <p id="voucher-code-note" className={SYSTEM_CODE_NOTE_CLASS}>
+                Số phiếu tự phát sinh.
+              </p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="created-date">Ngay lap</Label>
+              <Label htmlFor="created-date">Ngày lập</Label>
               <Input
                 id="created-date"
                 type="date"
@@ -200,31 +202,28 @@ export default function OrdersPage() {
               />
             </div>
             <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="customer">Khach hang</Label>
-              <select
+              <Label htmlFor="customer">Khách hàng</Label>
+              <Select
                 id="customer"
                 value={customerId}
-                onChange={(event) => setCustomerId(Number.parseInt(event.target.value, 10))}
-                className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-              >
-                {CUSTOMERS.map((customer) => (
-                  <option key={customer.id} value={customer.id}>
-                    {customer.name}
-                  </option>
-                ))}
-              </select>
+                onValueChange={(value) => setCustomerId(Number.parseInt(value, 10))}
+                options={CUSTOMERS.map((customer) => ({
+                  value: customer.id,
+                  label: customer.name,
+                }))}
+              />
               <p className="text-xs text-muted-foreground">
-                Da chon: <span className="font-medium text-foreground">{selectedCustomer.name}</span>
+                Đã chọn: <span className="font-medium text-foreground">{selectedCustomer.name}</span>
               </p>
             </div>
           </div>
 
-          <div className="space-y-3 rounded-xl border bg-background p-4">
+          <div className="space-y-2 rounded-lg border bg-background p-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-base font-semibold">Chi tiet san pham ban</h2>
-              <Button onClick={handleAddLine} variant="outline" className="cursor-pointer">
-                <Plus className="mr-2 h-4 w-4" />
-                Them dong
+              <h2 className="text-sm font-semibold">Chi tiết sản phẩm bán</h2>
+              <Button onClick={handleAddLine} variant="outline" size="sm" className="h-7 cursor-pointer">
+                <Plus className="mr-1.5 h-3.5 w-3.5" />
+                Thêm dòng
               </Button>
             </div>
 
@@ -233,12 +232,12 @@ export default function OrdersPage() {
                 <TableHeader>
                   <TableRow className="bg-muted/40 hover:bg-muted/40">
                     <TableHead className="w-14 text-center">STT</TableHead>
-                    <TableHead className="min-w-[220px]">San pham</TableHead>
-                    <TableHead className="min-w-[150px]">Loai san pham</TableHead>
-                    <TableHead className="min-w-[120px]">So luong</TableHead>
-                    <TableHead className="min-w-[120px]">Don vi tinh</TableHead>
-                    <TableHead className="min-w-[150px]">Don gia</TableHead>
-                    <TableHead className="min-w-[160px]">Thanh tien</TableHead>
+                    <TableHead className="min-w-[220px]">Sản phẩm</TableHead>
+                    <TableHead className="min-w-[150px]">Loại sản phẩm</TableHead>
+                    <TableHead className="min-w-[120px]">Số lượng</TableHead>
+                    <TableHead className="min-w-[120px]">Đơn vị tính</TableHead>
+                    <TableHead className="min-w-[150px]">Đơn giá</TableHead>
+                    <TableHead className="min-w-[160px]">Thành tiền</TableHead>
                     <TableHead className="w-12"></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -247,19 +246,16 @@ export default function OrdersPage() {
                     <TableRow key={line.id}>
                       <TableCell className="text-center font-medium">{index + 1}</TableCell>
                       <TableCell>
-                        <select
+                        <Select
                           value={line.productId}
-                          onChange={(event) =>
-                            handleUpdateLine(line.id, "productId", event.target.value)
+                          onValueChange={(value) =>
+                            handleUpdateLine(line.id, "productId", value)
                           }
-                          className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-                        >
-                          {MOCK_PRODUCTS.map((product) => (
-                            <option key={product.id} value={product.id}>
-                              {product.name}
-                            </option>
-                          ))}
-                        </select>
+                          options={MOCK_PRODUCTS.map((product) => ({
+                            value: product.id,
+                            label: product.name,
+                          }))}
+                        />
                       </TableCell>
                       <TableCell>{line.product.categoryName}</TableCell>
                       <TableCell>
@@ -290,7 +286,7 @@ export default function OrdersPage() {
                           variant="destructive"
                           onClick={() => handleRemoveLine(line.id)}
                           className="cursor-pointer"
-                          aria-label="Xoa dong"
+                          aria-label="Xóa dòng"
                           disabled={lineWithMeta.length === 1}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -303,9 +299,9 @@ export default function OrdersPage() {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-slate-50 px-4 py-3">
-            <span className="text-base font-semibold">Tong tien:</span>
-            <span className="text-xl font-bold text-gold">{formatVND(totalAmount)}</span>
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-muted/25 px-3 py-2">
+            <span className="text-sm font-semibold">Tổng tiền</span>
+            <span className="text-lg font-bold text-gold">{formatVND(totalAmount)}</span>
           </div>
 
           {message && (
@@ -320,11 +316,11 @@ export default function OrdersPage() {
               onClick={handleResetForm}
               className="cursor-pointer"
             >
-              Lam moi
+              Làm mới
             </Button>
             <Button onClick={handleSaveOrder} className="cursor-pointer">
               <Save className="mr-2 h-4 w-4" />
-              Luu phieu ban hang
+              Lưu phiếu bán hàng
             </Button>
           </div>
         </CardContent>
