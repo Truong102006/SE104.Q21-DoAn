@@ -1,3 +1,20 @@
+## 0. Cap Nhat Moi Nhat (2026-05-15)
+
+- Backend da bo sung them nen tang CRUD + service + dto + controller cho cac module:
+  - `phieu-mua-hang`, `phieu-ban-hang`, `phieu-dich-vu`
+  - `tham-so`
+  - `bao-cao-ton-kho`, `bao-cao-doanh-thu-san-pham`, `bao-cao-doanh-thu-dich-vu`
+  - `chuc-nang`, `nhom-nguoi-dung`, `nguoi-dung`, `phan-quyen`
+- Da cap nhat `ApiPaths` de mo route cho cac module tren.
+- Da bo sung repository method phuc vu:
+  - search keyword
+  - validate duplicate nghiep vu
+  - generate ma tu dong (PM/PB/DV va mot so ma bao cao/quan tri)
+- Trang thai build/test backend:
+  - Lenh da chay: `cd backend && ./mvnw test`
+  - Ket qua: `BUILD SUCCESS` (lan gan nhat trong ngay 2026-05-15)
+
+---
 # SE104.Q21 - Web Quản Lý Cửa Hàng Vàng Bạc Đá Quý - Báo Cáo Tiến Độ Tổng Thể
 
 > **Ngày cập nhật:** 2026-05-15  
