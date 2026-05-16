@@ -1,51 +1,44 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useRef, useState } from "react";
 import { useAuthStore } from "@/stores/auth-store";
 import { cn } from "@/lib/utils";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { NavGroup, UserRole } from "@/types";
 import {
+  Archive,
   Bell,
+  FileOutput,
   LayoutDashboard,
   Package,
+  Search,
   Wrench,
-  Users,
-  ShoppingCart,
   UserRound,
   Truck,
   ClipboardList,
-  TrendingUp,
+  BarChart3,
   Gem,
-  ChevronLeft,
 } from "lucide-react";
-
-/* ──────────────────────────────────────────────────────────────
-   Dynamic Sidebar — Role-based navigation
-   • ADMIN sees all menu items
-   • STAFF only sees permitted items
-   • Collapsible with smooth animation
-   ────────────────────────────────────────────────────────── */
 
 const NAV_GROUPS: NavGroup[] = [
   {
-    label: "Tổng quan",
+    label: "Dashboard tổng quan",
     items: [
       {
-        title: "Dashboard",
+        title: "Tổng quan",
         href: "/dashboard",
         icon: LayoutDashboard,
         roles: ["ADMIN", "STAFF"],
       },
+    ],
+  },
+  {
+    label: "Thông báo",
+    items: [
       {
-        title: "Thong bao",
+        title: "Thông báo",
         href: "/dashboard/notifications",
         icon: Bell,
         roles: ["ADMIN", "STAFF"],
@@ -53,77 +46,87 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    label: "Quản lý bán hàng",
-    items: [
-      {
-        title: "Sản phẩm",
-        href: "/dashboard/products",
-        icon: Package,
-        roles: ["ADMIN", "STAFF"],
-      },
-      {
-        title: "Dich vu",
-        href: "/dashboard/services",
-        icon: Wrench,
-        roles: ["ADMIN", "STAFF"],
-      },
-            {
-        title: "Don hang",
-        href: "/dashboard/orders",
-        icon: ShoppingCart,
-        roles: ["ADMIN", "STAFF"],
-        badge: "3",
-      },
-      {
-        title: "Phieu dich vu",
-        href: "/dashboard/service-orders",
-        icon: ClipboardList,
-        roles: ["ADMIN", "STAFF"],
-      },
-      {
-        title: "Khách hàng",
-        href: "/dashboard/customers",
-        icon: UserRound,
-        roles: ["ADMIN", "STAFF"],
-      },
-    ],
-  },
-  {
-    label: "Quản lý kho",
+    label: "Lưu trữ",
     items: [
       {
         title: "Nhà cung cấp",
         href: "/dashboard/suppliers",
         icon: Truck,
         roles: ["ADMIN"],
+        badge: "BM1",
       },
       {
-        title: "Nhập hàng",
+        title: "Khách hàng",
+        href: "/dashboard/customers",
+        icon: UserRound,
+        roles: ["ADMIN", "STAFF"],
+        badge: "BM2",
+      },
+      {
+        title: "Đơn vị tính",
+        href: "/dashboard/categories",
+        icon: ClipboardList,
+        roles: ["ADMIN", "STAFF"],
+        badge: "BM3",
+      },
+      {
+        title: "Loại dịch vụ",
+        href: "/dashboard/services",
+        icon: Wrench,
+        roles: ["ADMIN", "STAFF"],
+        badge: "BM4",
+      },
+      {
+        title: "Phiếu mua hàng",
         href: "/dashboard/purchase-orders",
         icon: ClipboardList,
         roles: ["ADMIN"],
+        badge: "BM5",
       },
-    ],
-  },
-  {
-    label: "Thông tin thị trường",
-    items: [
       {
-        title: "Giá vàng",
-        href: "/dashboard/gold-prices",
-        icon: TrendingUp,
+        title: "Phiếu bán hàng",
+        href: "/dashboard/orders",
+        icon: ClipboardList,
         roles: ["ADMIN", "STAFF"],
+        badge: "BM6",
+      },
+      {
+        title: "Phiếu dịch vụ",
+        href: "/dashboard/service-orders",
+        icon: ClipboardList,
+        roles: ["ADMIN", "STAFF"],
+        badge: "BM7",
       },
     ],
   },
   {
-    label: "Hệ thống",
+    label: "Tra cứu",
     items: [
       {
-        title: "Nhân viên",
-        href: "/dashboard/staff",
-        icon: Users,
-        roles: ["ADMIN"],
+        title: "Sản phẩm",
+        href: "/dashboard/products",
+        icon: Package,
+        roles: ["ADMIN", "STAFF"],
+        badge: "BM8",
+      },
+      {
+        title: "Phiếu dịch vụ",
+        href: "/dashboard/service-voucher-lookup",
+        icon: ClipboardList,
+        roles: ["ADMIN", "STAFF"],
+        badge: "BM9",
+      },
+    ],
+  },
+  {
+    label: "Kết xuất",
+    items: [
+      {
+        title: "Báo cáo tổng hợp",
+        href: "/dashboard/reports",
+        icon: BarChart3,
+        roles: ["ADMIN", "STAFF"],
+        badge: "BM10-12",
       },
     ],
   },
@@ -132,135 +135,233 @@ const NAV_GROUPS: NavGroup[] = [
 interface SidebarProps {
   collapsed: boolean;
   onToggle: () => void;
+  mobile?: boolean;
 }
 
-export function Sidebar({ collapsed, onToggle }: SidebarProps) {
+const COMPACT_GROUP_META: Record<string, { icon: React.ComponentType<{ className?: string; strokeWidth?: number }> }> = {
+  "Lưu trữ": { icon: Archive },
+  "Tra cứu": { icon: Search },
+  "Kết xuất": { icon: FileOutput },
+};
+
+export function Sidebar({ mobile = false }: SidebarProps) {
   const pathname = usePathname();
   const user = useAuthStore((s) => s.user);
   const role: UserRole = user?.role ?? "STAFF";
+  const [openCompactGroup, setOpenCompactGroup] = useState<string | null>(null);
+  const [flyoutPos, setFlyoutPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  /* Filter nav items by role */
   const visibleGroups = NAV_GROUPS.map((group) => ({
     ...group,
     items: group.items.filter((item) => item.roles.includes(role)),
   })).filter((group) => group.items.length > 0);
 
+  const compactOpenGroup = visibleGroups.find((group) => group.label === openCompactGroup) ?? null;
+
+  function cancelCloseTimer() {
+    if (closeTimer.current) {
+      clearTimeout(closeTimer.current);
+      closeTimer.current = null;
+    }
+  }
+
+  function scheduleCloseFlyout() {
+    cancelCloseTimer();
+    closeTimer.current = setTimeout(() => setOpenCompactGroup(null), 120);
+  }
+
+  function openFlyout(groupLabel: string, target: HTMLElement) {
+    cancelCloseTimer();
+    const rect = target.getBoundingClientRect();
+    setFlyoutPos({ top: rect.top, left: rect.right + 8 });
+    setOpenCompactGroup(groupLabel);
+  }
+
   return (
     <aside
       className={cn(
-        "fixed inset-y-0 left-0 z-30 flex flex-col border-r border-sidebar-border bg-sidebar transition-[width] duration-300 ease-in-out",
-        collapsed ? "w-[68px]" : "w-64",
+        "z-30 flex flex-col overflow-visible border-r border-sidebar-border bg-sidebar",
+        mobile ? "h-full w-full" : "fixed inset-y-0 left-0 w-52",
       )}
     >
-      {/* ─── Logo ──────────────────────────────────────── */}
-      <div className="flex h-16 items-center gap-3 px-4 border-b border-sidebar-border">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary">
-          <Gem className="h-5 w-5 text-sidebar-primary-foreground" strokeWidth={1.5} />
+      <div className="flex h-14 items-center gap-2 border-b border-sidebar-border px-2.5">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary">
+          <Gem className="h-4.5 w-4.5 text-sidebar-primary-foreground" strokeWidth={1.5} />
         </div>
-        <div
-          className={cn(
-            "overflow-hidden transition-[opacity,width] duration-300",
-            collapsed ? "w-0 opacity-0" : "w-auto opacity-100",
-          )}
-        >
-          <h2 className="whitespace-nowrap text-base font-semibold text-sidebar-foreground">
-            Gold Store
-          </h2>
+        <div>
+          <h2 className="whitespace-nowrap text-[1rem] font-semibold leading-tight text-sidebar-foreground">Gold Store</h2>
+          <p className="whitespace-nowrap text-[11px] text-sidebar-foreground/55">Management Workspace</p>
         </div>
       </div>
 
-      {/* ─── Navigation ────────────────────────────────── */}
-      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
+      <nav className="app-scrollbar flex-1 space-y-3 overflow-x-visible overflow-y-auto px-1.5 py-2.5">
         {visibleGroups.map((group) => (
           <div key={group.label}>
-            {/* Group label */}
-            {!collapsed && (
-              <p className="mb-2 px-2 text-[11px] font-medium uppercase tracking-wider text-sidebar-foreground/40">
+            {(!COMPACT_GROUP_META[group.label] || mobile) && (
+              <p className="mb-1.5 px-2 text-[10px] font-semibold uppercase tracking-[0.11em] text-sidebar-foreground/45">
                 {group.label}
               </p>
             )}
-            {collapsed && <Separator className="mb-2 bg-sidebar-border" />}
 
-            <ul className="space-y-1">
-              {group.items.map((item) => {
-                const isActive =
-                  pathname === item.href ||
-                  (item.href !== "/dashboard" &&
-                    pathname.startsWith(item.href));
+            {(!COMPACT_GROUP_META[group.label] || mobile) && (
+              <ul className="space-y-1">
+                {group.items.map((item) => {
+                  const baseHref = item.href.split("#")[0];
+                  const isActive = pathname === baseHref || (baseHref !== "/dashboard" && pathname.startsWith(baseHref));
 
-                const linkContent = (
-                  <Link
-                    href={item.href}
-                    className={cn(
-                      "group flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors duration-150 cursor-pointer",
-                      isActive
-                        ? "bg-sidebar-accent text-sidebar-primary"
-                        : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                    )}
-                  >
-                    <item.icon
+                  const linkContent = (
+                    <Link
+                      href={item.href}
                       className={cn(
-                        "h-5 w-5 shrink-0 transition-colors duration-150",
+                        "group flex h-8.5 cursor-pointer items-center gap-2 rounded-lg px-2 text-sm font-medium",
                         isActive
-                          ? "text-sidebar-primary"
-                          : "text-sidebar-foreground/50 group-hover:text-sidebar-accent-foreground",
+                          ? "bg-sidebar-accent text-sidebar-primary"
+                          : "text-sidebar-foreground/78 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                       )}
-                      strokeWidth={1.8}
-                    />
-                    {!collapsed && (
-                      <>
-                        <span className="truncate">{item.title}</span>
-                        {item.badge && (
-                          <Badge
-                            variant="secondary"
-                            className="ml-auto h-5 min-w-5 justify-center bg-sidebar-primary/15 text-sidebar-primary text-[10px] font-semibold"
-                          >
-                            {item.badge}
-                          </Badge>
+                    >
+                      <item.icon
+                        className={cn(
+                          "h-5 w-5 shrink-0",
+                          isActive
+                            ? "text-sidebar-primary"
+                            : "text-sidebar-foreground/55 group-hover:text-sidebar-accent-foreground",
                         )}
-                      </>
-                    )}
-                  </Link>
-                );
+                        strokeWidth={1.85}
+                      />
+                      <span className="truncate">{item.title}</span>
+                      {item.badge && (
+                        <span
+                          className={cn(
+                            "ml-auto rounded border px-1.5 py-0.5 text-[10px] leading-none tracking-wide",
+                            isActive
+                              ? "border-sidebar-primary/40 bg-sidebar-primary/15 text-sidebar-primary"
+                              : "border-sidebar-border/90 bg-sidebar-accent/50 text-sidebar-foreground/65",
+                          )}
+                        >
+                          {item.badge}
+                        </span>
+                      )}
+                    </Link>
+                  );
+
+                  return (
+                    <li key={item.href}>
+                      {mobile ? (
+                        linkContent
+                      ) : (
+                        <Tooltip>
+                          <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
+                          <TooltipContent side="right" sideOffset={8}>
+                            {item.title}
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+
+            {!mobile && COMPACT_GROUP_META[group.label] && (
+              <div className="relative">
+                {(() => {
+                  const CompactIcon = COMPACT_GROUP_META[group.label].icon;
+                  const hasActiveChild = group.items.some((item) => {
+                    const baseHref = item.href.split("#")[0];
+                    return pathname === baseHref || (baseHref !== "/dashboard" && pathname.startsWith(baseHref));
+                  });
+
+                  return (
+                    <>
+                      <button
+                        type="button"
+                        className={cn(
+                          "flex h-8.5 w-full items-center gap-2 rounded-lg px-2 text-left text-sm font-medium",
+                          hasActiveChild
+                            ? "bg-sidebar-accent text-sidebar-primary"
+                            : "text-sidebar-foreground/78 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                        )}
+                        onMouseEnter={(event) => openFlyout(group.label, event.currentTarget)}
+                        onMouseLeave={scheduleCloseFlyout}
+                      >
+                        <CompactIcon
+                          className={cn(
+                            "h-5 w-5 shrink-0",
+                            hasActiveChild
+                              ? "text-sidebar-primary"
+                              : "text-sidebar-foreground/55",
+                          )}
+                          strokeWidth={1.85}
+                        />
+                        <span className="truncate">{group.label}</span>
+                      </button>
+                    </>
+                  );
+                })()}
+              </div>
+            )}
+          </div>
+        ))}
+      </nav>
+
+      {!mobile && compactOpenGroup && compactOpenGroup.items.length > 0 && (
+        <div
+          className="fixed z-[80] w-64"
+          style={{ top: flyoutPos.top, left: flyoutPos.left }}
+          onMouseEnter={cancelCloseTimer}
+          onMouseLeave={scheduleCloseFlyout}
+        >
+          <div className="rounded-lg border border-sidebar-border bg-sidebar p-2 shadow-xl">
+            <ul className="space-y-1">
+              {compactOpenGroup.items.map((item) => {
+                const baseHref = item.href.split("#")[0];
+                const isActive =
+                  pathname === baseHref || (baseHref !== "/dashboard" && pathname.startsWith(baseHref));
 
                 return (
-                  <li key={item.href}>
-                    {collapsed ? (
-                      <Tooltip>
-                        <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
-                        <TooltipContent side="right" sideOffset={8}>
-                          {item.title}
-                        </TooltipContent>
-                      </Tooltip>
-                    ) : (
-                      linkContent
-                    )}
+                  <li key={`compact-${item.href}`}>
+                    <Link
+                      href={item.href}
+                      className={cn(
+                        "group flex h-9 cursor-pointer items-center gap-2.5 rounded-lg px-2.5 text-sm font-medium",
+                        isActive
+                          ? "bg-sidebar-accent text-sidebar-primary"
+                          : "text-sidebar-foreground/78 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                      )}
+                      onClick={() => setOpenCompactGroup(null)}
+                    >
+                      <item.icon
+                        className={cn(
+                          "h-4 w-4 shrink-0",
+                          isActive
+                            ? "text-sidebar-primary"
+                            : "text-sidebar-foreground/55 group-hover:text-sidebar-accent-foreground",
+                        )}
+                        strokeWidth={1.85}
+                      />
+                      <span className="truncate">{item.title}</span>
+                      {item.badge && (
+                        <span
+                          className={cn(
+                            "ml-auto rounded border px-1.5 py-0.5 text-[10px] leading-none tracking-wide",
+                            isActive
+                              ? "border-sidebar-primary/40 bg-sidebar-primary/15 text-sidebar-primary"
+                              : "border-sidebar-border/90 bg-sidebar-accent/50 text-sidebar-foreground/65",
+                          )}
+                        >
+                          {item.badge}
+                        </span>
+                      )}
+                    </Link>
                   </li>
                 );
               })}
             </ul>
           </div>
-        ))}
-      </nav>
-
-      {/* ─── Collapse toggle ───────────────────────────── */}
-      <div className="border-t border-sidebar-border p-3">
-        <button
-          onClick={onToggle}
-          className="flex h-9 w-full items-center justify-center rounded-lg text-sidebar-foreground/50 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors cursor-pointer"
-          aria-label={collapsed ? "Mở rộng menu" : "Thu gọn menu"}
-        >
-          <ChevronLeft
-            className={cn(
-              "h-4 w-4 transition-transform duration-300",
-              collapsed && "rotate-180",
-            )}
-          />
-        </button>
-      </div>
+        </div>
+      )}
     </aside>
   );
 }
-
-
 

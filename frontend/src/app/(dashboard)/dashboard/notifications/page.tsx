@@ -1,46 +1,203 @@
-"use client";
+﻿"use client";
 
 import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { STATUS_DOT_CLASS, STATUS_TONE_CLASS } from "@/lib/status-styles";
+import { cn } from "@/lib/utils";
 import {
   AppNotification,
+  NotificationType,
   formatRelativeTime,
   getNotificationTypeLabel,
   getUnreadNotificationCount,
   MOCK_NOTIFICATIONS,
 } from "@/lib/mock-notifications";
-import { BellRing, CheckCheck } from "lucide-react";
+import {
+  CheckCheck,
+  Cog,
+  Inbox,
+  Package,
+  Search,
+  ShoppingCart,
+  SlidersHorizontal,
+  TrendingUp,
+  type LucideIcon,
+} from "lucide-react";
 
-type NotificationFilter = "ALL" | "UNREAD";
+type NotificationScopeFilter = "ALL" | "UNREAD";
+type NotificationTypeFilter = "ALL" | NotificationType;
+
+interface GroupedNotifications {
+  label: string;
+  items: AppNotification[];
+}
+
+const TYPE_FILTERS: Array<{ value: NotificationTypeFilter; label: string }> = [
+  { value: "ALL", label: "Tất cả" },
+  { value: "ORDER", label: "Đơn hàng" },
+  { value: "INVENTORY", label: "Tồn kho" },
+  { value: "PRICE", label: "Giá vàng" },
+  { value: "SYSTEM", label: "Hệ thống" },
+];
+
+const TYPE_META: Record<NotificationType, { icon: LucideIcon; iconClass: string; badgeClass: string }> = {
+  ORDER: {
+    icon: ShoppingCart,
+    iconClass: "bg-sky-600/12 text-sky-700",
+    badgeClass: "border-sky-600/30 bg-sky-600/10 text-sky-700",
+  },
+  INVENTORY: {
+    icon: Package,
+    iconClass: "bg-amber-600/12 text-amber-700",
+    badgeClass: "border-amber-600/30 bg-amber-600/10 text-amber-700",
+  },
+  PRICE: {
+    icon: TrendingUp,
+    iconClass: "bg-emerald-600/12 text-emerald-700",
+    badgeClass: "border-emerald-600/30 bg-emerald-600/10 text-emerald-700",
+  },
+  SYSTEM: {
+    icon: Cog,
+    iconClass: "bg-violet-600/12 text-violet-700",
+    badgeClass: "border-violet-600/30 bg-violet-600/10 text-violet-700",
+  },
+};
+
+function isSameDay(a: Date, b: Date): boolean {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
+function getDateGroupLabel(isoDate: string): string {
+  const now = new Date();
+  const date = new Date(isoDate);
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+
+  if (isSameDay(date, now)) {
+    return "Hôm nay";
+  }
+
+  if (isSameDay(date, yesterday)) {
+    return "Hôm qua";
+  }
+
+  return new Intl.DateTimeFormat("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(date);
+}
 
 export default function NotificationsPage() {
-  const [filter, setFilter] = useState<NotificationFilter>("ALL");
-  const [notifications, setNotifications] =
-    useState<AppNotification[]>(MOCK_NOTIFICATIONS);
+  const [notifications, setNotifications] = useState<AppNotification[]>(MOCK_NOTIFICATIONS);
+  const [scopeFilter, setScopeFilter] = useState<NotificationScopeFilter>("ALL");
+  const [typeFilter, setTypeFilter] = useState<NotificationTypeFilter>("ALL");
+  const [keyword, setKeyword] = useState("");
+
+  const sortedNotifications = useMemo(() => {
+    return [...notifications].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
+  }, [notifications]);
 
   const unreadCount = useMemo(
     () => getUnreadNotificationCount(notifications),
     [notifications],
   );
 
-  const visibleNotifications = useMemo(() => {
-    if (filter === "UNREAD") {
-      return notifications.filter((notification) => notification.unread);
+  const totalCount = notifications.length;
+  const readCount = totalCount - unreadCount;
+
+  const typeCounts = useMemo(() => {
+    return notifications.reduce(
+      (acc, notification) => {
+        acc[notification.type] += 1;
+        return acc;
+      },
+      {
+        ORDER: 0,
+        INVENTORY: 0,
+        PRICE: 0,
+        SYSTEM: 0,
+      } as Record<NotificationType, number>,
+    );
+  }, [notifications]);
+
+  const filteredNotifications = useMemo(() => {
+    const normalizedKeyword = keyword.trim().toLowerCase();
+
+    return sortedNotifications.filter((notification) => {
+      if (scopeFilter === "UNREAD" && !notification.unread) {
+        return false;
+      }
+
+      if (typeFilter !== "ALL" && notification.type !== typeFilter) {
+        return false;
+      }
+
+      if (!normalizedKeyword) {
+        return true;
+      }
+
+      return (
+        notification.title.toLowerCase().includes(normalizedKeyword) ||
+        notification.message.toLowerCase().includes(normalizedKeyword)
+      );
+    });
+  }, [keyword, scopeFilter, sortedNotifications, typeFilter]);
+
+  const visibleUnreadCount = useMemo(
+    () => filteredNotifications.filter((notification) => notification.unread).length,
+    [filteredNotifications],
+  );
+
+  const groupedNotifications = useMemo(() => {
+    const map = new Map<string, AppNotification[]>();
+
+    for (const notification of filteredNotifications) {
+      const label = getDateGroupLabel(notification.createdAt);
+      if (!map.has(label)) {
+        map.set(label, []);
+      }
+      map.get(label)?.push(notification);
     }
-    return notifications;
-  }, [filter, notifications]);
+
+    return Array.from(map.entries()).map(
+      ([label, items]): GroupedNotifications => ({
+        label,
+        items,
+      }),
+    );
+  }, [filteredNotifications]);
 
   function handleMarkAllRead() {
     setNotifications((previous) =>
-      previous.map((notification) => ({ ...notification, unread: false })),
+      previous.map((notification) => ({
+        ...notification,
+        unread: false,
+      })),
+    );
+  }
+
+  function handleMarkVisibleRead() {
+    const visibleIds = new Set(filteredNotifications.map((notification) => notification.id));
+
+    setNotifications((previous) =>
+      previous.map((notification) =>
+        visibleIds.has(notification.id)
+          ? {
+              ...notification,
+              unread: false,
+            }
+          : notification,
+      ),
     );
   }
 
@@ -48,107 +205,215 @@ export default function NotificationsPage() {
     setNotifications((previous) =>
       previous.map((notification) =>
         notification.id === id
-          ? { ...notification, unread: !notification.unread }
+          ? {
+              ...notification,
+              unread: !notification.unread,
+            }
           : notification,
       ),
     );
   }
 
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Thong bao</h1>
-          <p className="mt-1 text-muted-foreground">
-            Theo doi cap nhat don hang, ton kho va he thong.
-          </p>
-        </div>
-        <Badge variant="outline" className="ml-auto">
-          {unreadCount} chua doc
-        </Badge>
-      </div>
+  function handleResetFilters() {
+    setScopeFilter("ALL");
+    setTypeFilter("ALL");
+    setKeyword("");
+  }
 
-      <Card>
-        <CardHeader className="border-b">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <BellRing className="h-5 w-5 text-gold" />
-                Trung tam thong bao
-              </CardTitle>
-              <CardDescription>
-                Du lieu mock cho frontend, co the thay bang API sau.
-              </CardDescription>
+  const hasActiveFilters = scopeFilter !== "ALL" || typeFilter !== "ALL" || keyword.trim().length > 0;
+
+  return (
+    <div className="space-y-3">
+      <Card className="overflow-hidden">
+        <CardHeader className="border-b bg-muted/25 px-3 py-3">
+          <div className="space-y-2.5">
+            <div className="flex flex-wrap items-center gap-2">
+              <CardTitle className="text-base">Thông báo</CardTitle>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <Badge variant="outline" className="h-5 border-border/80 bg-card px-2 text-[10px]">
+                  Tổng {totalCount}
+                </Badge>
+                <Badge variant="outline" className={cn("h-5 gap-1 px-2 text-[10px]", STATUS_TONE_CLASS.primary)}>
+                  <span className={cn("h-1.5 w-1.5 rounded-full", STATUS_DOT_CLASS.primary)} />
+                  Chưa đọc {unreadCount}
+                </Badge>
+                <Badge variant="outline" className="h-5 border-border/80 bg-card px-2 text-[10px] text-muted-foreground">
+                  Đã đọc {readCount}
+                </Badge>
+              </div>
+              <div className="ml-auto flex flex-wrap items-center gap-1.5">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleMarkVisibleRead}
+                  disabled={visibleUnreadCount === 0}
+                  className="h-7 cursor-pointer"
+                >
+                  <CheckCheck className="mr-1.5 h-3.5 w-3.5" />
+                  Đã đọc lọc
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleMarkAllRead}
+                  disabled={unreadCount === 0}
+                  className="h-7 cursor-pointer"
+                >
+                  <CheckCheck className="mr-1.5 h-3.5 w-3.5" />
+                  Đọc tất cả
+                </Button>
+              </div>
             </div>
-            <div className="flex gap-2">
-              <Button
-                variant={filter === "ALL" ? "default" : "outline"}
-                onClick={() => setFilter("ALL")}
-                className="cursor-pointer"
-              >
-                Tat ca
-              </Button>
-              <Button
-                variant={filter === "UNREAD" ? "default" : "outline"}
-                onClick={() => setFilter("UNREAD")}
-                className="cursor-pointer"
-              >
-                Chua doc
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handleMarkAllRead}
-                className="cursor-pointer"
-                disabled={unreadCount === 0}
-              >
-                <CheckCheck className="mr-2 h-4 w-4" />
-                Danh dau da doc
-              </Button>
+
+            <div className="grid gap-2 xl:grid-cols-[minmax(260px,1fr)_auto] xl:items-center">
+              <div className="relative">
+                <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={keyword}
+                  onChange={(event) => setKeyword(event.target.value)}
+                  placeholder="Tìm theo tiêu đề hoặc nội dung thông báo"
+                  className="pl-9"
+                />
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  variant={scopeFilter === "ALL" ? "default" : "outline"}
+                  size="sm"
+                  className="h-7 cursor-pointer"
+                  onClick={() => setScopeFilter("ALL")}
+                >
+                  Tất cả
+                  <span className="ml-1.5 rounded border border-current/25 px-1.5 text-[10px] leading-4">
+                    {totalCount}
+                  </span>
+                </Button>
+                <Button
+                  variant={scopeFilter === "UNREAD" ? "default" : "outline"}
+                  size="sm"
+                  className="h-7 cursor-pointer"
+                  onClick={() => setScopeFilter("UNREAD")}
+                >
+                  Chưa đọc
+                  <span className="ml-1.5 rounded border border-current/25 px-1.5 text-[10px] leading-4">
+                    {unreadCount}
+                  </span>
+                </Button>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground">
+                <SlidersHorizontal className="h-3.5 w-3.5" />
+                Loại:
+              </span>
+              {TYPE_FILTERS.map((typeOption) => (
+                <Button
+                  key={typeOption.value}
+                  variant={typeFilter === typeOption.value ? "default" : "outline"}
+                  size="sm"
+                  className="h-7 cursor-pointer"
+                  onClick={() => setTypeFilter(typeOption.value)}
+                >
+                  {typeOption.label}
+                  <span className="ml-1.5 rounded border border-current/25 px-1.5 text-[10px] leading-4">
+                    {typeOption.value === "ALL" ? totalCount : typeCounts[typeOption.value]}
+                  </span>
+                </Button>
+              ))}
             </div>
           </div>
         </CardHeader>
+
         <CardContent className="p-0">
-          {visibleNotifications.length === 0 ? (
-            <div className="px-6 py-12 text-center text-sm text-muted-foreground">
-              Khong co thong bao nao phu hop voi bo loc.
+          <div className="flex items-center justify-between border-b border-border/60 px-3 py-1.5 text-xs text-muted-foreground">
+            <span>
+              {filteredNotifications.length} thông báo phù hợp
+              {visibleUnreadCount > 0 ? `, ${visibleUnreadCount} chưa đọc` : ""}
+            </span>
+            {hasActiveFilters && (
+              <Button variant="ghost" size="sm" className="h-7 cursor-pointer" onClick={handleResetFilters}>
+                Xóa bộ lọc
+              </Button>
+            )}
+          </div>
+
+          {groupedNotifications.length === 0 ? (
+            <div className="px-6 py-14 text-center">
+              <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full border border-border/70 bg-muted/45">
+                <Inbox className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <p className="text-sm font-medium">Không tìm thấy thông báo phù hợp</p>
+              <p className="mt-1 text-sm text-muted-foreground">Thử đổi bộ lọc hoặc từ khóa tìm kiếm.</p>
             </div>
           ) : (
-            <ul className="divide-y">
-              {visibleNotifications.map((notification) => (
-                <li
-                  key={notification.id}
-                  className="flex items-start gap-3 px-6 py-4 transition-colors hover:bg-muted/20"
-                >
-                  <span
-                    className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${
-                      notification.unread ? "bg-gold" : "bg-muted-foreground/30"
-                    }`}
-                  />
-                  <div className="min-w-0 flex-1 space-y-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="font-medium">{notification.title}</p>
-                      <Badge variant="outline" className="text-[10px]">
-                        {getNotificationTypeLabel(notification.type)}
-                      </Badge>
-                      <span className="text-xs text-muted-foreground">
-                        {formatRelativeTime(notification.createdAt)}
-                      </span>
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      {notification.message}
-                    </p>
+            <div>
+              {groupedNotifications.map((group) => (
+                <section key={group.label} className="border-b border-border/60 last:border-b-0">
+                  <div className="bg-muted/35 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    {group.label}
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleToggleRead(notification.id)}
-                    className="cursor-pointer whitespace-nowrap"
-                  >
-                    {notification.unread ? "Danh dau da doc" : "Danh dau chua doc"}
-                  </Button>
-                </li>
+
+                  <ul>
+                    {group.items.map((notification) => {
+                      const typeMeta = TYPE_META[notification.type];
+                      const TypeIcon = typeMeta.icon;
+
+                      return (
+                        <li
+                          key={notification.id}
+                          className={cn(
+                            "grid gap-2 px-3 py-2.5 md:grid-cols-[auto_1fr_auto] md:items-start",
+                            notification.unread ? "bg-primary/5" : "bg-card",
+                          )}
+                        >
+                          <div
+                            className={cn(
+                              "mt-0.5 flex h-7 w-7 items-center justify-center rounded-md",
+                              typeMeta.iconClass,
+                            )}
+                          >
+                            <TypeIcon className="h-4 w-4" />
+                          </div>
+
+                          <div className="min-w-0 space-y-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="font-medium text-foreground">{notification.title}</p>
+                              {notification.unread && (
+                                <Badge
+                                  variant="outline"
+                                  className={cn("h-5 gap-1 px-2 text-[10px]", STATUS_TONE_CLASS.primary)}
+                                >
+                                  <span className={cn("h-1.5 w-1.5 rounded-full", STATUS_DOT_CLASS.primary)} />
+                                  Mới
+                                </Badge>
+                              )}
+                              <Badge variant="outline" className={cn("text-[10px]", typeMeta.badgeClass)}>
+                                {getNotificationTypeLabel(notification.type)}
+                              </Badge>
+                              <span className="text-xs text-muted-foreground">
+                                {formatRelativeTime(notification.createdAt)}
+                              </span>
+                            </div>
+                            <p className="text-sm text-muted-foreground">{notification.message}</p>
+                          </div>
+
+                          <div className="flex justify-end md:pt-0.5">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleToggleRead(notification.id)}
+                              className="h-7 cursor-pointer whitespace-nowrap"
+                            >
+                              {notification.unread ? "Đánh dấu đã đọc" : "Đánh dấu chưa đọc"}
+                            </Button>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </section>
               ))}
-            </ul>
+            </div>
           )}
         </CardContent>
       </Card>

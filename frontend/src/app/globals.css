@@ -4,23 +4,13 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/*
- * ═══════════════════════════════════════════════════════════
- *  Gold Store — Luxury Jewelry Dashboard Theme
- *  Design System: Premium black + gold accent
- *  Typography mood: luxury, elegant, refined
- *  Generated via UI/UX Pro Max Skill v2.5
- * ═══════════════════════════════════════════════════════════
- */
-
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-sans: "Segoe UI", "Noto Sans", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "Cascadia Code", "Consolas", "SFMono-Regular", monospace;
+  --font-heading: "Segoe UI", "Noto Sans", "Helvetica Neue", Arial, sans-serif;
 
-  /* Sidebar tokens */
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -30,14 +20,12 @@
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar: var(--sidebar);
 
-  /* Charts */
   --color-chart-5: var(--chart-5);
   --color-chart-4: var(--chart-4);
   --color-chart-3: var(--chart-3);
   --color-chart-2: var(--chart-2);
   --color-chart-1: var(--chart-1);
 
-  /* Core */
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
@@ -55,163 +43,181 @@
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
 
-  /* Gold accent – the brand color */
   --color-gold: var(--gold);
   --color-gold-foreground: var(--gold-foreground);
 
-  /* Radius */
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
+  --radius-sm: calc(var(--radius) * 0.65);
+  --radius-md: calc(var(--radius) * 0.85);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  --radius-xl: calc(var(--radius) * 1.25);
+  --radius-2xl: calc(var(--radius) * 1.55);
 }
 
-/* ─── Light Mode (default) ────────────────────────────────── */
 :root {
-  --background: oklch(0.985 0.002 75);     /* warm off-white #FAFAF9 */
-  --foreground: oklch(0.145 0.015 60);     /* deep charcoal #1C1917 */
+  --background: oklch(0.972 0.004 255);
+  --foreground: oklch(0.27 0.03 258);
 
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0.015 60);
+  --card-foreground: oklch(0.27 0.03 258);
 
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0.015 60);
+  --popover-foreground: oklch(0.27 0.03 258);
 
-  --primary: oklch(0.145 0.015 60);        /* deep charcoal */
-  --primary-foreground: oklch(0.985 0.002 75);
+  --primary: oklch(0.56 0.18 261);
+  --primary-foreground: oklch(0.99 0.002 250);
 
-  --secondary: oklch(0.96 0.005 75);       /* warm light gray */
-  --secondary-foreground: oklch(0.25 0.015 60);
+  --secondary: oklch(0.935 0.013 255);
+  --secondary-foreground: oklch(0.33 0.03 258);
 
-  --muted: oklch(0.955 0.005 75);
-  --muted-foreground: oklch(0.48 0.01 60);
+  --muted: oklch(0.952 0.01 255);
+  --muted-foreground: oklch(0.5 0.02 258);
 
-  --accent: oklch(0.955 0.005 75);
-  --accent-foreground: oklch(0.25 0.015 60);
+  --accent: oklch(0.924 0.022 255);
+  --accent-foreground: oklch(0.3 0.03 258);
 
-  --destructive: oklch(0.55 0.22 25);      /* #DC2626 */
+  --destructive: oklch(0.59 0.22 28);
 
-  --border: oklch(0.9 0.005 75);
-  --input: oklch(0.9 0.005 75);
-  --ring: oklch(0.65 0.11 75);             /* gold ring */
+  --border: oklch(0.89 0.01 255);
+  --input: oklch(0.89 0.01 255);
+  --ring: oklch(0.58 0.17 261);
 
-  /* Gold brand accent */
-  --gold: oklch(0.65 0.12 75);             /* rich gold #A16207 */
-  --gold-foreground: oklch(1 0 0);
+  --gold: oklch(0.71 0.12 74);
+  --gold-foreground: oklch(0.2 0.02 75);
 
-  /* Charts */
-  --chart-1: oklch(0.65 0.12 75);  /* gold */
-  --chart-2: oklch(0.55 0.05 60);
-  --chart-3: oklch(0.72 0.15 85);
-  --chart-4: oklch(0.45 0.03 60);
-  --chart-5: oklch(0.35 0.02 60);
+  --chart-1: oklch(0.56 0.18 261);
+  --chart-2: oklch(0.66 0.11 207);
+  --chart-3: oklch(0.69 0.13 74);
+  --chart-4: oklch(0.6 0.16 149);
+  --chart-5: oklch(0.55 0.2 25);
 
-  --radius: 0.625rem;
+  --radius: 0.75rem;
 
-  /* Sidebar (dark always) */
-  --sidebar: oklch(0.14 0.01 60);
-  --sidebar-foreground: oklch(0.88 0.02 75);
-  --sidebar-primary: oklch(0.65 0.12 75);  /* gold */
-  --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.22 0.015 60);
-  --sidebar-accent-foreground: oklch(0.92 0.02 75);
-  --sidebar-border: oklch(0.25 0.015 60);
-  --sidebar-ring: oklch(0.65 0.12 75);
+  --sidebar: oklch(0.215 0.03 258);
+  --sidebar-foreground: oklch(0.91 0.01 255);
+  --sidebar-primary: oklch(0.67 0.15 255);
+  --sidebar-primary-foreground: oklch(0.99 0.002 250);
+  --sidebar-accent: oklch(0.3 0.03 258);
+  --sidebar-accent-foreground: oklch(0.97 0.005 250);
+  --sidebar-border: oklch(0.35 0.028 258);
+  --sidebar-ring: oklch(0.67 0.15 255);
 }
 
-/* ─── Dark Mode ───────────────────────────────────────────── */
 .dark {
-  --background: oklch(0.12 0.01 60);
-  --foreground: oklch(0.96 0.005 75);
+  --background: oklch(0.18 0.02 258);
+  --foreground: oklch(0.95 0.005 250);
 
-  --card: oklch(0.17 0.01 60);
-  --card-foreground: oklch(0.96 0.005 75);
+  --card: oklch(0.22 0.02 258);
+  --card-foreground: oklch(0.95 0.005 250);
 
-  --popover: oklch(0.17 0.01 60);
-  --popover-foreground: oklch(0.96 0.005 75);
+  --popover: oklch(0.22 0.02 258);
+  --popover-foreground: oklch(0.95 0.005 250);
 
-  --primary: oklch(0.92 0.005 75);
-  --primary-foreground: oklch(0.17 0.01 60);
+  --primary: oklch(0.69 0.14 255);
+  --primary-foreground: oklch(0.2 0.02 258);
 
-  --secondary: oklch(0.22 0.015 60);
-  --secondary-foreground: oklch(0.96 0.005 75);
+  --secondary: oklch(0.28 0.02 258);
+  --secondary-foreground: oklch(0.92 0.01 250);
 
-  --muted: oklch(0.22 0.015 60);
-  --muted-foreground: oklch(0.65 0.01 60);
+  --muted: oklch(0.28 0.02 258);
+  --muted-foreground: oklch(0.72 0.02 255);
 
-  --accent: oklch(0.22 0.015 60);
-  --accent-foreground: oklch(0.96 0.005 75);
+  --accent: oklch(0.32 0.03 258);
+  --accent-foreground: oklch(0.95 0.005 250);
 
-  --destructive: oklch(0.65 0.2 22);
+  --destructive: oklch(0.68 0.19 27);
 
-  --border: oklch(1 0 0 / 10%);
+  --border: oklch(1 0 0 / 11%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.65 0.12 75);
+  --ring: oklch(0.69 0.14 255);
 
-  --gold: oklch(0.72 0.14 80);
-  --gold-foreground: oklch(0.12 0.01 60);
+  --gold: oklch(0.74 0.13 76);
+  --gold-foreground: oklch(0.2 0.02 75);
 
-  --chart-1: oklch(0.72 0.14 80);
-  --chart-2: oklch(0.55 0.05 60);
-  --chart-3: oklch(0.62 0.1 85);
-  --chart-4: oklch(0.45 0.03 60);
-  --chart-5: oklch(0.35 0.02 60);
+  --chart-1: oklch(0.69 0.14 255);
+  --chart-2: oklch(0.72 0.1 207);
+  --chart-3: oklch(0.74 0.13 76);
+  --chart-4: oklch(0.66 0.13 149);
+  --chart-5: oklch(0.67 0.17 27);
 
-  --sidebar: oklch(0.10 0.01 60);
-  --sidebar-foreground: oklch(0.88 0.02 75);
-  --sidebar-primary: oklch(0.72 0.14 80);
-  --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.18 0.015 60);
-  --sidebar-accent-foreground: oklch(0.92 0.02 75);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.72 0.14 80);
+  --sidebar: oklch(0.15 0.02 258);
+  --sidebar-foreground: oklch(0.9 0.01 255);
+  --sidebar-primary: oklch(0.69 0.14 255);
+  --sidebar-primary-foreground: oklch(0.2 0.02 258);
+  --sidebar-accent: oklch(0.24 0.025 258);
+  --sidebar-accent-foreground: oklch(0.95 0.005 250);
+  --sidebar-border: oklch(1 0 0 / 12%);
+  --sidebar-ring: oklch(0.69 0.14 255);
 }
 
-/* ─── Base layer ──────────────────────────────────────────── */
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+
+  html,
   body {
-    @apply bg-background text-foreground;
+    @apply h-full font-sans;
   }
-  html {
-    @apply font-sans;
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    background-image: none;
   }
+
+  ::selection {
+    background: oklch(0.67 0.13 255 / 30%);
+    color: oklch(0.23 0.03 258);
+  }
+
 }
 
-/* ─── Custom utilities ────────────────────────────────────── */
 @layer utilities {
-  /* Gold gradient text */
+  .surface-panel {
+    @apply rounded-xl border border-border/70 bg-card shadow-[0_1px_2px_rgb(16_24_40/0.06),0_12px_24px_rgb(16_24_40/0.04)];
+  }
+
+  .surface-muted {
+    @apply rounded-lg border border-border/60 bg-muted/45;
+  }
+
   .text-gold-gradient {
-    background: linear-gradient(135deg, oklch(0.72 0.14 80), oklch(0.58 0.12 70));
+    background: linear-gradient(140deg, oklch(0.74 0.13 76), oklch(0.62 0.14 58));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
 
-  /* Subtle gold shimmer on hover */
-  .shimmer-gold {
-    position: relative;
-    overflow: hidden;
+  .data-grid {
+    @apply rounded-lg border border-border/70 bg-card;
   }
-  .shimmer-gold::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(
-      120deg,
-      transparent 30%,
-      oklch(0.72 0.14 80 / 0.08) 50%,
-      transparent 70%
-    );
-    transform: translateX(-100%);
-    transition: transform 600ms ease;
+
+  .app-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: oklch(0.56 0.03 258 / 70%) transparent;
   }
-  .shimmer-gold:hover::after {
-    transform: translateX(100%);
+
+  .app-scrollbar::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .app-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .app-scrollbar::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: oklch(0.56 0.03 258 / 60%);
+  }
+
+  .app-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: oklch(0.62 0.05 258 / 75%);
+  }
+
+  .desktop-static *,
+  .desktop-static *::before,
+  .desktop-static *::after {
+    animation: none !important;
+    transition: none !important;
   }
 }

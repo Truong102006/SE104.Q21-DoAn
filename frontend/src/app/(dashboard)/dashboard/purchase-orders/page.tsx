@@ -1,12 +1,20 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader, StatusBadge } from "@/components/dashboard/management";
+import { DatePickerInput } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { MoneyInput, parseMoneyInput } from "@/components/ui/money-input";
+import { QuantityStepper } from "@/components/ui/quantity-stepper";
+import { Select } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { SYSTEM_CODE_INPUT_CLASS, SYSTEM_CODE_NOTE_CLASS } from "@/lib/form-styles";
 import { formatVND } from "@/lib/mock-data";
+import { useUnitStore } from "@/stores/unit-store";
 import { Plus, Save, Trash2 } from "lucide-react";
 
 interface SupplierOption {
@@ -28,50 +36,51 @@ interface PurchaseLine {
   id: number;
   productId: number;
   quantity: string;
+  unit: string;
   unitPrice: string;
 }
 
 const SUPPLIERS: SupplierOption[] = [
   {
     id: 1,
-    name: "Cong ty Vang Bac A",
+    name: "Công ty Vàng Bạc A",
     phone: "0909000111",
     address: "Q1, TP.HCM",
   },
   {
     id: 2,
-    name: "Nha phan phoi Kim Hoan B",
+    name: "Nhà phân phối Kim Hoàn B",
     phone: "0909000222",
-    address: "Ha Noi",
+    address: "Hà Nội",
   },
   {
     id: 3,
-    name: "Doi tac nguyen lieu C",
+    name: "Đối tác nguyên liệu C",
     phone: "0909000333",
-    address: "Da Nang",
+    address: "Đà Nẵng",
   },
 ];
 
 const PRODUCTS: ProductOption[] = [
   {
     id: 1,
-    name: "Vang 24K nguyen lieu",
-    type: "Vang",
-    unit: "Luong",
+    name: "Vàng 24K nguyên liệu",
+    type: "Vàng",
+    unit: "Lượng",
     defaultPrice: 92_500_000,
   },
   {
     id: 2,
-    name: "Bac 925 nguyen lieu",
-    type: "Bac",
+    name: "Bạc 925 nguyên liệu",
+    type: "Bạc",
     unit: "Kg",
     defaultPrice: 22_000_000,
   },
   {
     id: 3,
-    name: "Da CZ trang suc",
-    type: "Da quy",
-    unit: "Vien",
+    name: "Đá CZ trang sức",
+    type: "Đá quý",
+    unit: "Viên",
     defaultPrice: 120_000,
   },
 ];
@@ -102,16 +111,29 @@ function buildDefaultLine(id: number): PurchaseLine {
     id,
     productId: PRODUCTS[0].id,
     quantity: "1",
+    unit: PRODUCTS[0].unit,
     unitPrice: PRODUCTS[0].defaultPrice.toString(),
   };
 }
 
 export default function PurchaseOrdersPage() {
+  const { units, hydrate, isHydrated } = useUnitStore();
   const [voucherCode] = useState(getVoucherCode());
   const [createdDate, setCreatedDate] = useState(getTodayValue());
   const [supplierId, setSupplierId] = useState<number>(SUPPLIERS[0].id);
   const [lines, setLines] = useState<PurchaseLine[]>([buildDefaultLine(1)]);
   const [message, setMessage] = useState<string>("");
+
+  useEffect(() => {
+    if (!isHydrated) {
+      hydrate();
+    }
+  }, [hydrate, isHydrated]);
+
+  const unitOptions = useMemo(
+    () => units.map((unit) => ({ value: unit.name, label: unit.name })),
+    [units],
+  );
 
   const selectedSupplier = useMemo(
     () => SUPPLIERS.find((supplier) => supplier.id === supplierId) ?? SUPPLIERS[0],
@@ -122,7 +144,7 @@ export default function PurchaseOrdersPage() {
     return lines.map((line) => {
       const product = PRODUCTS.find((item) => item.id === line.productId) ?? PRODUCTS[0];
       const quantity = parsePositiveNumber(line.quantity);
-      const unitPrice = parsePositiveNumber(line.unitPrice);
+      const unitPrice = parseMoneyInput(line.unitPrice);
       return {
         ...line,
         product,
@@ -137,6 +159,19 @@ export default function PurchaseOrdersPage() {
     () => lineWithMeta.reduce((sum, line) => sum + line.amount, 0),
     [lineWithMeta],
   );
+  const invalidLineIndexes = useMemo(
+    () =>
+      lineWithMeta
+        .map((line, index) => (line.quantity <= 0 || line.unitPrice <= 0 ? index + 1 : null))
+        .filter((value): value is number => value !== null),
+    [lineWithMeta],
+  );
+  const hasDateError = !createdDate;
+  const hasSupplierError = !supplierId;
+  const hasLineError = invalidLineIndexes.length > 0;
+  const hasTotalError = totalAmount <= 0;
+  const canSaveOrder = !hasDateError && !hasSupplierError && !hasLineError && !hasTotalError;
+  const voucherStatus = canSaveOrder ? "Sẵn sàng nhập kho" : "Cần bổ sung";
 
   function handleAddLine() {
     setLines((previous) => {
@@ -157,7 +192,7 @@ export default function PurchaseOrdersPage() {
 
   function handleUpdateLine(
     id: number,
-    field: "productId" | "quantity" | "unitPrice",
+    field: "productId" | "quantity" | "unit" | "unitPrice",
     value: string,
   ) {
     setLines((previous) =>
@@ -172,6 +207,7 @@ export default function PurchaseOrdersPage() {
           return {
             ...line,
             productId: product.id,
+            unit: product.unit,
             unitPrice: product.defaultPrice.toString(),
           };
         }
@@ -188,111 +224,121 @@ export default function PurchaseOrdersPage() {
     setCreatedDate(getTodayValue());
     setSupplierId(SUPPLIERS[0].id);
     setLines([buildDefaultLine(1)]);
-    setMessage("Da reset phieu mua hang.");
+    setMessage("Đã reset phiếu mua hàng.");
   }
 
   function handleSaveOrder() {
-    const hasInvalidLine = lineWithMeta.some(
-      (line) => line.quantity <= 0 || line.unitPrice <= 0,
-    );
-
-    if (hasInvalidLine) {
-      setMessage("Vui long nhap so luong va don gia hop le cho tat ca dong.");
+    if (hasLineError) {
+      setMessage("Vui lòng nhập số lượng và đơn giá hợp lệ cho tất cả dòng.");
       return;
     }
 
-    if (totalAmount <= 0) {
-      setMessage("Tong tien phai lon hon 0.");
+    if (hasTotalError) {
+      setMessage("Tổng tiền phải lớn hơn 0.");
       return;
     }
 
-    setMessage("Da luu phieu mua hang thanh cong (du lieu demo frontend).");
+    setMessage("Đã lưu phiếu mua hàng thành công (dữ liệu demo frontend).");
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Nhap hang</h1>
-        <p className="mt-1 text-muted-foreground">
-          Tao phieu mua hang voi giao dien gon gang, de nhap lieu va kiem tra.
-        </p>
-      </div>
+    <div className="space-y-3">
+      <PageHeader
+        eyebrow="Nghiệp vụ nhập kho"
+        title="Phiếu mua hàng"
+        description="Tạo phiếu nhập, gắn nhà cung cấp và kiểm soát tổng tiền trước khi cộng tồn kho."
+        badges={
+          <>
+            <Badge variant="outline" className="border-border/70 bg-background/70">BM5</Badge>
+            <StatusBadge tone={canSaveOrder ? "success" : "warning"}>{voucherStatus}</StatusBadge>
+          </>
+        }
+      />
 
       <Card className="overflow-hidden border-border/70 shadow-sm">
-        <CardHeader className="border-b bg-gradient-to-r from-slate-50 to-amber-50/70">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+        <CardHeader className="border-b bg-muted/25 px-3 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <CardTitle className="text-xl tracking-tight">Phieu mua hang</CardTitle>
-              <CardDescription>
-                Quan ly thong tin nha cung cap va danh sach san pham nhap.
-              </CardDescription>
+              <CardTitle className="text-base tracking-tight">Phiếu mua hàng</CardTitle>
+              <CardDescription className="text-xs">BM5 - Quản lý nhà cung cấp và sản phẩm nhập.</CardDescription>
             </div>
-            <span className="rounded-full border border-gold/40 bg-gold/10 px-3 py-1 text-xs font-semibold text-gold">
-              Nhap kho
+            <span className="rounded border border-gold/40 bg-gold/10 px-2 py-0.5 text-[10px] font-semibold text-gold">
+              Nhập kho
             </span>
           </div>
         </CardHeader>
 
-        <CardContent className="space-y-6 pt-6">
-          <div className="grid gap-4 md:grid-cols-2">
+        <CardContent className="space-y-3 p-3">
+          <div className="grid gap-3 md:grid-cols-4">
             <div className="space-y-2">
-              <Label htmlFor="voucher-code">So phieu</Label>
-              <Input id="voucher-code" value={voucherCode} readOnly />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="created-date">Ngay lap</Label>
+              <Label htmlFor="voucher-code">Số phiếu</Label>
               <Input
-                id="created-date"
-                type="date"
-                value={createdDate}
-                onChange={(event) => setCreatedDate(event.target.value)}
+                id="voucher-code"
+                value={voucherCode}
+                readOnly
+                className={SYSTEM_CODE_INPUT_CLASS}
+                aria-describedby="voucher-code-note"
               />
+              <p id="voucher-code-note" className={SYSTEM_CODE_NOTE_CLASS}>
+                Số phiếu tự phát sinh.
+              </p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="supplier">Nha cung cap</Label>
-              <select
+              <Label htmlFor="created-date">Ngày lập</Label>
+              <DatePickerInput
+                id="created-date"
+                value={createdDate}
+                onValueChange={setCreatedDate}
+              />
+              {hasDateError && (
+                <p className="text-xs text-destructive">Vui lòng chọn ngày lập.</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="supplier">Nhà cung cấp</Label>
+              <Select
                 id="supplier"
                 value={supplierId}
-                onChange={(event) => setSupplierId(Number.parseInt(event.target.value, 10))}
-                className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-              >
-                {SUPPLIERS.map((supplier) => (
-                  <option key={supplier.id} value={supplier.id}>
-                    {supplier.name}
-                  </option>
-                ))}
-              </select>
+                onValueChange={(value) => setSupplierId(Number.parseInt(value, 10))}
+                options={SUPPLIERS.map((supplier) => ({
+                  value: supplier.id,
+                  label: supplier.name,
+                }))}
+              />
+              {hasSupplierError && (
+                <p className="text-xs text-destructive">Vui lòng chọn nhà cung cấp.</p>
+              )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="supplier-phone">So dien thoai</Label>
+              <Label htmlFor="supplier-phone">Số điện thoại</Label>
               <Input id="supplier-phone" value={selectedSupplier.phone} readOnly />
             </div>
             <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="supplier-address">Dia chi</Label>
+              <Label htmlFor="supplier-address">Địa chỉ</Label>
               <Input id="supplier-address" value={selectedSupplier.address} readOnly />
             </div>
           </div>
 
-          <div className="space-y-3 rounded-xl border bg-background p-4">
+          <div className="space-y-2 rounded-lg border bg-background p-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-base font-semibold">Chi tiet san pham nhap</h2>
-              <Button onClick={handleAddLine} variant="outline" className="cursor-pointer">
-                <Plus className="mr-2 h-4 w-4" />
-                Them dong
+              <h2 className="text-sm font-semibold">Chi tiết sản phẩm nhập</h2>
+              <Button onClick={handleAddLine} variant="outline" size="sm" className="h-7 cursor-pointer">
+                <Plus className="mr-1.5 h-3.5 w-3.5" />
+                Thêm dòng
               </Button>
             </div>
 
             <div className="rounded-lg border">
-              <Table>
+              <Table className="table-fixed [&_th]:whitespace-normal [&_th]:leading-4 [&_td]:align-middle">
                 <TableHeader>
                   <TableRow className="bg-muted/40 hover:bg-muted/40">
                     <TableHead className="w-14 text-center">STT</TableHead>
-                    <TableHead className="min-w-[220px]">San pham</TableHead>
-                    <TableHead className="min-w-[140px]">Loai san pham</TableHead>
-                    <TableHead className="min-w-[120px]">So luong</TableHead>
-                    <TableHead className="min-w-[120px]">Don vi tinh</TableHead>
-                    <TableHead className="min-w-[150px]">Don gia</TableHead>
-                    <TableHead className="min-w-[160px]">Thanh tien</TableHead>
+                    <TableHead className="w-[27%]">Sản phẩm</TableHead>
+                    <TableHead className="w-[14%]">Loại sản phẩm</TableHead>
+                    <TableHead className="w-[11%]">Số lượng</TableHead>
+                    <TableHead className="w-[11%]">Đơn vị tính</TableHead>
+                    <TableHead className="w-[15%]">Đơn giá</TableHead>
+                    <TableHead className="w-[16%]">Thành tiền</TableHead>
                     <TableHead className="w-12"></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -301,41 +347,42 @@ export default function PurchaseOrdersPage() {
                     <TableRow key={line.id}>
                       <TableCell className="text-center font-medium">{index + 1}</TableCell>
                       <TableCell>
-                        <select
+                        <Select
                           value={line.productId}
-                          onChange={(event) =>
-                            handleUpdateLine(line.id, "productId", event.target.value)
+                          onValueChange={(value) =>
+                            handleUpdateLine(line.id, "productId", value)
                           }
-                          className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-                        >
-                          {PRODUCTS.map((product) => (
-                            <option key={product.id} value={product.id}>
-                              {product.name}
-                            </option>
-                          ))}
-                        </select>
+                          options={PRODUCTS.map((product) => ({
+                            value: product.id,
+                            label: product.name,
+                          }))}
+                        />
                       </TableCell>
-                      <TableCell>{line.product.type}</TableCell>
+                      <TableCell className="truncate text-sm">{line.product.type}</TableCell>
                       <TableCell>
-                        <Input
-                          value={line.quantity}
-                          onChange={(event) =>
-                            handleUpdateLine(line.id, "quantity", event.target.value)
-                          }
+                        <QuantityStepper
+                          value={String(line.quantity)}
+                          onValueChange={(value) => handleUpdateLine(line.id, "quantity", value)}
+                          min={1}
+                          step={1}
                           inputMode="decimal"
                         />
                       </TableCell>
-                      <TableCell>{line.product.unit}</TableCell>
                       <TableCell>
-                        <Input
-                          value={line.unitPrice}
-                          onChange={(event) =>
-                            handleUpdateLine(line.id, "unitPrice", event.target.value)
-                          }
-                          inputMode="numeric"
+                        <Select
+                          value={line.unit}
+                          onValueChange={(value) => handleUpdateLine(line.id, "unit", value)}
+                          options={unitOptions}
                         />
                       </TableCell>
-                      <TableCell className="font-semibold">
+                      <TableCell>
+                        <MoneyInput
+                          value={String(line.unitPrice)}
+                          onValueChange={(value) => handleUpdateLine(line.id, "unitPrice", value)}
+                          inputClassName="h-8 text-[13px]"
+                        />
+                      </TableCell>
+                      <TableCell className="truncate text-sm font-semibold">
                         {formatVND(line.amount)}
                       </TableCell>
                       <TableCell className="text-right">
@@ -344,7 +391,7 @@ export default function PurchaseOrdersPage() {
                           variant="destructive"
                           onClick={() => handleRemoveLine(line.id)}
                           className="cursor-pointer"
-                          aria-label="Xoa dong"
+                          aria-label="Xóa dòng"
                           disabled={lineWithMeta.length === 1}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -357,10 +404,16 @@ export default function PurchaseOrdersPage() {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-slate-50 px-4 py-3">
-            <span className="text-base font-semibold">Tong tien:</span>
-            <span className="text-xl font-bold text-gold">{formatVND(totalAmount)}</span>
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-muted/25 px-3 py-2">
+            <span className="text-sm font-semibold">Tổng tiền</span>
+            <span className="text-lg font-bold text-gold">{formatVND(totalAmount)}</span>
           </div>
+
+          {hasLineError && (
+            <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+              Dòng không hợp lệ: {invalidLineIndexes.join(", ")}. Số lượng và đơn giá phải lớn hơn 0.
+            </p>
+          )}
 
           {message && (
             <p className="rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm">
@@ -374,11 +427,11 @@ export default function PurchaseOrdersPage() {
               onClick={handleResetForm}
               className="cursor-pointer"
             >
-              Lam moi
+              Làm mới
             </Button>
-            <Button onClick={handleSaveOrder} className="cursor-pointer">
+            <Button onClick={handleSaveOrder} className="cursor-pointer" disabled={!canSaveOrder}>
               <Save className="mr-2 h-4 w-4" />
-              Luu phieu mua hang
+              Lưu phiếu mua hàng
             </Button>
           </div>
         </CardContent>

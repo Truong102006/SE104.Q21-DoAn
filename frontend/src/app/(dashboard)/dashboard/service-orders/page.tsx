@@ -1,12 +1,21 @@
-"use client";
+﻿"use client";
 
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader, StatusBadge } from "@/components/dashboard/management";
+import { DatePickerInput } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { MoneyInput, parseMoneyInput } from "@/components/ui/money-input";
+import { QuantityStepper } from "@/components/ui/quantity-stepper";
+import { Select } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { SYSTEM_CODE_INPUT_CLASS, SYSTEM_CODE_NOTE_CLASS } from "@/lib/form-styles";
 import { formatVND } from "@/lib/mock-data";
+import { STATUS_DOT_CLASS, STATUS_TONE_CLASS, type StatusTone } from "@/lib/status-styles";
+import { cn } from "@/lib/utils";
 import { Plus, Save, Trash2 } from "lucide-react";
 
 interface CustomerOption {
@@ -26,41 +35,51 @@ type ServiceStatus = "PENDING" | "IN_PROGRESS" | "DONE";
 interface ServiceLine {
   id: number;
   serviceTypeId: number;
-  chargedPrice: string;
   quantity: string;
-  prepaid: string;
   deliveryDate: string;
   status: ServiceStatus;
 }
 
 const CUSTOMERS: CustomerOption[] = [
-  { id: 1, name: "Nguyen Van Minh", phone: "0908000111" },
-  { id: 2, name: "Tran Thi Lan", phone: "0908000222" },
-  { id: 3, name: "Le Quang Huy", phone: "0908000333" },
+  { id: 1, name: "Nguyễn Văn Minh", phone: "0908000111" },
+  { id: 2, name: "Trần Thị Lan", phone: "0908000222" },
+  { id: 3, name: "Lê Quang Huy", phone: "0908000333" },
 ];
 
 const SERVICE_TYPES: ServiceTypeOption[] = [
-  { id: 1, name: "Danh bong trang suc", servicePrice: 120_000 },
-  { id: 2, name: "Khac ten tren nhan", servicePrice: 150_000 },
-  { id: 3, name: "Thu mua vang cu", servicePrice: 80_000 },
+  { id: 1, name: "Đánh bóng trang sức", servicePrice: 120_000 },
+  { id: 2, name: "Khắc tên trên nhẫn", servicePrice: 150_000 },
+  { id: 3, name: "Thu mua vàng cũ", servicePrice: 80_000 },
 ];
 
 const STATUS_LABELS: Record<ServiceStatus, string> = {
-  PENDING: "Cho tiep nhan",
-  IN_PROGRESS: "Dang xu ly",
-  DONE: "Da giao",
+  PENDING: "Chờ tiếp nhận",
+  IN_PROGRESS: "Đang xử lý",
+  DONE: "Đã giao",
+};
+
+const VOUCHER_STATUS_LABELS: Record<"DONE" | "PENDING", string> = {
+  DONE: "Hoàn thành",
+  PENDING: "Chưa hoàn thành",
+};
+
+const SERVICE_STATUS_TONE: Record<ServiceStatus, StatusTone> = {
+  PENDING: "warning",
+  IN_PROGRESS: "info",
+  DONE: "success",
 };
 
 function getTodayValue(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-function getVoucherCode(): string {
+function getVoucherCode(sequence: number): string {
   const now = new Date();
   const y = now.getFullYear();
   const m = String(now.getMonth() + 1).padStart(2, "0");
   const d = String(now.getDate()).padStart(2, "0");
-  return `PDV-${y}${m}${d}-001`;
+  const seq = String(sequence).padStart(3, "0");
+  return `PDV-${y}${m}${d}-${seq}`;
 }
 
 function parsePositiveNumber(raw: string): number {
@@ -76,19 +95,19 @@ function buildDefaultLine(id: number): ServiceLine {
   return {
     id,
     serviceTypeId: SERVICE_TYPES[0].id,
-    chargedPrice: SERVICE_TYPES[0].servicePrice.toString(),
     quantity: "1",
-    prepaid: "0",
     deliveryDate: getTodayValue(),
     status: "PENDING",
   };
 }
 
 export default function ServiceOrdersPage() {
-  const [voucherCode] = useState(getVoucherCode());
+  const [voucherIndex, setVoucherIndex] = useState(1);
+  const [voucherCode, setVoucherCode] = useState(() => getVoucherCode(1));
   const [createdDate, setCreatedDate] = useState(getTodayValue());
   const [customerId, setCustomerId] = useState<number>(CUSTOMERS[0].id);
   const [lines, setLines] = useState<ServiceLine[]>([buildDefaultLine(1)]);
+  const [voucherPrepaid, setVoucherPrepaid] = useState("0");
   const [message, setMessage] = useState("");
 
   const selectedCustomer = useMemo(
@@ -101,20 +120,15 @@ export default function ServiceOrdersPage() {
       const serviceType =
         SERVICE_TYPES.find((item) => item.id === line.serviceTypeId) ?? SERVICE_TYPES[0];
       const quantity = parsePositiveNumber(line.quantity);
-      const chargedPrice = parsePositiveNumber(line.chargedPrice);
-      const amount = quantity * chargedPrice;
-      const prepaidRaw = parsePositiveNumber(line.prepaid);
-      const prepaid = Math.min(prepaidRaw, amount);
-      const remaining = Math.max(amount - prepaid, 0);
+      const chargedPriceValue = serviceType.servicePrice;
+      const amount = quantity * chargedPriceValue;
 
       return {
         ...line,
         serviceType,
         quantity,
-        chargedPrice,
+        chargedPriceValue,
         amount,
-        prepaid,
-        remaining,
       };
     });
   }, [lines]);
@@ -123,11 +137,35 @@ export default function ServiceOrdersPage() {
     () => lineWithMeta.reduce((sum, line) => sum + line.amount, 0),
     [lineWithMeta],
   );
-  const totalPrepaid = useMemo(
-    () => lineWithMeta.reduce((sum, line) => sum + line.prepaid, 0),
+  const totalPrepaid = Math.min(parseMoneyInput(voucherPrepaid), totalAmount);
+  const totalRemaining = useMemo(() => Math.max(totalAmount - totalPrepaid, 0), [totalAmount, totalPrepaid]);
+  const isVoucherCompleted = useMemo(
+    () => lineWithMeta.length > 0 && lineWithMeta.every((line) => line.status === "DONE"),
     [lineWithMeta],
   );
-  const totalRemaining = useMemo(() => Math.max(totalAmount - totalPrepaid, 0), [totalAmount, totalPrepaid]);
+  const hasCreatedDateError = !createdDate;
+  const invalidQuantityOrPriceLines = useMemo(
+    () =>
+      lineWithMeta
+        .map((line, index) => (line.quantity <= 0 || line.chargedPriceValue <= 0 ? index + 1 : null))
+        .filter((value): value is number => value !== null),
+    [lineWithMeta],
+  );
+  const invalidDeliveryDateLines = useMemo(
+    () =>
+      lineWithMeta
+        .map((line, index) => (!line.deliveryDate ? index + 1 : null))
+        .filter((value): value is number => value !== null),
+    [lineWithMeta],
+  );
+  const hasPrepaidError = parseMoneyInput(voucherPrepaid) > totalAmount;
+  const hasTotalError = totalAmount <= 0;
+  const canSaveVoucher =
+    !hasCreatedDateError &&
+    invalidQuantityOrPriceLines.length === 0 &&
+    invalidDeliveryDateLines.length === 0 &&
+    !hasPrepaidError &&
+    !hasTotalError;
 
   function handleAddLine() {
     setLines((previous) => {
@@ -150,9 +188,7 @@ export default function ServiceOrdersPage() {
     id: number,
     field:
       | "serviceTypeId"
-      | "chargedPrice"
       | "quantity"
-      | "prepaid"
       | "deliveryDate"
       | "status",
     value: string,
@@ -170,7 +206,6 @@ export default function ServiceOrdersPage() {
           return {
             ...line,
             serviceTypeId: serviceType.id,
-            chargedPrice: serviceType.servicePrice.toString(),
           };
         }
 
@@ -193,265 +228,290 @@ export default function ServiceOrdersPage() {
     setCreatedDate(getTodayValue());
     setCustomerId(CUSTOMERS[0].id);
     setLines([buildDefaultLine(1)]);
-    setMessage("Da reset phieu dich vu.");
+    setVoucherPrepaid("0");
+    setMessage("Đã reset phiếu dịch vụ.");
   }
 
   function handleSaveVoucher() {
-    const hasInvalid = lineWithMeta.some(
-      (line) => line.quantity <= 0 || line.chargedPrice <= 0,
-    );
-    if (hasInvalid) {
-      setMessage("Vui long nhap so luong va don gia duoc tinh hop le.");
+    if (invalidQuantityOrPriceLines.length > 0) {
+      setMessage("Vui lòng nhập số lượng và đơn giá được tính hợp lệ.");
       return;
     }
 
-    if (totalAmount <= 0) {
-      setMessage("Tong tien phai lon hon 0.");
+    if (invalidDeliveryDateLines.length > 0) {
+      setMessage("Vui lòng nhập đầy đủ ngày giao cho các dòng dịch vụ.");
       return;
     }
 
-    setMessage("Da luu phieu dich vu thanh cong (du lieu demo frontend).");
+    if (hasPrepaidError) {
+      setMessage("Tiền trả trước không được lớn hơn tổng tiền phiếu dịch vụ.");
+      return;
+    }
+
+    if (hasTotalError) {
+      setMessage("Tổng tiền phải lớn hơn 0.");
+      return;
+    }
+
+    const nextVoucherIndex = voucherIndex + 1;
+    setVoucherIndex(nextVoucherIndex);
+    setVoucherCode(getVoucherCode(nextVoucherIndex));
+    setCreatedDate(getTodayValue());
+    setCustomerId(CUSTOMERS[0].id);
+    setLines([buildDefaultLine(1)]);
+    setVoucherPrepaid("0");
+    setMessage("Đã lưu phiếu dịch vụ thành công (dữ liệu demo frontend). Vào Tra cứu > Phiếu dịch vụ để xem BM9.");
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Phieu dich vu</h1>
-        <p className="mt-1 text-muted-foreground">
-          Lap phieu dich vu theo doi thanh toan tra truoc va so tien con lai.
-        </p>
-      </div>
+    <div className="space-y-2">
+      <PageHeader
+        eyebrow="Nghiệp vụ dịch vụ"
+        title="Phiếu dịch vụ"
+        description="Theo dõi dịch vụ, trả trước, ngày giao và trạng thái hoàn thành của từng dòng."
+        badges={
+          <>
+            <Badge variant="outline" className="border-border/70 bg-background/70">BM7</Badge>
+            <StatusBadge tone={canSaveVoucher ? "success" : "warning"}>
+              {canSaveVoucher ? "Sẵn sàng lưu" : "Cần bổ sung"}
+            </StatusBadge>
+          </>
+        }
+      />
 
       <Card className="overflow-hidden border-border/70 shadow-sm">
-        <CardHeader className="border-b bg-gradient-to-r from-slate-50 to-sky-50/70">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+        <CardHeader className="border-b bg-muted/25 px-2.5 py-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <CardTitle className="text-xl tracking-tight">Chi tiet phieu dich vu</CardTitle>
-              <CardDescription>
-                Quan ly loai dich vu, don gia tinh, tien thanh toan va ngay giao.
-              </CardDescription>
+              <CardTitle className="text-base tracking-tight">Phiếu dịch vụ</CardTitle>
+              <CardDescription className="text-xs">BM7 - Quản lý dịch vụ, thanh toán và ngày giao.</CardDescription>
             </div>
-            <span className="rounded-full border border-sky-500/30 bg-sky-500/10 px-3 py-1 text-xs font-semibold text-sky-700">
-              Dich vu
+            <span className="rounded border border-sky-500/30 bg-sky-500/10 px-2 py-0.5 text-[10px] font-semibold text-sky-700">
+              Dịch vụ
             </span>
           </div>
         </CardHeader>
 
-        <CardContent className="space-y-6 pt-6">
-          <div className="grid gap-4 md:grid-cols-2">
+        <CardContent className="space-y-2 p-2.5">
+          <div className="grid gap-2 md:grid-cols-4">
             <div className="space-y-2">
-              <Label htmlFor="voucher-code">So phieu</Label>
-              <Input id="voucher-code" value={voucherCode} readOnly />
+              <Label htmlFor="voucher-code">Số phiếu</Label>
+              <Input
+                id="voucher-code"
+                value={voucherCode}
+                readOnly
+                className={SYSTEM_CODE_INPUT_CLASS}
+                aria-describedby="voucher-code-note"
+              />
+              <p id="voucher-code-note" className={SYSTEM_CODE_NOTE_CLASS}>
+                Số phiếu tự phát sinh.
+              </p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="created-date">Ngay lap</Label>
-              <Input
+              <Label htmlFor="created-date">Ngày lập</Label>
+              <DatePickerInput
                 id="created-date"
-                type="date"
                 value={createdDate}
-                onChange={(event) => setCreatedDate(event.target.value)}
+                onValueChange={setCreatedDate}
+              />
+              {hasCreatedDateError && (
+                <p className="text-xs text-destructive">Vui lòng chọn ngày lập.</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="customer">Khách hàng</Label>
+              <Select
+                id="customer"
+                value={customerId}
+                onValueChange={(value) => setCustomerId(Number.parseInt(value, 10))}
+                options={CUSTOMERS.map((customer) => ({
+                  value: customer.id,
+                  label: customer.name,
+                }))}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="customer">Khach hang</Label>
-              <select
-                id="customer"
-                value={customerId}
-                onChange={(event) => setCustomerId(Number.parseInt(event.target.value, 10))}
-                className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-              >
-                {CUSTOMERS.map((customer) => (
-                  <option key={customer.id} value={customer.id}>
-                    {customer.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="customer-phone">So dien thoai</Label>
+              <Label htmlFor="customer-phone">Số điện thoại</Label>
               <Input id="customer-phone" value={selectedCustomer.phone} readOnly />
             </div>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div className="rounded-xl border bg-slate-50 px-4 py-3">
-              <p className="text-xs text-muted-foreground">Tong tien</p>
-              <p className="text-lg font-semibold">{formatVND(totalAmount)}</p>
+          <div className="grid gap-1.5 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-lg border bg-muted/20 px-2.5 py-1.5">
+              <p className="text-xs text-muted-foreground">Tổng tiền</p>
+              <p className="text-base font-semibold">{formatVND(totalAmount)}</p>
             </div>
-            <div className="rounded-xl border bg-emerald-50 px-4 py-3">
-              <p className="text-xs text-muted-foreground">Tong tien tra truoc</p>
-              <p className="text-lg font-semibold text-emerald-700">{formatVND(totalPrepaid)}</p>
+            <div className="rounded-lg border bg-muted/20 px-2.5 py-1.5">
+              <p className="text-xs text-muted-foreground">Trả trước</p>
+              <MoneyInput
+                value={voucherPrepaid}
+                onValueChange={setVoucherPrepaid}
+                inputClassName="h-8 text-base text-emerald-700"
+              />
+              {hasPrepaidError && (
+                <p className="mt-1 text-[11px] text-destructive">Không được vượt tổng tiền.</p>
+              )}
             </div>
-            <div className="rounded-xl border bg-amber-50 px-4 py-3">
-              <p className="text-xs text-muted-foreground">Tong tien con lai</p>
-              <p className="text-lg font-semibold text-amber-700">{formatVND(totalRemaining)}</p>
+            <div className="rounded-lg border bg-muted/20 px-2.5 py-1.5">
+              <p className="text-xs text-muted-foreground">Còn lại</p>
+              <p className="text-base font-semibold text-amber-700">{formatVND(totalRemaining)}</p>
+            </div>
+            <div className="rounded-lg border bg-muted/20 px-2.5 py-1.5">
+              <p className="text-xs text-muted-foreground">Tình trạng phiếu hiện tại</p>
+              <Badge
+                variant="outline"
+                className={cn(
+                  "mt-1 h-6 gap-1 px-2 text-xs",
+                  isVoucherCompleted ? STATUS_TONE_CLASS.success : STATUS_TONE_CLASS.warning,
+                )}
+              >
+                <span
+                  className={cn(
+                    "h-1.5 w-1.5 rounded-full",
+                    isVoucherCompleted ? STATUS_DOT_CLASS.success : STATUS_DOT_CLASS.warning,
+                  )}
+                />
+                {isVoucherCompleted
+                  ? VOUCHER_STATUS_LABELS.DONE
+                  : VOUCHER_STATUS_LABELS.PENDING}
+              </Badge>
             </div>
           </div>
 
-          <div className="space-y-3 rounded-xl border bg-background p-4">
+          <div className="space-y-2 rounded-lg border bg-background p-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-base font-semibold">Danh sach dich vu</h2>
-              <Button onClick={handleAddLine} variant="outline" className="cursor-pointer">
-                <Plus className="mr-2 h-4 w-4" />
-                Them dong
-              </Button>
+              <h2 className="text-sm font-semibold">Danh sách dịch vụ</h2>
             </div>
 
-            <div className="rounded-lg border">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/40 hover:bg-muted/40">
-                    <TableHead rowSpan={2} className="w-14 text-center align-middle">
-                      STT
-                    </TableHead>
-                    <TableHead rowSpan={2} className="min-w-[190px] align-middle">
-                      Loai dich vu
-                    </TableHead>
-                    <TableHead rowSpan={2} className="min-w-[140px] align-middle">
-                      Don gia dich vu
-                    </TableHead>
-                    <TableHead rowSpan={2} className="min-w-[150px] align-middle">
-                      Don gia duoc tinh
-                    </TableHead>
-                    <TableHead rowSpan={2} className="min-w-[120px] align-middle">
-                      So luong
-                    </TableHead>
-                    <TableHead rowSpan={2} className="min-w-[150px] align-middle">
-                      Thanh tien
-                    </TableHead>
-                    <TableHead colSpan={2} className="min-w-[250px] text-center">
-                      Thanh toan
-                    </TableHead>
-                    <TableHead rowSpan={2} className="min-w-[150px] align-middle">
-                      Ngay giao
-                    </TableHead>
-                    <TableHead rowSpan={2} className="min-w-[130px] align-middle">
-                      Tinh trang
-                    </TableHead>
-                    <TableHead rowSpan={2} className="w-12 align-middle"></TableHead>
-                  </TableRow>
-                  <TableRow className="bg-muted/40 hover:bg-muted/40">
-                    <TableHead className="min-w-[120px] text-center">Tra truoc</TableHead>
-                    <TableHead className="min-w-[120px] text-center">Con lai</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {lineWithMeta.map((line, index) => (
-                    <TableRow key={line.id}>
-                      <TableCell className="text-center font-medium">{index + 1}</TableCell>
-                      <TableCell>
-                        <select
-                          value={line.serviceTypeId}
-                          onChange={(event) =>
-                            handleUpdateLine(line.id, "serviceTypeId", event.target.value)
-                          }
-                          className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-                        >
-                          {SERVICE_TYPES.map((serviceType) => (
-                            <option key={serviceType.id} value={serviceType.id}>
-                              {serviceType.name}
-                            </option>
-                          ))}
-                        </select>
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        {formatVND(line.serviceType.servicePrice)}
-                      </TableCell>
-                      <TableCell>
-                        <Input
-                          value={line.chargedPrice}
-                          onChange={(event) =>
-                            handleUpdateLine(line.id, "chargedPrice", event.target.value)
-                          }
-                          inputMode="numeric"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Input
-                          value={line.quantity}
-                          onChange={(event) =>
-                            handleUpdateLine(line.id, "quantity", event.target.value)
-                          }
-                          inputMode="decimal"
-                        />
-                      </TableCell>
-                      <TableCell className="font-semibold">{formatVND(line.amount)}</TableCell>
-                      <TableCell>
-                        <Input
-                          value={line.prepaid}
-                          onChange={(event) =>
-                            handleUpdateLine(line.id, "prepaid", event.target.value)
-                          }
-                          inputMode="numeric"
-                        />
-                      </TableCell>
-                      <TableCell className="font-medium text-amber-700">
-                        {formatVND(line.remaining)}
-                      </TableCell>
-                      <TableCell>
-                        <Input
-                          type="date"
+            <Table className="table-fixed [&_th]:px-2 [&_th]:py-3 [&_th]:text-[11px] [&_th]:leading-4 [&_th]:whitespace-normal [&_td]:px-2 [&_td]:py-2.5 [&_td]:align-middle [&_td]:text-[13px]">
+              <TableHeader>
+                <TableRow className="bg-muted/40 hover:bg-muted/40">
+                  <TableHead className="w-[4%] text-center">STT</TableHead>
+                  <TableHead className="w-[24%]">Loại dịch vụ</TableHead>
+                  <TableHead className="w-[14%]">Ngày giao / Tình trạng</TableHead>
+                  <TableHead className="w-[14%] text-right">Đơn giá</TableHead>
+                  <TableHead className="w-[12%] text-center">Số lượng</TableHead>
+                  <TableHead className="w-[16%] text-right">Thành tiền</TableHead>
+                  <TableHead className="w-[4%] text-right"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {lineWithMeta.map((line, index) => (
+                  <TableRow key={line.id} className="bg-card/70">
+                    <TableCell className="text-center font-semibold">{index + 1}</TableCell>
+                    <TableCell>
+                      <Select
+                        value={line.serviceTypeId}
+                        onValueChange={(value) => handleUpdateLine(line.id, "serviceTypeId", value)}
+                        className="h-9 text-sm [&>span]:whitespace-nowrap [&>span]:truncate"
+                        contentClassName="max-w-[360px]"
+                        options={SERVICE_TYPES.map((serviceType) => ({
+                          value: serviceType.id,
+                          label: serviceType.name,
+                        }))}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <div className="space-y-1.5">
+                        <DatePickerInput
                           value={line.deliveryDate}
-                          onChange={(event) =>
-                            handleUpdateLine(line.id, "deliveryDate", event.target.value)
-                          }
+                          onValueChange={(value) => handleUpdateLine(line.id, "deliveryDate", value)}
+                          compact
+                          className="h-8 w-full text-[12px]"
                         />
-                      </TableCell>
-                      <TableCell>
-                        <select
+                        <Select
                           value={line.status}
-                          onChange={(event) =>
-                            handleUpdateLine(line.id, "status", event.target.value)
-                          }
-                          className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-                        >
-                          {(Object.keys(STATUS_LABELS) as ServiceStatus[]).map((status) => (
-                            <option key={status} value={status}>
-                              {STATUS_LABELS[status]}
-                            </option>
-                          ))}
-                        </select>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          size="icon-sm"
-                          variant="destructive"
-                          onClick={() => handleRemoveLine(line.id)}
-                          className="cursor-pointer"
-                          aria-label="Xoa dong"
-                          disabled={lineWithMeta.length === 1}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
+                          onValueChange={(value) => handleUpdateLine(line.id, "status", value)}
+                          className={cn(
+                            "h-8 border-current/30 px-2 text-[12px] [&>span]:truncate",
+                            STATUS_TONE_CLASS[SERVICE_STATUS_TONE[line.status]],
+                          )}
+                          options={(Object.keys(STATUS_LABELS) as ServiceStatus[]).map((status) => ({
+                            value: status,
+                            label: STATUS_LABELS[status],
+                            leadingClassName: STATUS_DOT_CLASS[SERVICE_STATUS_TONE[status]],
+                          }))}
+                        />
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right font-semibold whitespace-nowrap">
+                      {formatVND(line.serviceType.servicePrice)}
+                    </TableCell>
+                    <TableCell>
+                      <QuantityStepper
+                        value={String(line.quantity)}
+                        onValueChange={(value) => handleUpdateLine(line.id, "quantity", value)}
+                        min={1}
+                        step={1}
+                        inputClassName="h-8 min-w-[2.4rem] text-sm"
+                      />
+                    </TableCell>
+                    <TableCell className="text-right font-bold whitespace-nowrap">
+                      {formatVND(line.amount)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        size="icon-sm"
+                        variant="destructive"
+                        onClick={() => handleRemoveLine(line.id)}
+                        className="cursor-pointer"
+                        aria-label="Xóa dòng"
+                        disabled={lineWithMeta.length === 1}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
 
+            <Button onClick={handleAddLine} variant="outline" size="sm" className="h-8 w-full cursor-pointer border-dashed">
+              <Plus className="mr-1.5 h-3.5 w-3.5" />
+              Thêm dòng dịch vụ
+            </Button>
+          </div>
           {message && (
             <p className="rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm">
               {message}
             </p>
           )}
 
-          <div className="flex flex-wrap justify-end gap-2">
+          {(invalidQuantityOrPriceLines.length > 0 ||
+            invalidDeliveryDateLines.length > 0 ||
+            hasPrepaidError) && (
+            <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+              {invalidQuantityOrPriceLines.length > 0 && (
+                <p>Dòng lỗi số lượng/đơn giá: {invalidQuantityOrPriceLines.join(", ")}.</p>
+              )}
+              {invalidDeliveryDateLines.length > 0 && (
+                <p>Dòng chưa nhập ngày giao: {invalidDeliveryDateLines.join(", ")}.</p>
+              )}
+              {hasPrepaidError && (
+                <p>Tiền trả trước không được lớn hơn tổng tiền phiếu dịch vụ.</p>
+              )}
+            </div>
+          )}
+
+          <div className="flex flex-wrap justify-end gap-1.5">
             <Button
               variant="outline"
               onClick={handleResetForm}
               className="cursor-pointer"
             >
-              Lam moi
+              Làm mới
             </Button>
-            <Button onClick={handleSaveVoucher} className="cursor-pointer">
+            <Button onClick={handleSaveVoucher} className="cursor-pointer" disabled={!canSaveVoucher}>
               <Save className="mr-2 h-4 w-4" />
-              Luu phieu dich vu
+              Lưu phiếu dịch vụ
             </Button>
           </div>
         </CardContent>
       </Card>
+
     </div>
   );
 }
+
+
+

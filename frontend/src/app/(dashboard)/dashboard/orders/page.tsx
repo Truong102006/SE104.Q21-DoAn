@@ -1,12 +1,21 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader, StatusBadge } from "@/components/dashboard/management";
+import { DatePickerInput } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { MoneyInput, parseMoneyInput } from "@/components/ui/money-input";
+import { QuantityStepper } from "@/components/ui/quantity-stepper";
+import { Select } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { SYSTEM_CODE_INPUT_CLASS, SYSTEM_CODE_NOTE_CLASS } from "@/lib/form-styles";
 import { formatVND, MOCK_PRODUCTS } from "@/lib/mock-data";
+import { UNIT_SELECT_OPTIONS } from "@/lib/unit-data";
+import { useUnitStore } from "@/stores/unit-store";
 import { Plus, Save, Trash2 } from "lucide-react";
 
 interface CustomerOption {
@@ -18,13 +27,14 @@ interface SaleLine {
   id: number;
   productId: number;
   quantity: string;
+  unit: string;
   unitPrice: string;
 }
 
 const CUSTOMERS: CustomerOption[] = [
-  { id: 1, name: "Nguyen Van Minh" },
-  { id: 2, name: "Tran Thi Lan" },
-  { id: 3, name: "Le Quang Huy" },
+  { id: 1, name: "Nguyễn Văn Minh" },
+  { id: 2, name: "Trần Thị Lan" },
+  { id: 3, name: "Lê Quang Huy" },
 ];
 
 function getTodayValue(): string {
@@ -49,20 +59,52 @@ function parsePositiveNumber(raw: string): number {
 }
 
 function buildDefaultLine(id: number): SaleLine {
+  const product = MOCK_PRODUCTS[0];
   return {
     id,
-    productId: MOCK_PRODUCTS[0].id,
+    productId: product.id,
     quantity: "1",
-    unitPrice: MOCK_PRODUCTS[0].sellingPrice.toString(),
+    unit: resolveProductUnit(product.weightUnit),
+    unitPrice: product.sellingPrice.toString(),
   };
 }
 
+function resolveProductUnit(rawUnit: string): string {
+  const normalized = rawUnit.trim().toLowerCase();
+  const match = UNIT_SELECT_OPTIONS.find((unit) => unit.value.toLowerCase() === normalized);
+  if (match) {
+    return match.value;
+  }
+  if (normalized.includes("ch")) {
+    return "Chỉ";
+  }
+  if (normalized.includes("kg")) {
+    return "Kg";
+  }
+  if (normalized.includes("vi")) {
+    return "Viên";
+  }
+  return "Gram";
+}
+
 export default function OrdersPage() {
+  const { units, hydrate, isHydrated } = useUnitStore();
   const [voucherCode] = useState(getVoucherCode());
   const [createdDate, setCreatedDate] = useState(getTodayValue());
   const [customerId, setCustomerId] = useState<number>(CUSTOMERS[0].id);
   const [lines, setLines] = useState<SaleLine[]>([buildDefaultLine(1)]);
   const [message, setMessage] = useState<string>("");
+
+  useEffect(() => {
+    if (!isHydrated) {
+      hydrate();
+    }
+  }, [hydrate, isHydrated]);
+
+  const unitOptions = useMemo(
+    () => units.map((unit) => ({ value: unit.name, label: unit.name })),
+    [units],
+  );
 
   const selectedCustomer = useMemo(
     () => CUSTOMERS.find((customer) => customer.id === customerId) ?? CUSTOMERS[0],
@@ -73,7 +115,7 @@ export default function OrdersPage() {
     return lines.map((line) => {
       const product = MOCK_PRODUCTS.find((item) => item.id === line.productId) ?? MOCK_PRODUCTS[0];
       const quantity = parsePositiveNumber(line.quantity);
-      const unitPrice = parsePositiveNumber(line.unitPrice);
+      const unitPrice = parseMoneyInput(line.unitPrice);
       return {
         ...line,
         product,
@@ -88,6 +130,19 @@ export default function OrdersPage() {
     () => lineWithMeta.reduce((sum, line) => sum + line.amount, 0),
     [lineWithMeta],
   );
+  const invalidLineIndexes = useMemo(
+    () =>
+      lineWithMeta
+        .map((line, index) => (line.quantity <= 0 || line.unitPrice <= 0 ? index + 1 : null))
+        .filter((value): value is number => value !== null),
+    [lineWithMeta],
+  );
+  const hasDateError = !createdDate;
+  const hasCustomerError = !customerId;
+  const hasLineError = invalidLineIndexes.length > 0;
+  const hasTotalError = totalAmount <= 0;
+  const canSaveOrder = !hasDateError && !hasCustomerError && !hasLineError && !hasTotalError;
+  const voucherStatus = canSaveOrder ? "Sẵn sàng lưu" : "Cần bổ sung";
 
   function handleAddLine() {
     setLines((previous) => {
@@ -108,7 +163,7 @@ export default function OrdersPage() {
 
   function handleUpdateLine(
     id: number,
-    field: "productId" | "quantity" | "unitPrice",
+    field: "productId" | "quantity" | "unit" | "unitPrice",
     value: string,
   ) {
     setLines((previous) =>
@@ -123,6 +178,7 @@ export default function OrdersPage() {
           return {
             ...line,
             productId: product.id,
+            unit: resolveProductUnit(product.weightUnit),
             unitPrice: product.sellingPrice.toString(),
           };
         }
@@ -139,106 +195,116 @@ export default function OrdersPage() {
     setCreatedDate(getTodayValue());
     setCustomerId(CUSTOMERS[0].id);
     setLines([buildDefaultLine(1)]);
-    setMessage("Da reset phieu ban hang.");
+    setMessage("Đã reset phiếu bán hàng.");
   }
 
   function handleSaveOrder() {
-    const hasInvalidLine = lineWithMeta.some(
-      (line) => line.quantity <= 0 || line.unitPrice <= 0,
-    );
-
-    if (hasInvalidLine) {
-      setMessage("Vui long nhap so luong va don gia hop le cho tat ca dong.");
+    if (hasLineError) {
+      setMessage("Vui lòng nhập số lượng và đơn giá hợp lệ cho tất cả dòng.");
       return;
     }
 
-    if (totalAmount <= 0) {
-      setMessage("Tong tien phai lon hon 0.");
+    if (hasTotalError) {
+      setMessage("Tổng tiền phải lớn hơn 0.");
       return;
     }
 
-    setMessage("Da luu phieu ban hang thanh cong (du lieu demo frontend).");
+    setMessage("Đã lưu phiếu bán hàng thành công (dữ liệu demo frontend).");
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Don hang</h1>
-        <p className="mt-1 text-muted-foreground">
-          Tao phieu ban hang voi giao dien gon gang, de nhap lieu va chot don nhanh.
-        </p>
-      </div>
+    <div className="space-y-3">
+      <PageHeader
+        eyebrow="Nghiệp vụ bán hàng"
+        title="Phiếu bán hàng"
+        description="Tạo phiếu bán, kiểm tra số lượng/đơn giá và khóa tổng tiền trước khi lưu."
+        badges={
+          <>
+            <Badge variant="outline" className="border-border/70 bg-background/70">BM6</Badge>
+            <StatusBadge tone={canSaveOrder ? "success" : "warning"}>{voucherStatus}</StatusBadge>
+          </>
+        }
+      />
 
       <Card className="overflow-hidden border-border/70 shadow-sm">
-        <CardHeader className="border-b bg-gradient-to-r from-slate-50 to-emerald-50/70">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+        <CardHeader className="border-b bg-muted/25 px-3 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <CardTitle className="text-xl tracking-tight">Phieu ban hang</CardTitle>
-              <CardDescription>
-                Quan ly thong tin khach hang va danh sach san pham ban.
-              </CardDescription>
+              <CardTitle className="text-base tracking-tight">Phiếu bán hàng</CardTitle>
+              <CardDescription className="text-xs">BM6 - Quản lý khách hàng và sản phẩm bán.</CardDescription>
             </div>
-            <span className="rounded-full border border-emerald-600/30 bg-emerald-600/10 px-3 py-1 text-xs font-semibold text-emerald-700">
-              Ban hang
+            <span className="rounded border border-emerald-600/30 bg-emerald-600/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+              Bán hàng
             </span>
           </div>
         </CardHeader>
 
-        <CardContent className="space-y-6 pt-6">
-          <div className="grid gap-4 md:grid-cols-2">
+        <CardContent className="space-y-3 p-3">
+          <div className="grid gap-3 md:grid-cols-4">
             <div className="space-y-2">
-              <Label htmlFor="voucher-code">So phieu</Label>
-              <Input id="voucher-code" value={voucherCode} readOnly />
+              <Label htmlFor="voucher-code">Số phiếu</Label>
+              <Input
+                id="voucher-code"
+                value={voucherCode}
+                readOnly
+                className={SYSTEM_CODE_INPUT_CLASS}
+                aria-describedby="voucher-code-note"
+              />
+              <p id="voucher-code-note" className={SYSTEM_CODE_NOTE_CLASS}>
+                Số phiếu tự phát sinh.
+              </p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="created-date">Ngay lap</Label>
-              <Input
+              <Label htmlFor="created-date">Ngày lập</Label>
+              <DatePickerInput
                 id="created-date"
-                type="date"
                 value={createdDate}
-                onChange={(event) => setCreatedDate(event.target.value)}
+                onValueChange={setCreatedDate}
               />
+              {hasDateError && (
+                <p className="text-xs text-destructive">Vui lòng chọn ngày lập.</p>
+              )}
             </div>
             <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="customer">Khach hang</Label>
-              <select
+              <Label htmlFor="customer">Khách hàng</Label>
+              <Select
                 id="customer"
                 value={customerId}
-                onChange={(event) => setCustomerId(Number.parseInt(event.target.value, 10))}
-                className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-              >
-                {CUSTOMERS.map((customer) => (
-                  <option key={customer.id} value={customer.id}>
-                    {customer.name}
-                  </option>
-                ))}
-              </select>
+                onValueChange={(value) => setCustomerId(Number.parseInt(value, 10))}
+                options={CUSTOMERS.map((customer) => ({
+                  value: customer.id,
+                  label: customer.name,
+                }))}
+              />
+              {hasCustomerError && (
+                <p className="text-xs text-destructive">Vui lòng chọn khách hàng.</p>
+              )}
               <p className="text-xs text-muted-foreground">
-                Da chon: <span className="font-medium text-foreground">{selectedCustomer.name}</span>
+                Đã chọn: <span className="font-medium text-foreground">{selectedCustomer.name}</span>
               </p>
             </div>
           </div>
 
-          <div className="space-y-3 rounded-xl border bg-background p-4">
+          <div className="space-y-2 rounded-lg border bg-background p-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-base font-semibold">Chi tiet san pham ban</h2>
-              <Button onClick={handleAddLine} variant="outline" className="cursor-pointer">
-                <Plus className="mr-2 h-4 w-4" />
-                Them dong
+              <h2 className="text-sm font-semibold">Chi tiết sản phẩm bán</h2>
+              <Button onClick={handleAddLine} variant="outline" size="sm" className="h-7 cursor-pointer">
+                <Plus className="mr-1.5 h-3.5 w-3.5" />
+                Thêm dòng
               </Button>
             </div>
 
             <div className="rounded-lg border">
-              <Table>
+              <Table className="table-fixed [&_th]:whitespace-normal [&_th]:leading-4 [&_td]:align-middle">
                 <TableHeader>
                   <TableRow className="bg-muted/40 hover:bg-muted/40">
                     <TableHead className="w-14 text-center">STT</TableHead>
-                    <TableHead className="min-w-[220px]">San pham</TableHead>
-                    <TableHead className="min-w-[150px]">Loai san pham</TableHead>
-                    <TableHead className="min-w-[120px]">So luong</TableHead>
-                    <TableHead className="min-w-[120px]">Don vi tinh</TableHead>
-                    <TableHead className="min-w-[150px]">Don gia</TableHead>
-                    <TableHead className="min-w-[160px]">Thanh tien</TableHead>
+                    <TableHead className="w-[27%]">Sản phẩm</TableHead>
+                    <TableHead className="w-[14%]">Loại sản phẩm</TableHead>
+                    <TableHead className="w-[11%]">Số lượng</TableHead>
+                    <TableHead className="w-[11%]">Đơn vị tính</TableHead>
+                    <TableHead className="w-[15%]">Đơn giá</TableHead>
+                    <TableHead className="w-[16%]">Thành tiền</TableHead>
                     <TableHead className="w-12"></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -247,41 +313,42 @@ export default function OrdersPage() {
                     <TableRow key={line.id}>
                       <TableCell className="text-center font-medium">{index + 1}</TableCell>
                       <TableCell>
-                        <select
+                        <Select
                           value={line.productId}
-                          onChange={(event) =>
-                            handleUpdateLine(line.id, "productId", event.target.value)
+                          onValueChange={(value) =>
+                            handleUpdateLine(line.id, "productId", value)
                           }
-                          className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-                        >
-                          {MOCK_PRODUCTS.map((product) => (
-                            <option key={product.id} value={product.id}>
-                              {product.name}
-                            </option>
-                          ))}
-                        </select>
+                          options={MOCK_PRODUCTS.map((product) => ({
+                            value: product.id,
+                            label: product.name,
+                          }))}
+                        />
                       </TableCell>
-                      <TableCell>{line.product.categoryName}</TableCell>
+                      <TableCell className="truncate text-sm">{line.product.categoryName}</TableCell>
                       <TableCell>
-                        <Input
-                          value={line.quantity}
-                          onChange={(event) =>
-                            handleUpdateLine(line.id, "quantity", event.target.value)
-                          }
+                        <QuantityStepper
+                          value={String(line.quantity)}
+                          onValueChange={(value) => handleUpdateLine(line.id, "quantity", value)}
+                          min={1}
+                          step={1}
                           inputMode="decimal"
                         />
                       </TableCell>
-                      <TableCell>{line.product.weightUnit}</TableCell>
                       <TableCell>
-                        <Input
-                          value={line.unitPrice}
-                          onChange={(event) =>
-                            handleUpdateLine(line.id, "unitPrice", event.target.value)
-                          }
-                          inputMode="numeric"
+                        <Select
+                          value={line.unit}
+                          onValueChange={(value) => handleUpdateLine(line.id, "unit", value)}
+                          options={unitOptions}
                         />
                       </TableCell>
-                      <TableCell className="font-semibold">
+                      <TableCell>
+                        <MoneyInput
+                          value={String(line.unitPrice)}
+                          onValueChange={(value) => handleUpdateLine(line.id, "unitPrice", value)}
+                          inputClassName="h-8 text-[13px]"
+                        />
+                      </TableCell>
+                      <TableCell className="truncate text-sm font-semibold">
                         {formatVND(line.amount)}
                       </TableCell>
                       <TableCell className="text-right">
@@ -290,7 +357,7 @@ export default function OrdersPage() {
                           variant="destructive"
                           onClick={() => handleRemoveLine(line.id)}
                           className="cursor-pointer"
-                          aria-label="Xoa dong"
+                          aria-label="Xóa dòng"
                           disabled={lineWithMeta.length === 1}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -303,10 +370,16 @@ export default function OrdersPage() {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-slate-50 px-4 py-3">
-            <span className="text-base font-semibold">Tong tien:</span>
-            <span className="text-xl font-bold text-gold">{formatVND(totalAmount)}</span>
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-muted/25 px-3 py-2">
+            <span className="text-sm font-semibold">Tổng tiền</span>
+            <span className="text-lg font-bold text-gold">{formatVND(totalAmount)}</span>
           </div>
+
+          {hasLineError && (
+            <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+              Dòng không hợp lệ: {invalidLineIndexes.join(", ")}. Số lượng và đơn giá phải lớn hơn 0.
+            </p>
+          )}
 
           {message && (
             <p className="rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm">
@@ -320,11 +393,11 @@ export default function OrdersPage() {
               onClick={handleResetForm}
               className="cursor-pointer"
             >
-              Lam moi
+              Làm mới
             </Button>
-            <Button onClick={handleSaveOrder} className="cursor-pointer">
+            <Button onClick={handleSaveOrder} className="cursor-pointer" disabled={!canSaveOrder}>
               <Save className="mr-2 h-4 w-4" />
-              Luu phieu ban hang
+              Lưu phiếu bán hàng
             </Button>
           </div>
         </CardContent>

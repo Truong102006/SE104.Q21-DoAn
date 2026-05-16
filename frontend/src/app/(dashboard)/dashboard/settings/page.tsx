@@ -1,7 +1,6 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -29,36 +28,24 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Cai dat</h1>
-          <p className="mt-1 text-muted-foreground">
-            Quan ly cac tuy chon giao dien va thong bao.
-          </p>
-        </div>
-        <Badge variant="outline" className="ml-auto">
-          Frontend local state
-        </Badge>
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-2">
+    <div className="space-y-3">
+      <div className="grid gap-3 lg:grid-cols-2">
         <Card>
-          <CardHeader>
+          <CardHeader className="border-b px-3 py-3">
             <CardTitle className="flex items-center gap-2">
               <Bell className="h-4 w-4" />
-              Thong bao
+              Thông báo
             </CardTitle>
             <CardDescription>
-              Tuy chon duoc luu tam thoi tren client.
+              Tùy chọn được lưu tạm thời trên client.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3">
-            <label className="flex cursor-pointer items-center justify-between rounded-lg border bg-muted/20 p-3">
+          <CardContent className="space-y-2 p-3">
+            <label className="flex cursor-pointer items-center justify-between rounded-lg border bg-muted/20 p-2.5">
               <div>
-                <p className="text-sm font-medium">Nhan email he thong</p>
+                <p className="text-sm font-medium">Nhận email hệ thống</p>
                 <p className="text-xs text-muted-foreground">
-                  Gui thong bao qua email tai khoan.
+                  Gửi thông báo qua email tài khoản.
                 </p>
               </div>
               <input
@@ -69,11 +56,11 @@ export default function SettingsPage() {
               />
             </label>
 
-            <label className="flex cursor-pointer items-center justify-between rounded-lg border bg-muted/20 p-3">
+            <label className="flex cursor-pointer items-center justify-between rounded-lg border bg-muted/20 p-2.5">
               <div>
-                <p className="text-sm font-medium">Don hang moi</p>
+                <p className="text-sm font-medium">Đơn hàng mới</p>
                 <p className="text-xs text-muted-foreground">
-                  Bat thong bao khi co don hang phat sinh.
+                  Bật thông báo khi có đơn hàng phát sinh.
                 </p>
               </div>
               <input
@@ -87,19 +74,19 @@ export default function SettingsPage() {
         </Card>
 
         <Card>
-          <CardHeader>
+          <CardHeader className="border-b px-3 py-3">
             <CardTitle className="flex items-center gap-2">
               <Settings className="h-4 w-4" />
-              Giao dien
+              Giao diện
             </CardTitle>
-            <CardDescription>Tuy chinh cach hien thi dashboard.</CardDescription>
+            <CardDescription>Tùy chỉnh cách hiển thị dashboard.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3">
-            <label className="flex cursor-pointer items-center justify-between rounded-lg border bg-muted/20 p-3">
+          <CardContent className="space-y-2 p-3">
+            <label className="flex cursor-pointer items-center justify-between rounded-lg border bg-muted/20 p-2.5">
               <div>
-                <p className="text-sm font-medium">Che do compact</p>
+                <p className="text-sm font-medium">Chế độ compact</p>
                 <p className="text-xs text-muted-foreground">
-                  Thu gon mat do thong tin tren the va bang.
+                  Thu gọn mật độ thông tin trên thẻ và bảng.
                 </p>
               </div>
               <input
@@ -111,12 +98,12 @@ export default function SettingsPage() {
             </label>
 
             <Button onClick={handleSave} className="w-full sm:w-auto">
-              Luu cai dat tam thoi
+              Lưu cài đặt tạm thời
             </Button>
 
             {savedAt && (
               <p className="text-xs text-muted-foreground">
-                Da luu luc {savedAt} (chi luu trong phien hien tai).
+                Đã lưu lúc {savedAt} (chỉ lưu trong phiên hiện tại).
               </p>
             )}
           </CardContent>
@@ -125,3 +112,6 @@ export default function SettingsPage() {
     </div>
   );
 }
+
+
+

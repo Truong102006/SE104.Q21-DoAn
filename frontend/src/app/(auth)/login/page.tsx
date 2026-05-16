@@ -65,7 +65,16 @@ export default function LoginPage() {
     setError("");
   }
 
-  if (!isHydrated) return null;
+  if (!isHydrated) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="h-8 w-8 animate-spin text-gold" />
+          <p className="text-sm text-muted-foreground">Đang khởi tạo trang đăng nhập...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-dvh">
