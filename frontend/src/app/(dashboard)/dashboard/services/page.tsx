@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { MoneyInput, parseMoneyInput } from "@/components/ui/money-input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatVND } from "@/lib/mock-data";
 import { Pencil, Plus, Search, Trash2, X } from "lucide-react";
@@ -139,11 +140,7 @@ export default function ServicesPage() {
   }
 
   function parseUnitPrice(value: string): number {
-    const digitsOnly = value.replace(/[^\d]/g, "");
-    if (!digitsOnly) {
-      return 0;
-    }
-    return Number.parseInt(digitsOnly, 10);
+    return parseMoneyInput(value);
   }
 
   function validateDraft(): { valid: boolean; price: number } {
@@ -355,14 +352,11 @@ export default function ServicesPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="service-price">Đơn giá (VND)</Label>
-                <Input
+                <MoneyInput
                   id="service-price"
                   value={draft.unitPrice}
-                  onChange={(event) =>
-                    handleChangeDraft("unitPrice", event.target.value)
-                  }
-                  placeholder="VD: 150000"
-                  inputMode="numeric"
+                  onValueChange={(value) => handleChangeDraft("unitPrice", value)}
+                  placeholder="VD: 150.000"
                 />
               </div>
 
