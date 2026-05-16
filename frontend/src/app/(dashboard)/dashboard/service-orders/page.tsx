@@ -583,13 +583,13 @@ export default function ServiceOrdersPage() {
                         {formatVND(line.remaining)}
                       </TableCell>
                       <TableCell>
-                        <Input
-                          type="date"
+                        <DatePickerInput
                           value={line.deliveryDate}
-                          onChange={(event) =>
-                            handleUpdateLine(line.id, "deliveryDate", event.target.value)
+                          onValueChange={(value) =>
+                            handleUpdateLine(line.id, "deliveryDate", value)
                           }
-                          className="h-7 min-w-[8.6rem] px-1.5 text-[12px]"
+                          compact
+                          className="h-7 min-w-[8.6rem]"
                         />
                       </TableCell>
                       <TableCell>

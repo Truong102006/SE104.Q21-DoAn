@@ -13,6 +13,7 @@ interface BasePickerProps {
   onValueChange: (value: string) => void;
   disabled?: boolean;
   className?: string;
+  compact?: boolean;
   min?: string;
   max?: string;
   "aria-label"?: string;
@@ -190,6 +191,7 @@ function PickerInput({
   onValueChange,
   disabled,
   className,
+  compact = false,
   min,
   max,
   "aria-label": ariaLabel,
@@ -334,13 +336,14 @@ function PickerInput({
     <>
       <div
         className={cn(
-          "flex h-9 w-full min-w-0 items-center gap-2 rounded-lg border border-input/90 bg-background pl-2.5 pr-1.5 text-left text-sm shadow-[inset_0_1px_2px_rgb(16_24_40/0.03)] transition-[border-color,box-shadow,background-color]",
+          "flex h-9 w-full min-w-0 items-center gap-2 rounded-lg border border-input/90 bg-background text-left text-sm shadow-[inset_0_1px_2px_rgb(16_24_40/0.03)] transition-[border-color,box-shadow,background-color]",
           "focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/30",
+          compact ? "pl-1.5 pr-1" : "pl-2.5 pr-1.5",
           disabled && "pointer-events-none cursor-not-allowed bg-input/45 opacity-50",
           className,
         )}
       >
-        <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
+        {!compact && <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />}
         <input
           id={id}
           type="text"
@@ -360,15 +363,21 @@ function PickerInput({
               (event.currentTarget as HTMLInputElement).blur();
             }
           }}
-          className="h-full min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/75"
+          className={cn(
+            "h-full min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/75",
+            compact && "text-[12px]",
+          )}
         />
         <button
           ref={triggerRef}
           type="button"
           onClick={() => setIsOpen((prev) => !prev)}
-          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          className={cn(
+            "inline-flex shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
+            compact ? "h-6 w-6" : "h-7 w-7",
+          )}
         >
-          <Calendar className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+          <Calendar className={cn("shrink-0 text-muted-foreground", compact ? "h-3 w-3" : "h-3.5 w-3.5")} />
         </button>
       </div>
 
