@@ -1,15 +1,20 @@
-﻿"use client";
+"use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader, StatusBadge } from "@/components/dashboard/management";
 import { DatePickerInput } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { MoneyInput, parseMoneyInput } from "@/components/ui/money-input";
+import { QuantityStepper } from "@/components/ui/quantity-stepper";
 import { Select } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { SYSTEM_CODE_INPUT_CLASS, SYSTEM_CODE_NOTE_CLASS } from "@/lib/form-styles";
 import { formatVND } from "@/lib/mock-data";
+import { useUnitStore } from "@/stores/unit-store";
 import { Plus, Save, Trash2 } from "lucide-react";
 
 interface SupplierOption {
@@ -31,6 +36,7 @@ interface PurchaseLine {
   id: number;
   productId: number;
   quantity: string;
+  unit: string;
   unitPrice: string;
 }
 
@@ -105,16 +111,29 @@ function buildDefaultLine(id: number): PurchaseLine {
     id,
     productId: PRODUCTS[0].id,
     quantity: "1",
+    unit: PRODUCTS[0].unit,
     unitPrice: PRODUCTS[0].defaultPrice.toString(),
   };
 }
 
 export default function PurchaseOrdersPage() {
+  const { units, hydrate, isHydrated } = useUnitStore();
   const [voucherCode] = useState(getVoucherCode());
   const [createdDate, setCreatedDate] = useState(getTodayValue());
   const [supplierId, setSupplierId] = useState<number>(SUPPLIERS[0].id);
   const [lines, setLines] = useState<PurchaseLine[]>([buildDefaultLine(1)]);
   const [message, setMessage] = useState<string>("");
+
+  useEffect(() => {
+    if (!isHydrated) {
+      hydrate();
+    }
+  }, [hydrate, isHydrated]);
+
+  const unitOptions = useMemo(
+    () => units.map((unit) => ({ value: unit.name, label: unit.name })),
+    [units],
+  );
 
   const selectedSupplier = useMemo(
     () => SUPPLIERS.find((supplier) => supplier.id === supplierId) ?? SUPPLIERS[0],
@@ -125,7 +144,7 @@ export default function PurchaseOrdersPage() {
     return lines.map((line) => {
       const product = PRODUCTS.find((item) => item.id === line.productId) ?? PRODUCTS[0];
       const quantity = parsePositiveNumber(line.quantity);
-      const unitPrice = parsePositiveNumber(line.unitPrice);
+      const unitPrice = parseMoneyInput(line.unitPrice);
       return {
         ...line,
         product,
@@ -152,6 +171,7 @@ export default function PurchaseOrdersPage() {
   const hasLineError = invalidLineIndexes.length > 0;
   const hasTotalError = totalAmount <= 0;
   const canSaveOrder = !hasDateError && !hasSupplierError && !hasLineError && !hasTotalError;
+  const voucherStatus = canSaveOrder ? "Sẵn sàng nhập kho" : "Cần bổ sung";
 
   function handleAddLine() {
     setLines((previous) => {
@@ -172,7 +192,7 @@ export default function PurchaseOrdersPage() {
 
   function handleUpdateLine(
     id: number,
-    field: "productId" | "quantity" | "unitPrice",
+    field: "productId" | "quantity" | "unit" | "unitPrice",
     value: string,
   ) {
     setLines((previous) =>
@@ -187,6 +207,7 @@ export default function PurchaseOrdersPage() {
           return {
             ...line,
             productId: product.id,
+            unit: product.unit,
             unitPrice: product.defaultPrice.toString(),
           };
         }
@@ -222,6 +243,18 @@ export default function PurchaseOrdersPage() {
 
   return (
     <div className="space-y-3">
+      <PageHeader
+        eyebrow="Nghiệp vụ nhập kho"
+        title="Phiếu mua hàng"
+        description="Tạo phiếu nhập, gắn nhà cung cấp và kiểm soát tổng tiền trước khi cộng tồn kho."
+        badges={
+          <>
+            <Badge variant="outline" className="border-border/70 bg-background/70">BM5</Badge>
+            <StatusBadge tone={canSaveOrder ? "success" : "warning"}>{voucherStatus}</StatusBadge>
+          </>
+        }
+      />
+
       <Card className="overflow-hidden border-border/70 shadow-sm">
         <CardHeader className="border-b bg-muted/25 px-3 py-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -327,22 +360,26 @@ export default function PurchaseOrdersPage() {
                       </TableCell>
                       <TableCell className="truncate text-sm">{line.product.type}</TableCell>
                       <TableCell>
-                        <Input
-                          value={line.quantity}
-                          onChange={(event) =>
-                            handleUpdateLine(line.id, "quantity", event.target.value)
-                          }
+                        <QuantityStepper
+                          value={String(line.quantity)}
+                          onValueChange={(value) => handleUpdateLine(line.id, "quantity", value)}
+                          min={1}
+                          step={1}
                           inputMode="decimal"
                         />
                       </TableCell>
-                      <TableCell className="truncate text-sm">{line.product.unit}</TableCell>
                       <TableCell>
-                        <Input
-                          value={line.unitPrice}
-                          onChange={(event) =>
-                            handleUpdateLine(line.id, "unitPrice", event.target.value)
-                          }
-                          inputMode="numeric"
+                        <Select
+                          value={line.unit}
+                          onValueChange={(value) => handleUpdateLine(line.id, "unit", value)}
+                          options={unitOptions}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <MoneyInput
+                          value={String(line.unitPrice)}
+                          onValueChange={(value) => handleUpdateLine(line.id, "unitPrice", value)}
+                          inputClassName="h-8 text-[13px]"
                         />
                       </TableCell>
                       <TableCell className="truncate text-sm font-semibold">

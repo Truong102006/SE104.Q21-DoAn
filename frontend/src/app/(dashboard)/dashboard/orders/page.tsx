@@ -1,15 +1,21 @@
-﻿"use client";
+"use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader, StatusBadge } from "@/components/dashboard/management";
 import { DatePickerInput } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { MoneyInput, parseMoneyInput } from "@/components/ui/money-input";
+import { QuantityStepper } from "@/components/ui/quantity-stepper";
 import { Select } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { SYSTEM_CODE_INPUT_CLASS, SYSTEM_CODE_NOTE_CLASS } from "@/lib/form-styles";
 import { formatVND, MOCK_PRODUCTS } from "@/lib/mock-data";
+import { UNIT_SELECT_OPTIONS } from "@/lib/unit-data";
+import { useUnitStore } from "@/stores/unit-store";
 import { Plus, Save, Trash2 } from "lucide-react";
 
 interface CustomerOption {
@@ -21,6 +27,7 @@ interface SaleLine {
   id: number;
   productId: number;
   quantity: string;
+  unit: string;
   unitPrice: string;
 }
 
@@ -52,20 +59,52 @@ function parsePositiveNumber(raw: string): number {
 }
 
 function buildDefaultLine(id: number): SaleLine {
+  const product = MOCK_PRODUCTS[0];
   return {
     id,
-    productId: MOCK_PRODUCTS[0].id,
+    productId: product.id,
     quantity: "1",
-    unitPrice: MOCK_PRODUCTS[0].sellingPrice.toString(),
+    unit: resolveProductUnit(product.weightUnit),
+    unitPrice: product.sellingPrice.toString(),
   };
 }
 
+function resolveProductUnit(rawUnit: string): string {
+  const normalized = rawUnit.trim().toLowerCase();
+  const match = UNIT_SELECT_OPTIONS.find((unit) => unit.value.toLowerCase() === normalized);
+  if (match) {
+    return match.value;
+  }
+  if (normalized.includes("ch")) {
+    return "Chỉ";
+  }
+  if (normalized.includes("kg")) {
+    return "Kg";
+  }
+  if (normalized.includes("vi")) {
+    return "Viên";
+  }
+  return "Gram";
+}
+
 export default function OrdersPage() {
+  const { units, hydrate, isHydrated } = useUnitStore();
   const [voucherCode] = useState(getVoucherCode());
   const [createdDate, setCreatedDate] = useState(getTodayValue());
   const [customerId, setCustomerId] = useState<number>(CUSTOMERS[0].id);
   const [lines, setLines] = useState<SaleLine[]>([buildDefaultLine(1)]);
   const [message, setMessage] = useState<string>("");
+
+  useEffect(() => {
+    if (!isHydrated) {
+      hydrate();
+    }
+  }, [hydrate, isHydrated]);
+
+  const unitOptions = useMemo(
+    () => units.map((unit) => ({ value: unit.name, label: unit.name })),
+    [units],
+  );
 
   const selectedCustomer = useMemo(
     () => CUSTOMERS.find((customer) => customer.id === customerId) ?? CUSTOMERS[0],
@@ -76,7 +115,7 @@ export default function OrdersPage() {
     return lines.map((line) => {
       const product = MOCK_PRODUCTS.find((item) => item.id === line.productId) ?? MOCK_PRODUCTS[0];
       const quantity = parsePositiveNumber(line.quantity);
-      const unitPrice = parsePositiveNumber(line.unitPrice);
+      const unitPrice = parseMoneyInput(line.unitPrice);
       return {
         ...line,
         product,
@@ -103,6 +142,7 @@ export default function OrdersPage() {
   const hasLineError = invalidLineIndexes.length > 0;
   const hasTotalError = totalAmount <= 0;
   const canSaveOrder = !hasDateError && !hasCustomerError && !hasLineError && !hasTotalError;
+  const voucherStatus = canSaveOrder ? "Sẵn sàng lưu" : "Cần bổ sung";
 
   function handleAddLine() {
     setLines((previous) => {
@@ -123,7 +163,7 @@ export default function OrdersPage() {
 
   function handleUpdateLine(
     id: number,
-    field: "productId" | "quantity" | "unitPrice",
+    field: "productId" | "quantity" | "unit" | "unitPrice",
     value: string,
   ) {
     setLines((previous) =>
@@ -138,6 +178,7 @@ export default function OrdersPage() {
           return {
             ...line,
             productId: product.id,
+            unit: resolveProductUnit(product.weightUnit),
             unitPrice: product.sellingPrice.toString(),
           };
         }
@@ -173,6 +214,18 @@ export default function OrdersPage() {
 
   return (
     <div className="space-y-3">
+      <PageHeader
+        eyebrow="Nghiệp vụ bán hàng"
+        title="Phiếu bán hàng"
+        description="Tạo phiếu bán, kiểm tra số lượng/đơn giá và khóa tổng tiền trước khi lưu."
+        badges={
+          <>
+            <Badge variant="outline" className="border-border/70 bg-background/70">BM6</Badge>
+            <StatusBadge tone={canSaveOrder ? "success" : "warning"}>{voucherStatus}</StatusBadge>
+          </>
+        }
+      />
+
       <Card className="overflow-hidden border-border/70 shadow-sm">
         <CardHeader className="border-b bg-muted/25 px-3 py-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -273,22 +326,26 @@ export default function OrdersPage() {
                       </TableCell>
                       <TableCell className="truncate text-sm">{line.product.categoryName}</TableCell>
                       <TableCell>
-                        <Input
-                          value={line.quantity}
-                          onChange={(event) =>
-                            handleUpdateLine(line.id, "quantity", event.target.value)
-                          }
+                        <QuantityStepper
+                          value={String(line.quantity)}
+                          onValueChange={(value) => handleUpdateLine(line.id, "quantity", value)}
+                          min={1}
+                          step={1}
                           inputMode="decimal"
                         />
                       </TableCell>
-                      <TableCell className="truncate text-sm">{line.product.weightUnit}</TableCell>
                       <TableCell>
-                        <Input
-                          value={line.unitPrice}
-                          onChange={(event) =>
-                            handleUpdateLine(line.id, "unitPrice", event.target.value)
-                          }
-                          inputMode="numeric"
+                        <Select
+                          value={line.unit}
+                          onValueChange={(value) => handleUpdateLine(line.id, "unit", value)}
+                          options={unitOptions}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <MoneyInput
+                          value={String(line.unitPrice)}
+                          onValueChange={(value) => handleUpdateLine(line.id, "unitPrice", value)}
+                          inputClassName="h-8 text-[13px]"
                         />
                       </TableCell>
                       <TableCell className="truncate text-sm font-semibold">

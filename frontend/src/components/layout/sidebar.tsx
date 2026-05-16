@@ -122,25 +122,11 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Kết xuất",
     items: [
       {
-        title: "Báo cáo tồn kho",
-        href: "/dashboard/reports#bm10",
+        title: "Báo cáo tổng hợp",
+        href: "/dashboard/reports",
         icon: BarChart3,
         roles: ["ADMIN", "STAFF"],
-        badge: "BM10",
-      },
-      {
-        title: "Doanh thu sản phẩm",
-        href: "/dashboard/reports#bm11",
-        icon: BarChart3,
-        roles: ["ADMIN", "STAFF"],
-        badge: "BM11",
-      },
-      {
-        title: "Doanh thu dịch vụ",
-        href: "/dashboard/reports#bm12",
-        icon: BarChart3,
-        roles: ["ADMIN", "STAFF"],
-        badge: "BM12",
+        badge: "BM10-12",
       },
     ],
   },

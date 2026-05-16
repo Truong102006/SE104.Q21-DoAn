@@ -1,23 +1,29 @@
-﻿"use client";
+"use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { ConfirmDialog, EmptyState, PageHeader, StatusBadge, TableToolbar } from "@/components/dashboard/management";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { MoneyInput, parseMoneyInput } from "@/components/ui/money-input";
+import { QuantityStepper } from "@/components/ui/quantity-stepper";
+import { Select } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { SYSTEM_CODE_INPUT_CLASS, SYSTEM_CODE_NOTE_CLASS } from "@/lib/form-styles";
 import { formatVND, MOCK_PRODUCTS } from "@/lib/mock-data";
-import { STATUS_DOT_CLASS, STATUS_TONE_CLASS, type StatusTone } from "@/lib/status-styles";
-import { cn } from "@/lib/utils";
-import { Pencil, Plus, Search, Trash2, X } from "lucide-react";
+import { type StatusTone } from "@/lib/status-styles";
+import { UNIT_SELECT_OPTIONS } from "@/lib/unit-data";
+import { useUnitStore } from "@/stores/unit-store";
+import { PackageSearch, Pencil, Plus, Search, Trash2, X } from "lucide-react";
 
 interface ProductItem {
   id: number;
   code: string;
   name: string;
   category: string;
+  unit: string;
   price: number;
   stock: number;
 }
@@ -26,6 +32,7 @@ interface ProductDraft {
   code: string;
   name: string;
   category: string;
+  unit: string;
   price: string;
   stock: string;
 }
@@ -37,6 +44,7 @@ const INITIAL_PRODUCTS: ProductItem[] = MOCK_PRODUCTS.map((product) => ({
   code: `SP-${String(product.id).padStart(3, "0")}`,
   name: product.name,
   category: product.categoryName,
+  unit: resolveProductUnit(product.weightUnit),
   price: product.sellingPrice,
   stock: product.stock,
 }));
@@ -45,9 +53,28 @@ const EMPTY_DRAFT: ProductDraft = {
   code: "",
   name: "",
   category: "",
+  unit: UNIT_SELECT_OPTIONS[0]?.value ?? "Gram",
   price: "",
   stock: "",
 };
+
+function resolveProductUnit(rawUnit: string): string {
+  const normalized = rawUnit.trim().toLowerCase();
+  const match = UNIT_SELECT_OPTIONS.find((unit) => unit.value.toLowerCase() === normalized);
+  if (match) {
+    return match.value;
+  }
+  if (normalized.includes("ch")) {
+    return "Chỉ";
+  }
+  if (normalized.includes("kg")) {
+    return "Kg";
+  }
+  if (normalized.includes("vi")) {
+    return "Viên";
+  }
+  return "Gram";
+}
 
 function getProductCode(id: number): string {
   return `SP-${String(id).padStart(3, "0")}`;
@@ -84,6 +111,7 @@ function getStockState(stock: number): { label: string; tone: StatusTone } {
 }
 
 export default function ProductsPage() {
+  const { units, hydrate, isHydrated } = useUnitStore();
   const [products, setProducts] = useState<ProductItem[]>(INITIAL_PRODUCTS);
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -91,6 +119,18 @@ export default function ProductsPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [draft, setDraft] = useState<ProductDraft>(EMPTY_DRAFT);
   const [errorMessage, setErrorMessage] = useState("");
+  const [deletingProduct, setDeletingProduct] = useState<ProductItem | null>(null);
+
+  useEffect(() => {
+    if (!isHydrated) {
+      hydrate();
+    }
+  }, [hydrate, isHydrated]);
+
+  const unitOptions = useMemo(
+    () => units.map((unit) => ({ value: unit.name, label: unit.name })),
+    [units],
+  );
 
   const filteredProducts = useMemo(() => {
     const query = normalizeText(searchQuery);
@@ -99,7 +139,7 @@ export default function ProductsPage() {
     }
     return products.filter((product) => {
       const content = normalizeText(
-        `${product.code} ${product.name} ${product.category} ${product.price} ${product.stock}`,
+        `${product.code} ${product.name} ${product.category} ${product.unit} ${product.price} ${product.stock}`,
       );
       return content.includes(query);
     });
@@ -117,6 +157,7 @@ export default function ProductsPage() {
     setDraft({
       ...EMPTY_DRAFT,
       code: getProductCode(nextId),
+      unit: unitOptions[0]?.value ?? EMPTY_DRAFT.unit,
     });
     setErrorMessage("");
     setIsModalOpen(true);
@@ -129,6 +170,7 @@ export default function ProductsPage() {
       code: product.code,
       name: product.name,
       category: product.category,
+      unit: product.unit,
       price: product.price.toString(),
       stock: product.stock.toString(),
     });
@@ -157,8 +199,12 @@ export default function ProductsPage() {
       setErrorMessage("Vui lòng nhập loại sản phẩm.");
       return { valid: false, price: 0, stock: 0 };
     }
+    if (!draft.unit.trim()) {
+      setErrorMessage("Vui lòng chọn đơn vị tính từ danh sách BM3.");
+      return { valid: false, price: 0, stock: 0 };
+    }
 
-    const price = parseNonNegativeInt(draft.price);
+    const price = parseMoneyInput(draft.price);
     if (price <= 0) {
       setErrorMessage("Vui lòng nhập đơn giá hợp lệ (> 0).");
       return { valid: false, price: 0, stock: 0 };
@@ -184,6 +230,7 @@ export default function ProductsPage() {
           code: getProductCode(nextId),
           name: draft.name.trim(),
           category: draft.category.trim(),
+          unit: draft.unit,
           price,
           stock,
         },
@@ -199,6 +246,7 @@ export default function ProductsPage() {
               ...product,
               name: draft.name.trim(),
               category: draft.category.trim(),
+              unit: draft.unit,
               price,
               stock,
             }
@@ -209,33 +257,36 @@ export default function ProductsPage() {
   }
 
   function removeProduct(product: ProductItem) {
-    const confirmed = window.confirm(
-      `Xóa sản phẩm "${product.name}"? Hành động này không thể hoàn tác.`,
-    );
-    if (!confirmed) {
-      return;
-    }
     setProducts((previous) => previous.filter((item) => item.id !== product.id));
+    setDeletingProduct(null);
   }
 
   return (
     <div className="space-y-3">
-      <Card>
-        <CardHeader className="border-b px-3 py-3">
-          <div className="grid gap-2 xl:grid-cols-[auto_minmax(280px,1fr)_auto] xl:items-center">
-            <div className="flex flex-wrap items-center gap-2">
-              <CardTitle className="text-base">Tra cứu sản phẩm</CardTitle>
-              <Badge variant="outline" className="h-5 border-border/80 bg-card px-2 text-[10px]">
-                BM8
-              </Badge>
-              <Badge variant="outline" className="h-5 border-border/80 bg-card px-2 text-[10px]">
-                {filteredProducts.length}/{products.length} bản ghi
-              </Badge>
-              <Badge variant="outline" className="h-5 border-border/80 bg-card px-2 text-[10px]">
-                Tồn {totalStock}
-              </Badge>
-            </div>
+      <PageHeader
+        eyebrow="Danh mục hàng hóa"
+        title="Quản lý sản phẩm"
+        description="Chuẩn hóa mã sản phẩm, giá bán và tồn kho để các phiếu bán/nhập dùng dữ liệu nhất quán."
+        badges={
+          <>
+            <Badge variant="outline" className="border-border/70 bg-background/70">BM8</Badge>
+            <Badge variant="outline" className="border-border/70 bg-background/70">Tồn {totalStock}</Badge>
+          </>
+        }
+        actions={
+          <Button onClick={openCreateModal} size="sm" className="h-8 cursor-pointer">
+            <Plus className="mr-1.5 h-3.5 w-3.5" />
+            Thêm sản phẩm
+          </Button>
+        }
+      />
 
+      <Card>
+        <TableToolbar
+          title="Tra cứu sản phẩm"
+          description="Tìm nhanh theo mã, tên, loại sản phẩm, giá hoặc tồn kho."
+          meta={<Badge variant="outline" className="h-5 border-border/80 bg-card px-2 text-[10px]">{filteredProducts.length}/{products.length} bản ghi</Badge>}
+          search={
             <div className="relative">
               <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -245,36 +296,40 @@ export default function ProductsPage() {
                 className="pl-9"
               />
             </div>
-
-            <Button onClick={openCreateModal} size="sm" className="h-8 cursor-pointer">
-              <Plus className="mr-1.5 h-3.5 w-3.5" />
-              Thêm sản phẩm
-            </Button>
-          </div>
-        </CardHeader>
+          }
+        />
 
         <CardContent className="px-0">
+          {filteredProducts.length === 0 ? (
+            <div className="p-4">
+              <EmptyState
+                icon={PackageSearch}
+                title="Không tìm thấy sản phẩm phù hợp"
+                description="Thử đổi từ khóa tìm kiếm hoặc thêm sản phẩm mới nếu đây là mặt hàng chưa có trong danh mục."
+                action={
+                  <Button onClick={openCreateModal} size="sm" className="cursor-pointer">
+                    <Plus className="mr-1.5 h-3.5 w-3.5" />
+                    Thêm sản phẩm
+                  </Button>
+                }
+              />
+            </div>
+          ) : (
           <Table className="table-fixed [&_th]:whitespace-normal [&_th]:leading-4 [&_td]:align-middle">
             <TableHeader>
               <TableRow className="bg-muted/40 hover:bg-muted/40">
                 <TableHead className="w-14 text-center">STT</TableHead>
                 <TableHead className="w-[12%]">Mã</TableHead>
-                <TableHead className="w-[33%]">Tên sản phẩm</TableHead>
-                <TableHead className="w-[17%]">Loại sản phẩm</TableHead>
-                <TableHead className="w-[16%] text-right">Đơn giá</TableHead>
-                <TableHead className="w-[14%] text-right">Tồn</TableHead>
+                <TableHead className="w-[28%]">Tên sản phẩm</TableHead>
+                <TableHead className="w-[15%]">Loại sản phẩm</TableHead>
+                <TableHead className="w-[10%]">Đơn vị tính</TableHead>
+                <TableHead className="w-[15%] text-right">Đơn giá</TableHead>
+                <TableHead className="w-[12%] text-right">Tồn</TableHead>
                 <TableHead className="w-24 text-right">Tác vụ</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredProducts.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
-                    Không tìm thấy sản phẩm phù hợp.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredProducts.map((product, index) => {
+                {filteredProducts.map((product, index) => {
                   const stockState = getStockState(product.stock);
 
                   return (
@@ -285,20 +340,14 @@ export default function ProductsPage() {
                       </TableCell>
                       <TableCell className="truncate font-medium">{product.name}</TableCell>
                       <TableCell className="truncate">{product.category}</TableCell>
+                      <TableCell className="truncate">{product.unit}</TableCell>
                       <TableCell className="text-right font-semibold text-gold">{formatVND(product.price)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
                           <span className="font-medium">{product.stock}</span>
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              "h-5 gap-1 px-2 text-[10px]",
-                              STATUS_TONE_CLASS[stockState.tone],
-                            )}
-                          >
-                            <span className={cn("h-1.5 w-1.5 rounded-full", STATUS_DOT_CLASS[stockState.tone])} />
+                          <StatusBadge tone={stockState.tone}>
                             {stockState.label}
-                          </Badge>
+                          </StatusBadge>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -316,7 +365,7 @@ export default function ProductsPage() {
                             variant="destructive"
                             size="icon-sm"
                             className="cursor-pointer"
-                            onClick={() => removeProduct(product)}
+                            onClick={() => setDeletingProduct(product)}
                             aria-label="Xóa sản phẩm"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
@@ -325,10 +374,10 @@ export default function ProductsPage() {
                       </TableCell>
                     </TableRow>
                   );
-                })
-              )}
+                })}
             </TableBody>
           </Table>
+          )}
         </CardContent>
       </Card>
 
@@ -385,6 +434,15 @@ export default function ProductsPage() {
                     placeholder="VD: Vàng"
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="product-unit">Đơn vị tính</Label>
+                  <Select
+                    id="product-unit"
+                    value={draft.unit}
+                    onValueChange={(value) => updateDraft("unit", value)}
+                    options={unitOptions}
+                  />
+                </div>
                 <div className="space-y-2 sm:col-span-2">
                   <Label htmlFor="product-name">Tên sản phẩm</Label>
                   <Input
@@ -397,22 +455,23 @@ export default function ProductsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="product-price">Đơn giá</Label>
-                  <Input
+                  <MoneyInput
                     id="product-price"
                     value={draft.price}
-                    onChange={(event) => updateDraft("price", event.target.value)}
-                    inputMode="numeric"
-                    placeholder="VD: 1500000"
+                    onValueChange={(value) => updateDraft("price", value)}
+                    placeholder="VD: 1.500.000"
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="product-stock">Tồn kho</Label>
-                  <Input
-                    id="product-stock"
+                  <QuantityStepper
                     value={draft.stock}
-                    onChange={(event) => updateDraft("stock", event.target.value)}
+                    onValueChange={(value) => updateDraft("stock", value)}
+                    min={0}
+                    step={1}
                     inputMode="numeric"
-                    placeholder="VD: 12"
+                    decrementLabel="Giảm tồn kho"
+                    incrementLabel="Tăng tồn kho"
                   />
                 </div>
               </div>
@@ -440,6 +499,24 @@ export default function ProductsPage() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={deletingProduct !== null}
+        title="Xóa sản phẩm?"
+        description={
+          deletingProduct
+            ? `Sản phẩm "${deletingProduct.name}" sẽ bị xóa khỏi danh mục demo. Hành động này không thể hoàn tác.`
+            : ""
+        }
+        confirmLabel="Xóa sản phẩm"
+        destructive
+        onCancel={() => setDeletingProduct(null)}
+        onConfirm={() => {
+          if (deletingProduct) {
+            removeProduct(deletingProduct);
+          }
+        }}
+      />
     </div>
   );
 }

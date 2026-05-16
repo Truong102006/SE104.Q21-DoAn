@@ -1,9 +1,10 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { ConfirmDialog, EmptyState, PageHeader, TableToolbar } from "@/components/dashboard/management";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -13,6 +14,7 @@ import {
   Phone,
   Plus,
   Search,
+  Store,
   Trash2,
   X,
 } from "lucide-react";
@@ -77,6 +79,7 @@ export default function SuppliersPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [draft, setDraft] = useState<SupplierDraft>(EMPTY_DRAFT);
   const [errorMessage, setErrorMessage] = useState("");
+  const [deletingSupplier, setDeletingSupplier] = useState<SupplierItem | null>(null);
 
   useEffect(() => {
     if (!isModalOpen) {
@@ -200,31 +203,31 @@ export default function SuppliersPage() {
   }
 
   function handleDeleteSupplier(supplier: SupplierItem) {
-    const confirmed = window.confirm(
-      `Xóa nhà cung cấp "${supplier.name}"? Hành động này không thể hoàn tác.`,
-    );
-    if (!confirmed) {
-      return;
-    }
-
     setSuppliers((previous) => previous.filter((item) => item.id !== supplier.id));
+    setDeletingSupplier(null);
   }
 
   return (
     <div className="space-y-3">
-      <Card>
-        <CardHeader className="border-b px-3 py-3">
-          <div className="grid gap-2 xl:grid-cols-[auto_minmax(280px,1fr)_auto] xl:items-center">
-            <div className="flex flex-wrap items-center gap-2">
-              <CardTitle className="text-base">Nhà cung cấp</CardTitle>
-              <Badge variant="outline" className="h-5 border-border/80 bg-card px-2 text-[10px]">
-                BM1
-              </Badge>
-              <Badge variant="outline" className="h-5 border-border/80 bg-card px-2 text-[10px]">
-                {shownSuppliers}/{suppliers.length} bản ghi
-              </Badge>
-            </div>
+      <PageHeader
+        eyebrow="Danh mục đối tác"
+        title="Quản lý nhà cung cấp"
+        description="Lưu thông tin nhà cung cấp để phiếu mua hàng tự động điền liên hệ, địa chỉ và giảm sai sót khi nhập kho."
+        badges={<Badge variant="outline" className="border-border/70 bg-background/70">BM1</Badge>}
+        actions={
+          <Button onClick={handleOpenCreateModal} size="sm" className="h-8 cursor-pointer">
+            <Plus className="mr-1.5 h-3.5 w-3.5" />
+            Thêm nhà cung cấp
+          </Button>
+        }
+      />
 
+      <Card>
+        <TableToolbar
+          title="Danh sách nhà cung cấp"
+          description="Tìm theo tên, số điện thoại, địa chỉ hoặc ghi chú."
+          meta={<Badge variant="outline" className="h-5 border-border/80 bg-card px-2 text-[10px]">{shownSuppliers}/{suppliers.length} bản ghi</Badge>}
+          search={
             <div className="relative">
               <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -234,15 +237,25 @@ export default function SuppliersPage() {
                 className="pl-9"
               />
             </div>
-
-            <Button onClick={handleOpenCreateModal} size="sm" className="h-8 cursor-pointer">
-              <Plus className="mr-1.5 h-3.5 w-3.5" />
-              Thêm nhà cung cấp
-            </Button>
-          </div>
-        </CardHeader>
+          }
+        />
 
         <CardContent className="px-0">
+          {filteredSuppliers.length === 0 ? (
+            <div className="p-4">
+              <EmptyState
+                icon={Store}
+                title="Không tìm thấy nhà cung cấp"
+                description="Thử đổi từ khóa hoặc thêm nhà cung cấp mới để dùng cho phiếu mua hàng."
+                action={
+                  <Button onClick={handleOpenCreateModal} size="sm" className="cursor-pointer">
+                    <Plus className="mr-1.5 h-3.5 w-3.5" />
+                    Thêm nhà cung cấp
+                  </Button>
+                }
+              />
+            </div>
+          ) : (
           <Table className="table-fixed [&_th]:whitespace-normal [&_th]:leading-4 [&_td]:align-middle">
             <TableHeader>
               <TableRow className="bg-muted/40 hover:bg-muted/40">
@@ -255,14 +268,7 @@ export default function SuppliersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredSuppliers.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
-                    Không tìm thấy nhà cung cấp phù hợp.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredSuppliers.map((supplier, index) => (
+                {filteredSuppliers.map((supplier, index) => (
                   <TableRow key={supplier.id} className="group">
                     <TableCell className="text-center font-medium">{index + 1}</TableCell>
                     <TableCell className="truncate font-medium">{supplier.name}</TableCell>
@@ -296,7 +302,7 @@ export default function SuppliersPage() {
                           variant="destructive"
                           size="icon-sm"
                           className="cursor-pointer"
-                          onClick={() => handleDeleteSupplier(supplier)}
+                          onClick={() => setDeletingSupplier(supplier)}
                           aria-label="Xóa nhà cung cấp"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -304,10 +310,10 @@ export default function SuppliersPage() {
                       </div>
                     </TableCell>
                   </TableRow>
-                ))
-              )}
+                ))}
             </TableBody>
           </Table>
+          )}
         </CardContent>
       </Card>
 
@@ -417,6 +423,24 @@ export default function SuppliersPage() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={deletingSupplier !== null}
+        title="Xóa nhà cung cấp?"
+        description={
+          deletingSupplier
+            ? `Nhà cung cấp "${deletingSupplier.name}" sẽ bị xóa khỏi danh mục demo. Hành động này không thể hoàn tác.`
+            : ""
+        }
+        confirmLabel="Xóa nhà cung cấp"
+        destructive
+        onCancel={() => setDeletingSupplier(null)}
+        onConfirm={() => {
+          if (deletingSupplier) {
+            handleDeleteSupplier(deletingSupplier);
+          }
+        }}
+      />
     </div>
   );
 }
