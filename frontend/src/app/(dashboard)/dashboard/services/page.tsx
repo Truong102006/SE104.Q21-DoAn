@@ -250,13 +250,13 @@ export default function ServicesPage() {
         </CardHeader>
 
         <CardContent className="px-0">
-          <Table>
+          <Table className="table-fixed [&_th]:whitespace-normal [&_th]:leading-4 [&_td]:align-middle">
             <TableHeader>
               <TableRow className="bg-muted/40 hover:bg-muted/40">
                 <TableHead className="w-14 text-center">STT</TableHead>
-                <TableHead>Loại dịch vụ</TableHead>
-                <TableHead className="text-right">Đơn giá</TableHead>
-                <TableHead>Ghi chú</TableHead>
+                <TableHead className="w-[30%]">Loại dịch vụ</TableHead>
+                <TableHead className="w-[20%] text-right">Đơn giá</TableHead>
+                <TableHead className="w-[40%]">Ghi chú</TableHead>
                 <TableHead className="w-24 text-right">Tác vụ</TableHead>
               </TableRow>
             </TableHeader>
@@ -271,13 +271,13 @@ export default function ServicesPage() {
                 filteredServices.map((service, index) => (
                   <TableRow key={service.id}>
                     <TableCell className="text-center font-medium">{index + 1}</TableCell>
-                    <TableCell className="font-medium">{service.serviceType}</TableCell>
+                    <TableCell className="truncate font-medium">{service.serviceType}</TableCell>
                     <TableCell className="text-right">
                       <Badge className="bg-emerald-600 text-white hover:bg-emerald-600">
                         {formatVND(service.unitPrice)}
                       </Badge>
                     </TableCell>
-                    <TableCell className="max-w-[360px] truncate text-muted-foreground">
+                    <TableCell className="truncate text-muted-foreground">
                       {service.note || "-"}
                     </TableCell>
                     <TableCell>

@@ -4,6 +4,9 @@
   "private": true,
   "scripts": {
     "dev:frontend": "npm --prefix frontend run dev",
+    "dev:frontend:start": "node scripts/frontend-start.js",
+    "dev:frontend:stop": "node scripts/frontend-stop.js",
+    "dev:frontend:status": "node scripts/frontend-status.js",
     "build:frontend": "npm --prefix frontend run build",
     "lint:frontend": "npm --prefix frontend run lint",
     "type-check:frontend": "npm --prefix frontend run type-check",
