@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { DatePickerInput } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
@@ -139,6 +140,18 @@ export default function PurchaseOrdersPage() {
     () => lineWithMeta.reduce((sum, line) => sum + line.amount, 0),
     [lineWithMeta],
   );
+  const invalidLineIndexes = useMemo(
+    () =>
+      lineWithMeta
+        .map((line, index) => (line.quantity <= 0 || line.unitPrice <= 0 ? index + 1 : null))
+        .filter((value): value is number => value !== null),
+    [lineWithMeta],
+  );
+  const hasDateError = !createdDate;
+  const hasSupplierError = !supplierId;
+  const hasLineError = invalidLineIndexes.length > 0;
+  const hasTotalError = totalAmount <= 0;
+  const canSaveOrder = !hasDateError && !hasSupplierError && !hasLineError && !hasTotalError;
 
   function handleAddLine() {
     setLines((previous) => {
@@ -194,16 +207,12 @@ export default function PurchaseOrdersPage() {
   }
 
   function handleSaveOrder() {
-    const hasInvalidLine = lineWithMeta.some(
-      (line) => line.quantity <= 0 || line.unitPrice <= 0,
-    );
-
-    if (hasInvalidLine) {
+    if (hasLineError) {
       setMessage("Vui lòng nhập số lượng và đơn giá hợp lệ cho tất cả dòng.");
       return;
     }
 
-    if (totalAmount <= 0) {
+    if (hasTotalError) {
       setMessage("Tổng tiền phải lớn hơn 0.");
       return;
     }
@@ -243,12 +252,14 @@ export default function PurchaseOrdersPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="created-date">Ngày lập</Label>
-              <Input
+              <DatePickerInput
                 id="created-date"
-                type="date"
                 value={createdDate}
-                onChange={(event) => setCreatedDate(event.target.value)}
+                onValueChange={setCreatedDate}
               />
+              {hasDateError && (
+                <p className="text-xs text-destructive">Vui lòng chọn ngày lập.</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="supplier">Nhà cung cấp</Label>
@@ -261,6 +272,9 @@ export default function PurchaseOrdersPage() {
                   label: supplier.name,
                 }))}
               />
+              {hasSupplierError && (
+                <p className="text-xs text-destructive">Vui lòng chọn nhà cung cấp.</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="supplier-phone">Số điện thoại</Label>
@@ -282,16 +296,16 @@ export default function PurchaseOrdersPage() {
             </div>
 
             <div className="rounded-lg border">
-              <Table>
+              <Table className="table-fixed [&_th]:whitespace-normal [&_th]:leading-4 [&_td]:align-middle">
                 <TableHeader>
                   <TableRow className="bg-muted/40 hover:bg-muted/40">
                     <TableHead className="w-14 text-center">STT</TableHead>
-                    <TableHead className="min-w-[220px]">Sản phẩm</TableHead>
-                    <TableHead className="min-w-[140px]">Loại sản phẩm</TableHead>
-                    <TableHead className="min-w-[120px]">Số lượng</TableHead>
-                    <TableHead className="min-w-[120px]">Đơn vị tính</TableHead>
-                    <TableHead className="min-w-[150px]">Đơn giá</TableHead>
-                    <TableHead className="min-w-[160px]">Thành tiền</TableHead>
+                    <TableHead className="w-[27%]">Sản phẩm</TableHead>
+                    <TableHead className="w-[14%]">Loại sản phẩm</TableHead>
+                    <TableHead className="w-[11%]">Số lượng</TableHead>
+                    <TableHead className="w-[11%]">Đơn vị tính</TableHead>
+                    <TableHead className="w-[15%]">Đơn giá</TableHead>
+                    <TableHead className="w-[16%]">Thành tiền</TableHead>
                     <TableHead className="w-12"></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -311,7 +325,7 @@ export default function PurchaseOrdersPage() {
                           }))}
                         />
                       </TableCell>
-                      <TableCell>{line.product.type}</TableCell>
+                      <TableCell className="truncate text-sm">{line.product.type}</TableCell>
                       <TableCell>
                         <Input
                           value={line.quantity}
@@ -321,7 +335,7 @@ export default function PurchaseOrdersPage() {
                           inputMode="decimal"
                         />
                       </TableCell>
-                      <TableCell>{line.product.unit}</TableCell>
+                      <TableCell className="truncate text-sm">{line.product.unit}</TableCell>
                       <TableCell>
                         <Input
                           value={line.unitPrice}
@@ -331,7 +345,7 @@ export default function PurchaseOrdersPage() {
                           inputMode="numeric"
                         />
                       </TableCell>
-                      <TableCell className="font-semibold">
+                      <TableCell className="truncate text-sm font-semibold">
                         {formatVND(line.amount)}
                       </TableCell>
                       <TableCell className="text-right">
@@ -358,6 +372,12 @@ export default function PurchaseOrdersPage() {
             <span className="text-lg font-bold text-gold">{formatVND(totalAmount)}</span>
           </div>
 
+          {hasLineError && (
+            <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+              Dòng không hợp lệ: {invalidLineIndexes.join(", ")}. Số lượng và đơn giá phải lớn hơn 0.
+            </p>
+          )}
+
           {message && (
             <p className="rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm">
               {message}
@@ -372,7 +392,7 @@ export default function PurchaseOrdersPage() {
             >
               Làm mới
             </Button>
-            <Button onClick={handleSaveOrder} className="cursor-pointer">
+            <Button onClick={handleSaveOrder} className="cursor-pointer" disabled={!canSaveOrder}>
               <Save className="mr-2 h-4 w-4" />
               Lưu phiếu mua hàng
             </Button>

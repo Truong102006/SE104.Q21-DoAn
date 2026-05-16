@@ -243,14 +243,14 @@ export default function SuppliersPage() {
         </CardHeader>
 
         <CardContent className="px-0">
-          <Table>
+          <Table className="table-fixed [&_th]:whitespace-normal [&_th]:leading-4 [&_td]:align-middle">
             <TableHeader>
               <TableRow className="bg-muted/40 hover:bg-muted/40">
                 <TableHead className="w-14 text-center">STT</TableHead>
-                <TableHead>Tên nhà cung cấp</TableHead>
-                <TableHead>Số điện thoại</TableHead>
-                <TableHead>Địa chỉ</TableHead>
-                <TableHead>Ghi chú</TableHead>
+                <TableHead className="w-[24%]">Tên nhà cung cấp</TableHead>
+                <TableHead className="w-[16%]">Số điện thoại</TableHead>
+                <TableHead className="w-[24%]">Địa chỉ</TableHead>
+                <TableHead className="w-[24%]">Ghi chú</TableHead>
                 <TableHead className="w-24 text-right">Tác vụ</TableHead>
               </TableRow>
             </TableHeader>
@@ -265,20 +265,20 @@ export default function SuppliersPage() {
                 filteredSuppliers.map((supplier, index) => (
                   <TableRow key={supplier.id} className="group">
                     <TableCell className="text-center font-medium">{index + 1}</TableCell>
-                    <TableCell className="font-medium">{supplier.name}</TableCell>
-                    <TableCell>
+                    <TableCell className="truncate font-medium">{supplier.name}</TableCell>
+                    <TableCell className="truncate">
                       <div className="inline-flex items-center gap-1.5 text-sm">
                         <Phone className="h-3.5 w-3.5 text-muted-foreground" />
                         {supplier.phone}
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="truncate">
                       <div className="inline-flex items-center gap-1.5 text-sm">
                         <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
                         {supplier.address || "-"}
                       </div>
                     </TableCell>
-                    <TableCell className="max-w-[320px] truncate text-muted-foreground">
+                    <TableCell className="truncate text-muted-foreground">
                       {supplier.note || "-"}
                     </TableCell>
                     <TableCell>

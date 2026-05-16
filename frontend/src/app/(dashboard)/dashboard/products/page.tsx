@@ -254,15 +254,15 @@ export default function ProductsPage() {
         </CardHeader>
 
         <CardContent className="px-0">
-          <Table>
+          <Table className="table-fixed [&_th]:whitespace-normal [&_th]:leading-4 [&_td]:align-middle">
             <TableHeader>
               <TableRow className="bg-muted/40 hover:bg-muted/40">
                 <TableHead className="w-14 text-center">STT</TableHead>
-                <TableHead>Mã</TableHead>
-                <TableHead>Tên sản phẩm</TableHead>
-                <TableHead>Loại sản phẩm</TableHead>
-                <TableHead className="text-right">Đơn giá</TableHead>
-                <TableHead className="text-right">Tồn</TableHead>
+                <TableHead className="w-[12%]">Mã</TableHead>
+                <TableHead className="w-[33%]">Tên sản phẩm</TableHead>
+                <TableHead className="w-[17%]">Loại sản phẩm</TableHead>
+                <TableHead className="w-[16%] text-right">Đơn giá</TableHead>
+                <TableHead className="w-[14%] text-right">Tồn</TableHead>
                 <TableHead className="w-24 text-right">Tác vụ</TableHead>
               </TableRow>
             </TableHeader>
@@ -283,8 +283,8 @@ export default function ProductsPage() {
                       <TableCell className="font-mono text-xs text-muted-foreground">
                         {product.code}
                       </TableCell>
-                      <TableCell className="max-w-[420px] truncate font-medium">{product.name}</TableCell>
-                      <TableCell>{product.category}</TableCell>
+                      <TableCell className="truncate font-medium">{product.name}</TableCell>
+                      <TableCell className="truncate">{product.category}</TableCell>
                       <TableCell className="text-right font-semibold text-gold">{formatVND(product.price)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">

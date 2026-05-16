@@ -187,13 +187,13 @@ export default function DashboardPage() {
             </div>
           </CardHeader>
           <CardContent className="pt-3">
-            <Table>
+            <Table className="table-fixed [&_th]:whitespace-normal [&_th]:leading-4 [&_td]:align-middle">
               <TableHeader>
                 <TableRow>
-                  <TableHead>Công việc</TableHead>
-                  <TableHead>Phụ trách</TableHead>
-                  <TableHead>Hạn</TableHead>
-                  <TableHead>Ưu tiên</TableHead>
+                  <TableHead className="w-[46%]">Công việc</TableHead>
+                  <TableHead className="w-[16%]">Phụ trách</TableHead>
+                  <TableHead className="w-[10%]">Hạn</TableHead>
+                  <TableHead className="w-[14%]">Ưu tiên</TableHead>
                   <TableHead className="w-16 text-right">Mở</TableHead>
                 </TableRow>
               </TableHeader>
@@ -204,7 +204,7 @@ export default function DashboardPage() {
                   return (
                     <TableRow key={item.id}>
                       <TableCell className="max-w-[420px] truncate font-medium">{item.title}</TableCell>
-                      <TableCell>{item.owner}</TableCell>
+                      <TableCell className="truncate">{item.owner}</TableCell>
                       <TableCell>{item.dueTime}</TableCell>
                       <TableCell>
                         <Badge

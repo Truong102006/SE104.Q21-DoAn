@@ -45,7 +45,7 @@ function Select({
         id={id}
         aria-label={ariaLabel}
         className={cn(
-          "flex h-8 w-full items-center justify-between gap-2 rounded-lg border border-input bg-card px-2.5 text-sm text-foreground shadow-xs outline-none",
+          "flex h-8 w-full items-center justify-between gap-2 rounded-lg border border-input bg-card px-2.5 text-sm text-foreground shadow-xs outline-none [&>span]:truncate",
           "hover:border-ring/45 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/25",
           "disabled:cursor-not-allowed disabled:opacity-50",
           className,

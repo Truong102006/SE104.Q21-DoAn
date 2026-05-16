@@ -104,17 +104,17 @@ export default function ServiceVoucherLookupPage() {
           </div>
         </CardHeader>
         <CardContent className="p-0">
-            <Table>
+            <Table className="table-fixed [&_th]:whitespace-normal [&_th]:leading-4 [&_td]:align-middle">
               <TableHeader>
                 <TableRow className="bg-muted/40 hover:bg-muted/40">
                   <TableHead className="w-14 text-center">STT</TableHead>
-                  <TableHead className="min-w-[170px]">Số phiếu</TableHead>
-                  <TableHead className="min-w-[130px]">Ngày lập</TableHead>
-                  <TableHead className="min-w-[180px]">Khách hàng</TableHead>
-                  <TableHead className="min-w-[140px] text-right">Tổng tiền</TableHead>
-                  <TableHead className="min-w-[140px] text-right">Trả trước</TableHead>
-                  <TableHead className="min-w-[140px] text-right">Còn lại</TableHead>
-                  <TableHead className="min-w-[140px]">Tình trạng</TableHead>
+                  <TableHead className="w-[19%]">Số phiếu</TableHead>
+                  <TableHead className="w-[13%]">Ngày lập</TableHead>
+                  <TableHead className="w-[22%]">Khách hàng</TableHead>
+                  <TableHead className="w-[14%] text-right">Tổng tiền</TableHead>
+                  <TableHead className="w-[14%] text-right">Trả trước</TableHead>
+                  <TableHead className="w-[14%] text-right">Còn lại</TableHead>
+                  <TableHead className="w-[14%]">Tình trạng</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -133,7 +133,7 @@ export default function ServiceVoucherLookupPage() {
                         <TableCell className="text-center font-medium">{index + 1}</TableCell>
                         <TableCell className="font-medium">{row.voucherCode}</TableCell>
                         <TableCell>{row.createdDate}</TableCell>
-                        <TableCell>{row.customerName}</TableCell>
+                        <TableCell className="truncate">{row.customerName}</TableCell>
                         <TableCell className="text-right font-medium">{formatVND(row.totalAmount)}</TableCell>
                         <TableCell className="text-right">{formatVND(row.prepaid)}</TableCell>
                         <TableCell className="text-right text-amber-700">{formatVND(row.remaining)}</TableCell>
