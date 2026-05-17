@@ -1,18 +1,18 @@
-## 0. Cap Nhat Moi Nhat (2026-05-15)
+## 0. Cập Nhật Mới Nhất (2026-05-15)
 
-- Backend da bo sung them nen tang CRUD + service + dto + controller cho cac module:
+- Backend đã bổ sung thêm nền tảng CRUD + service + dto + controller cho các module:
   - `phieu-mua-hang`, `phieu-ban-hang`, `phieu-dich-vu`
   - `tham-so`
   - `bao-cao-ton-kho`, `bao-cao-doanh-thu-san-pham`, `bao-cao-doanh-thu-dich-vu`
   - `chuc-nang`, `nhom-nguoi-dung`, `nguoi-dung`, `phan-quyen`
-- Da cap nhat `ApiPaths` de mo route cho cac module tren.
-- Da bo sung repository method phuc vu:
+- Đã cập nhật `ApiPaths` để mở route cho các module trên.
+- Đã bổ sung repository method phục vụ:
   - search keyword
-  - validate duplicate nghiep vu
-  - generate ma tu dong (PM/PB/DV va mot so ma bao cao/quan tri)
-- Trang thai build/test backend:
-  - Lenh da chay: `cd backend && ./mvnw test`
-  - Ket qua: `BUILD SUCCESS` (lan gan nhat trong ngay 2026-05-15)
+  - validate duplicate nghiệp vụ
+  - generate mã tự động (PM/PB/DV và một số mã báo cáo/quản trị)
+- Trạng thái build/test backend:
+  - Lệnh đã chạy: `cd backend && ./mvnw test`
+  - Kết quả: `BUILD SUCCESS` (lần gần nhất trong ngày 2026-05-15)
 
 ---
 # SE104.Q21 - Web Quản Lý Cửa Hàng Vàng Bạc Đá Quý - Báo Cáo Tiến Độ Tổng Thể
@@ -392,7 +392,7 @@ File liên quan:
 | 4 | Dùng dữ liệu mock/hardcoded cho login và dashboard | `frontend/src/lib/mock-data.ts`, `login/page.tsx` | Không phản ánh dữ liệu thực, khó kiểm chứng end-to-end |
 | 5 | Chưa có pagination backend | Các `getAll` trong `*ServiceImpl` | Nguy cơ chậm khi dữ liệu lớn |
 | 6 | `middleware.ts` đã deprecated ở Next.js 16 | Kết quả `next build` | Cần migrate sang `proxy.ts` |
-| 7 | Tài liệu tiến độ cũ lệch thực tế + lỗi encoding | `docs/progress.md` | Dễ gây hiểu sai trạng thái dự án |
+| 7 | Cần duy trì một nguồn tài liệu tiến độ duy nhất | `progress.md` | Tránh phân mảnh nội dung và mâu thuẫn trạng thái |
 | 8 | Dependency frontend có local self-link | `frontend/package.json` (`gold-jewelry-store-management: file:..`) | Cần kiểm chứng mục đích, tránh rủi ro build/publish |
 
 Ghi chú secret:
@@ -411,7 +411,7 @@ Ghi chú secret:
 | Database/Migration | 1 | `V1__init_schema.sql` (không tính `.gitkeep`) |
 | Config/Deployment | 13 | `docker-compose`, env example, tsconfig/eslint/next/pom/package |
 | Tests | 0 | Không có test case thực (chỉ `.gitkeep`) |
-| Docs | 3 | `README.md`, `frontend/README.md`, `docs/progress.md` |
+| Docs | 3 | `README.md`, `frontend/README.md`, `progress.md` |
 
 ---
 
