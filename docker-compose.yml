@@ -10,12 +10,34 @@ services:
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
-      - gold-store-postgres-data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-gold_store} -d ${POSTGRES_DB:-gold_store}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      - postgres-data:/var/lib/postgresql/data
+
+  frontend:
+    build: ./frontend
+    container_name: frontend
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+  backend:
+    build: ./backend
+    container_name: backend
+    depends_on:
+      - postgres
+    ports:
+      - "${SERVER_PORT:-8080}:8080"
+    env_file:
+      - .env
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-gold_store}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-gold_store}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-gold_store}
 
 volumes:
-  gold-store-postgres-data:
+  postgres-data:
