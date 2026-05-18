@@ -1,0 +1,13 @@
+spring:
+  config:
+    activate:
+      on-profile: supabase
+  datasource:
+    hikari:
+      # Supabase shared transaction pooler does not support server-side prepared statements.
+      # This keeps JDBC compatible if user accidentally uses a transaction-mode URI.
+      data-source-properties:
+        prepareThreshold: ${SPRING_DATASOURCE_PREPARE_THRESHOLD:0}
+      maximum-pool-size: ${SPRING_DATASOURCE_MAX_POOL_SIZE:10}
+      minimum-idle: ${SPRING_DATASOURCE_MIN_IDLE:2}
+

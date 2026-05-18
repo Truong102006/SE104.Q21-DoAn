@@ -1,4 +1,4 @@
-import type { Product, User, Category, GoldPrice } from "@/types";
+import type { Product, User, Category, GoldPrice, Customer } from "@/types";
 
 /* ──────────────────────────────────────────────────────────────
    Mock data for development — replace with real API calls later
@@ -27,6 +27,50 @@ export const MOCK_USERS: Record<string, { password: string; user: User }> = {
     },
   },
 };
+
+/* ── Customers ───────────────────────────────────────────── */
+export const MOCK_CUSTOMERS: Customer[] = [
+  {
+    id: 1,
+    fullName: "Phạm Minh Tuấn",
+    phone: "0901234567",
+    email: "tuan.pham@gmail.com",
+    address: "123 Lê Lợi, Quận 1, TP.HCM",
+    createdAt: "2026-04-10T08:00:00Z",
+  },
+  {
+    id: 2,
+    fullName: "Nguyễn Thị Mai",
+    phone: "0987654321",
+    email: "mai.nguyen@yahoo.com",
+    address: "456 Nguyễn Huệ, Quận 1, TP.HCM",
+    createdAt: "2026-04-12T09:30:00Z",
+  },
+  {
+    id: 3,
+    fullName: "Lê Hoàng Nam",
+    phone: "0912345678",
+    email: "nam.le@hotmail.com",
+    address: "789 Cách Mạng Tháng 8, Quận 10, TP.HCM",
+    createdAt: "2026-04-15T10:15:00Z",
+  },
+  {
+    id: 4,
+    fullName: "Trần Thu Hà",
+    phone: "0934567890",
+    email: "ha.tran@outlook.com",
+    address: "101 Võ Văn Tần, Quận 3, TP.HCM",
+    createdAt: "2026-04-20T14:45:00Z",
+  },
+  {
+    id: 5,
+    fullName: "Vũ Đức Anh",
+    phone: "0967890123",
+    email: "anh.vu@gmail.com",
+    address: "202 Điện Biên Phủ, Quận Bình Thạnh, TP.HCM",
+    createdAt: "2026-04-25T16:20:00Z",
+  },
+];
 
 /* ── Categories ──────────────────────────────────────────── */
 export const MOCK_CATEGORIES: Category[] = [

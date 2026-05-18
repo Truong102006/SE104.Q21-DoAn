@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,57 +20,36 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  MapPin,
-  Pencil,
-  Phone,
-  Plus,
-  Search,
-  Trash2,
-  UserRound,
-  X,
-} from "lucide-react";
-
-interface CustomerItem {
-  id: number;
-  name: string;
-  phone: string;
-  address: string;
-  note: string;
-}
+import { SYSTEM_CODE_INPUT_CLASS, SYSTEM_CODE_NOTE_CLASS } from "@/lib/form-styles";
+import { MOCK_CUSTOMERS } from "@/lib/mock-data";
+import { type Customer } from "@/types";
+import { Contact, Pencil, Plus, Search, Trash2, X, User } from "lucide-react";
 
 interface CustomerDraft {
-  name: string;
+  fullName: string;
   phone: string;
+  email: string;
   address: string;
-  note: string;
 }
 
 type FormMode = "create" | "edit";
 
-const INITIAL_CUSTOMERS: CustomerItem[] = [
-  {
-    id: 1,
-    name: "Nguyễn Văn Minh",
-    phone: "0908000111",
-    address: "Quận 1, TP.HCM",
-    note: "Khách hàng thân thiết",
-  },
-  {
-    id: 2,
-    name: "Trần Thị Lan",
-    phone: "0908000222",
-    address: "Quận 3, TP.HCM",
-    note: "Ưu tiên liên hệ buổi sáng",
-  },
-];
-
 const EMPTY_DRAFT: CustomerDraft = {
-  name: "",
+  fullName: "",
   phone: "",
+  email: "",
   address: "",
-  note: "",
 };
+
+function getCustomerCode(id: number): string {
+  return `KH-${String(id).padStart(4, "0")}`;
+}
+
+function getNextCustomerId(customers: Customer[]): number {
+  return customers.length === 0
+    ? 1
+    : Math.max(...customers.map((customer) => customer.id)) + 1;
+}
 
 function normalizeText(value: string): string {
   return value.trim().toLowerCase();
@@ -81,31 +60,14 @@ function normalizePhone(value: string): string {
 }
 
 export default function CustomersPage() {
-  const [customers, setCustomers] = useState<CustomerItem[]>(INITIAL_CUSTOMERS);
+  const [customers, setCustomers] = useState<Customer[]>(MOCK_CUSTOMERS);
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formMode, setFormMode] = useState<FormMode>("create");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [draft, setDraft] = useState<CustomerDraft>(EMPTY_DRAFT);
   const [errorMessage, setErrorMessage] = useState("");
-  const [deletingCustomer, setDeletingCustomer] = useState<CustomerItem | null>(
-    null,
-  );
-
-  useEffect(() => {
-    if (!isModalOpen) {
-      return;
-    }
-
-    function handleEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        handleCloseModal();
-      }
-    }
-
-    window.addEventListener("keydown", handleEscape);
-    return () => window.removeEventListener("keydown", handleEscape);
-  }, [isModalOpen]);
+  const [deletingCustomer, setDeletingCustomer] = useState<Customer | null>(null);
 
   const filteredCustomers = useMemo(() => {
     const query = normalizeText(searchQuery);
@@ -115,15 +77,13 @@ export default function CustomersPage() {
 
     return customers.filter((customer) => {
       const content = normalizeText(
-        `${customer.name} ${customer.phone} ${customer.address} ${customer.note}`,
+        `${getCustomerCode(customer.id)} ${customer.fullName} ${customer.phone} ${customer.email ?? ""} ${customer.address ?? ""}`,
       );
       return content.includes(query);
     });
   }, [customers, searchQuery]);
 
-  const shownCustomers = filteredCustomers.length;
-
-  function handleOpenCreateModal() {
+  function openCreateModal() {
     setFormMode("create");
     setEditingId(null);
     setDraft(EMPTY_DRAFT);
@@ -131,25 +91,25 @@ export default function CustomersPage() {
     setIsModalOpen(true);
   }
 
-  function handleOpenEditModal(customer: CustomerItem) {
+  function openEditModal(customer: Customer) {
     setFormMode("edit");
     setEditingId(customer.id);
     setDraft({
-      name: customer.name,
+      fullName: customer.fullName,
       phone: customer.phone,
-      address: customer.address,
-      note: customer.note,
+      email: customer.email ?? "",
+      address: customer.address ?? "",
     });
     setErrorMessage("");
     setIsModalOpen(true);
   }
 
-  function handleCloseModal() {
+  function closeModal() {
     setIsModalOpen(false);
     setErrorMessage("");
   }
 
-  function handleChangeDraft(field: keyof CustomerDraft, value: string) {
+  function updateDraft(field: keyof CustomerDraft, value: string) {
     setDraft((previous) => ({ ...previous, [field]: value }));
     if (errorMessage) {
       setErrorMessage("");
@@ -157,16 +117,21 @@ export default function CustomersPage() {
   }
 
   function validateDraft(): boolean {
-    const name = draft.name.trim();
+    const fullName = draft.fullName.trim();
     const phone = draft.phone.trim();
 
-    if (!name) {
-      setErrorMessage("Vui lòng nhập tên khách hàng.");
+    if (!fullName) {
+      setErrorMessage("Vui lòng nhập họ tên khách hàng.");
       return false;
     }
 
     if (!phone) {
       setErrorMessage("Vui lòng nhập số điện thoại.");
+      return false;
+    }
+
+    if (!/^[0-9+]{10,12}$/.test(phone)) {
+      setErrorMessage("Số điện thoại không hợp lệ.");
       return false;
     }
 
@@ -180,7 +145,7 @@ export default function CustomersPage() {
       return true;
     }
 
-    if (normalizeText(existingPhoneCustomer.name) === normalizeText(name)) {
+    if (normalizeText(existingPhoneCustomer.fullName) === normalizeText(fullName)) {
       setErrorMessage(
         "Khách hàng đã tồn tại trong hệ thống với số điện thoại này.",
       );
@@ -188,12 +153,12 @@ export default function CustomersPage() {
     }
 
     setErrorMessage(
-      `Số điện thoại này đã được gắn với khách hàng "${existingPhoneCustomer.name}".`,
+      `Số điện thoại này đã được gắn với khách hàng "${existingPhoneCustomer.fullName}".`,
     );
     return false;
   }
 
-  function handleSubmitCustomer(event: React.FormEvent<HTMLFormElement>) {
+  function submitCustomer(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (!validateDraft()) {
@@ -201,22 +166,20 @@ export default function CustomersPage() {
     }
 
     if (formMode === "create") {
-      const nextId =
-        customers.length === 0
-          ? 1
-          : Math.max(...customers.map((customer) => customer.id)) + 1;
+      const nextId = getNextCustomerId(customers);
 
       setCustomers((previous) => [
         ...previous,
         {
           id: nextId,
-          name: draft.name.trim(),
+          fullName: draft.fullName.trim(),
           phone: draft.phone.trim(),
-          address: draft.address.trim(),
-          note: draft.note.trim(),
+          email: draft.email.trim() || undefined,
+          address: draft.address.trim() || undefined,
+          createdAt: new Date().toISOString(),
         },
       ]);
-      handleCloseModal();
+      closeModal();
       return;
     }
 
@@ -225,18 +188,18 @@ export default function CustomersPage() {
         customer.id === editingId
           ? {
               ...customer,
-              name: draft.name.trim(),
+              fullName: draft.fullName.trim(),
               phone: draft.phone.trim(),
-              address: draft.address.trim(),
-              note: draft.note.trim(),
+              email: draft.email.trim() || undefined,
+              address: draft.address.trim() || undefined,
             }
           : customer,
       ),
     );
-    handleCloseModal();
+    closeModal();
   }
 
-  function handleDeleteCustomer(customer: CustomerItem) {
+  function removeCustomer(customer: Customer) {
     setCustomers((previous) => previous.filter((item) => item.id !== customer.id));
     setDeletingCustomer(null);
   }
@@ -246,18 +209,19 @@ export default function CustomersPage() {
       <PageHeader
         eyebrow="BM2"
         title="Danh sách khách hàng"
-        description="Quản lý tên khách hàng, số điện thoại, địa chỉ và ghi chú. Số điện thoại là định danh duy nhất cho mỗi khách hàng."
+        description="Quản lý thông tin khách hàng. Số điện thoại là định danh duy nhất cho mỗi khách hàng."
         badges={
-          <Badge variant="outline" className="border-border/70 bg-background/70">
-            BM2
-          </Badge>
+          <>
+            <Badge variant="outline" className="border-border/70 bg-background/70">
+              BM2
+            </Badge>
+            <Badge variant="outline" className="border-border/70 bg-background/70">
+              Tổng số {customers.length}
+            </Badge>
+          </>
         }
         actions={
-          <Button
-            onClick={handleOpenCreateModal}
-            size="sm"
-            className="h-8 cursor-pointer"
-          >
+          <Button onClick={openCreateModal} size="sm" className="h-8 cursor-pointer">
             <Plus className="mr-1.5 h-3.5 w-3.5" />
             Thêm khách hàng
           </Button>
@@ -267,13 +231,13 @@ export default function CustomersPage() {
       <Card>
         <TableToolbar
           title="Danh sách khách hàng"
-          description="Tìm theo tên, số điện thoại, địa chỉ hoặc ghi chú."
+          description="Tra cứu khách hàng theo mã, tên, số điện thoại, email hoặc địa chỉ."
           meta={
             <Badge
               variant="outline"
               className="h-5 border-border/80 bg-card px-2 text-[10px]"
             >
-              {shownCustomers}/{customers.length} bản ghi
+              {filteredCustomers.length}/{customers.length} khách hàng
             </Badge>
           }
           search={
@@ -282,7 +246,7 @@ export default function CustomersPage() {
               <Input
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder="Tìm theo tên, số điện thoại, địa chỉ..."
+                placeholder="Tìm theo mã, tên, SĐT..."
                 className="pl-9"
               />
             </div>
@@ -293,15 +257,11 @@ export default function CustomersPage() {
           {filteredCustomers.length === 0 ? (
             <div className="p-4">
               <EmptyState
-                icon={UserRound}
+                icon={Contact}
                 title="Không tìm thấy khách hàng"
-                description="Thử đổi từ khóa hoặc thêm khách hàng mới vào danh sách BM2."
+                description="Thử đổi từ khóa tìm kiếm hoặc thêm khách hàng mới."
                 action={
-                  <Button
-                    onClick={handleOpenCreateModal}
-                    size="sm"
-                    className="cursor-pointer"
-                  >
+                  <Button onClick={openCreateModal} size="sm" className="cursor-pointer">
                     <Plus className="mr-1.5 h-3.5 w-3.5" />
                     Thêm khách hàng
                   </Button>
@@ -313,36 +273,34 @@ export default function CustomersPage() {
               <TableHeader>
                 <TableRow className="bg-muted/40 hover:bg-muted/40">
                   <TableHead className="w-14 text-center">STT</TableHead>
-                  <TableHead className="w-[24%]">Tên khách hàng</TableHead>
-                  <TableHead className="w-[16%]">Số điện thoại</TableHead>
-                  <TableHead className="w-[24%]">Địa chỉ</TableHead>
-                  <TableHead className="w-[24%]">Ghi chú</TableHead>
+                  <TableHead className="w-[12%]">Mã KH</TableHead>
+                  <TableHead className="w-[20%]">Họ tên</TableHead>
+                  <TableHead className="w-[15%]">Số điện thoại</TableHead>
+                  <TableHead className="w-[20%]">Email</TableHead>
+                  <TableHead className="w-[23%]">Địa chỉ</TableHead>
                   <TableHead className="w-24 text-right">Tác vụ</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredCustomers.map((customer, index) => (
-                  <TableRow key={customer.id} className="group">
+                  <TableRow key={customer.id}>
                     <TableCell className="text-center font-medium">
                       {index + 1}
                     </TableCell>
+                    <TableCell className="font-mono text-xs text-muted-foreground">
+                      {getCustomerCode(customer.id)}
+                    </TableCell>
                     <TableCell className="truncate font-medium">
-                      {customer.name}
+                      {customer.fullName}
                     </TableCell>
-                    <TableCell className="truncate">
-                      <div className="inline-flex items-center gap-1.5 text-sm">
-                        <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-                        {customer.phone}
-                      </div>
-                    </TableCell>
-                    <TableCell className="truncate">
-                      <div className="inline-flex items-center gap-1.5 text-sm">
-                        <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
-                        {customer.address || "-"}
-                      </div>
+                    <TableCell className="truncate font-mono text-sm">
+                      {customer.phone}
                     </TableCell>
                     <TableCell className="truncate text-muted-foreground">
-                      {customer.note || "-"}
+                      {customer.email ?? "-"}
+                    </TableCell>
+                    <TableCell className="truncate text-xs text-muted-foreground">
+                      {customer.address ?? "-"}
                     </TableCell>
                     <TableCell>
                       <div className="flex justify-end gap-1">
@@ -350,8 +308,8 @@ export default function CustomersPage() {
                           variant="outline"
                           size="icon-sm"
                           className="cursor-pointer"
-                          onClick={() => handleOpenEditModal(customer)}
-                          aria-label="Sửa khách hàng"
+                          onClick={() => openEditModal(customer)}
+                          aria-label="Sửa thông tin"
                         >
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
@@ -377,82 +335,97 @@ export default function CustomersPage() {
       {isModalOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4 backdrop-blur-xs"
-          onClick={handleCloseModal}
+          onClick={closeModal}
         >
           <div
-            className="w-full max-w-xl rounded-xl border bg-background shadow-2xl"
+            className="w-full max-w-lg rounded-xl border bg-background shadow-2xl"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="flex items-start justify-between border-b px-5 py-4">
               <div>
-                <h2 className="text-lg font-semibold">
+                <h2 className="flex items-center gap-2 text-lg font-semibold">
+                  <User className="h-5 w-5 text-gold" />
                   {formMode === "create"
                     ? "Thêm khách hàng"
-                    : "Cập nhật khách hàng"}
+                    : "Cập nhật thông tin"}
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Điền đầy đủ thông tin khách hàng và lưu thay đổi.
+                  {formMode === "create"
+                    ? "Nhập thông tin cho khách hàng mới."
+                    : "Chỉnh sửa thông tin khách hàng hiện tại."}
                 </p>
               </div>
               <Button
                 variant="ghost"
                 size="icon-sm"
                 className="cursor-pointer"
-                onClick={handleCloseModal}
+                onClick={closeModal}
                 aria-label="Đóng cửa sổ"
               >
                 <X className="h-4 w-4" />
               </Button>
             </div>
 
-            <form onSubmit={handleSubmitCustomer} className="space-y-4 px-5 py-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2 sm:col-span-2">
-                  <Label htmlFor="customer-name">Tên khách hàng</Label>
+            <form onSubmit={submitCustomer} className="space-y-4 px-5 py-4">
+              <div className="grid gap-4">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>Mã khách hàng</Label>
+                    <Input
+                      value={
+                        formMode === "create"
+                          ? getCustomerCode(getNextCustomerId(customers))
+                          : getCustomerCode(editingId!)
+                      }
+                      readOnly
+                      className={SYSTEM_CODE_INPUT_CLASS}
+                    />
+                    <p className={SYSTEM_CODE_NOTE_CLASS}>Mã tự động.</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="cust-phone">
+                      Số điện thoại <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id="cust-phone"
+                      value={draft.phone}
+                      onChange={(event) => updateDraft("phone", event.target.value)}
+                      placeholder="VD: 0901234567"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="cust-name">
+                    Họ và tên <span className="text-destructive">*</span>
+                  </Label>
                   <Input
-                    id="customer-name"
-                    value={draft.name}
-                    onChange={(event) =>
-                      handleChangeDraft("name", event.target.value)
-                    }
-                    placeholder="VD: Nguyễn Văn Minh"
+                    id="cust-name"
+                    value={draft.fullName}
+                    onChange={(event) => updateDraft("fullName", event.target.value)}
+                    placeholder="VD: Nguyễn Văn A"
                     autoFocus
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="customer-phone">Số điện thoại</Label>
+                  <Label htmlFor="cust-email">Email</Label>
                   <Input
-                    id="customer-phone"
-                    value={draft.phone}
-                    onChange={(event) =>
-                      handleChangeDraft("phone", event.target.value)
-                    }
-                    placeholder="VD: 0908000111"
+                    id="cust-email"
+                    type="email"
+                    value={draft.email}
+                    onChange={(event) => updateDraft("email", event.target.value)}
+                    placeholder="VD: customer@example.com"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="customer-address">Địa chỉ</Label>
+                  <Label htmlFor="cust-address">Địa chỉ</Label>
                   <Input
-                    id="customer-address"
+                    id="cust-address"
                     value={draft.address}
-                    onChange={(event) =>
-                      handleChangeDraft("address", event.target.value)
-                    }
-                    placeholder="VD: Quận 1, TP.HCM"
-                  />
-                </div>
-
-                <div className="space-y-2 sm:col-span-2">
-                  <Label htmlFor="customer-note">Ghi chú</Label>
-                  <Input
-                    id="customer-note"
-                    value={draft.note}
-                    onChange={(event) =>
-                      handleChangeDraft("note", event.target.value)
-                    }
-                    placeholder="Thông tin bổ sung (nếu có)"
+                    onChange={(event) => updateDraft("address", event.target.value)}
+                    placeholder="VD: 123 Đường ABC, Quận X, TP. Y"
                   />
                 </div>
               </div>
@@ -468,11 +441,14 @@ export default function CustomersPage() {
                   type="button"
                   variant="outline"
                   className="cursor-pointer"
-                  onClick={handleCloseModal}
+                  onClick={closeModal}
                 >
                   Hủy
                 </Button>
-                <Button type="submit" className="cursor-pointer">
+                <Button
+                  type="submit"
+                  className="cursor-pointer bg-gold text-gold-foreground hover:bg-gold/90"
+                >
                   {formMode === "create" ? "Thêm mới" : "Lưu thay đổi"}
                 </Button>
               </div>
@@ -486,7 +462,7 @@ export default function CustomersPage() {
         title="Xóa khách hàng?"
         description={
           deletingCustomer
-            ? `Khách hàng "${deletingCustomer.name}" sẽ bị xóa khỏi danh sách demo. Hành động này không thể hoàn tác.`
+            ? `Thông tin của khách hàng "${deletingCustomer.fullName}" sẽ bị xóa. Hành động này không thể hoàn tác.`
             : ""
         }
         confirmLabel="Xóa khách hàng"
@@ -494,7 +470,7 @@ export default function CustomersPage() {
         onCancel={() => setDeletingCustomer(null)}
         onConfirm={() => {
           if (deletingCustomer) {
-            handleDeleteCustomer(deletingCustomer);
+            removeCustomer(deletingCustomer);
           }
         }}
       />

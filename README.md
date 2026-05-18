@@ -48,6 +48,31 @@ npm run dev:frontend
 
 Frontend mac dinh o `http://localhost:3000`.
 
+## Chay backend voi Supabase Postgres
+
+1. Trong Supabase Dashboard, mo project va bam `Connect`, copy thong tin ket noi Postgres.
+
+2. Set env vars cho backend (co the trong `.env` hoac env he thong):
+
+```bash
+SPRING_PROFILES_ACTIVE=supabase
+SPRING_DATASOURCE_URL=jdbc:postgresql://aws-0-<region>.pooler.supabase.com:5432/postgres?sslmode=require
+SPRING_DATASOURCE_USERNAME=postgres.<project_ref>
+SPRING_DATASOURCE_PASSWORD=<db_password>
+SPRING_DATASOURCE_PREPARE_THRESHOLD=0
+```
+
+3. Chay backend voi profile Supabase:
+
+```bash
+npm run dev:backend:supabase
+```
+
+Luu y:
+- Backend Spring Boot ket noi truc tiep PostgreSQL nen KHONG can `SUPABASE_ANON_KEY` hoac `SUPABASE_SERVICE_ROLE_KEY`.
+- Nen dung `Direct connection` hoac `Session pooler (port 5432)` cho app backend lau dai.
+- Migration Flyway se tu dong tao schema tren database Supabase khi backend start lan dau.
+
 ## Kiem tra
 
 ```bash
