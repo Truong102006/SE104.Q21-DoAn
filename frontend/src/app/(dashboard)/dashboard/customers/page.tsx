@@ -1,13 +1,25 @@
-﻿"use client";
+"use client";
 
 import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ConfirmDialog, EmptyState, PageHeader, TableToolbar } from "@/components/dashboard/management";
+import {
+  ConfirmDialog,
+  EmptyState,
+  PageHeader,
+  TableToolbar,
+} from "@/components/dashboard/management";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { SYSTEM_CODE_INPUT_CLASS, SYSTEM_CODE_NOTE_CLASS } from "@/lib/form-styles";
 import { MOCK_CUSTOMERS } from "@/lib/mock-data";
 import { type Customer } from "@/types";
@@ -36,11 +48,15 @@ function getCustomerCode(id: number): string {
 function getNextCustomerId(customers: Customer[]): number {
   return customers.length === 0
     ? 1
-    : Math.max(...customers.map((c) => c.id)) + 1;
+    : Math.max(...customers.map((customer) => customer.id)) + 1;
 }
 
 function normalizeText(value: string): string {
   return value.trim().toLowerCase();
+}
+
+function normalizePhone(value: string): string {
+  return value.replace(/\D/g, "");
 }
 
 export default function CustomersPage() {
@@ -58,6 +74,7 @@ export default function CustomersPage() {
     if (!query) {
       return customers;
     }
+
     return customers.filter((customer) => {
       const content = normalizeText(
         `${getCustomerCode(customer.id)} ${customer.fullName} ${customer.phone} ${customer.email ?? ""} ${customer.address ?? ""}`,
@@ -100,30 +117,57 @@ export default function CustomersPage() {
   }
 
   function validateDraft(): boolean {
-    if (!draft.fullName.trim()) {
+    const fullName = draft.fullName.trim();
+    const phone = draft.phone.trim();
+
+    if (!fullName) {
       setErrorMessage("Vui lòng nhập họ tên khách hàng.");
       return false;
     }
-    if (!draft.phone.trim()) {
+
+    if (!phone) {
       setErrorMessage("Vui lòng nhập số điện thoại.");
       return false;
     }
-    // Simple phone validation
-    if (!/^[0-9+]{10,12}$/.test(draft.phone.trim())) {
+
+    if (!/^[0-9+]{10,12}$/.test(phone)) {
       setErrorMessage("Số điện thoại không hợp lệ.");
       return false;
     }
-    return true;
+
+    const existingPhoneCustomer = customers.find(
+      (customer) =>
+        customer.id !== editingId &&
+        normalizePhone(customer.phone) === normalizePhone(phone),
+    );
+
+    if (!existingPhoneCustomer) {
+      return true;
+    }
+
+    if (normalizeText(existingPhoneCustomer.fullName) === normalizeText(fullName)) {
+      setErrorMessage(
+        "Khách hàng đã tồn tại trong hệ thống với số điện thoại này.",
+      );
+      return false;
+    }
+
+    setErrorMessage(
+      `Số điện thoại này đã được gắn với khách hàng "${existingPhoneCustomer.fullName}".`,
+    );
+    return false;
   }
 
   function submitCustomer(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
     if (!validateDraft()) {
       return;
     }
 
     if (formMode === "create") {
       const nextId = getNextCustomerId(customers);
+
       setCustomers((previous) => [
         ...previous,
         {
@@ -163,13 +207,17 @@ export default function CustomersPage() {
   return (
     <div className="space-y-3">
       <PageHeader
-        eyebrow="Khách hàng"
-        title="Quản lý thông tin khách hàng"
-        description="Lưu trữ và cập nhật thông tin khách hàng, số điện thoại và địa chỉ liên lạc."
+        eyebrow="BM2"
+        title="Danh sách khách hàng"
+        description="Quản lý thông tin khách hàng. Số điện thoại là định danh duy nhất cho mỗi khách hàng."
         badges={
           <>
-            <Badge variant="outline" className="border-border/70 bg-background/70">BM2</Badge>
-            <Badge variant="outline" className="border-border/70 bg-background/70">Tổng số {customers.length}</Badge>
+            <Badge variant="outline" className="border-border/70 bg-background/70">
+              BM2
+            </Badge>
+            <Badge variant="outline" className="border-border/70 bg-background/70">
+              Tổng số {customers.length}
+            </Badge>
           </>
         }
         actions={
@@ -183,8 +231,15 @@ export default function CustomersPage() {
       <Card>
         <TableToolbar
           title="Danh sách khách hàng"
-          description="Tra cứu khách hàng theo mã, tên hoặc số điện thoại."
-          meta={<Badge variant="outline" className="h-5 border-border/80 bg-card px-2 text-[10px]">{filteredCustomers.length}/{customers.length} khách hàng</Badge>}
+          description="Tra cứu khách hàng theo mã, tên, số điện thoại, email hoặc địa chỉ."
+          meta={
+            <Badge
+              variant="outline"
+              className="h-5 border-border/80 bg-card px-2 text-[10px]"
+            >
+              {filteredCustomers.length}/{customers.length} khách hàng
+            </Badge>
+          }
           search={
             <div className="relative">
               <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -214,7 +269,7 @@ export default function CustomersPage() {
               />
             </div>
           ) : (
-            <Table className="table-fixed [&_th]:whitespace-normal [&_th]:leading-4 [&_td]:align-middle">
+            <Table className="table-fixed [&_td]:align-middle [&_th]:whitespace-normal [&_th]:leading-4">
               <TableHeader>
                 <TableRow className="bg-muted/40 hover:bg-muted/40">
                   <TableHead className="w-14 text-center">STT</TableHead>
@@ -229,14 +284,24 @@ export default function CustomersPage() {
               <TableBody>
                 {filteredCustomers.map((customer, index) => (
                   <TableRow key={customer.id}>
-                    <TableCell className="text-center font-medium">{index + 1}</TableCell>
+                    <TableCell className="text-center font-medium">
+                      {index + 1}
+                    </TableCell>
                     <TableCell className="font-mono text-xs text-muted-foreground">
                       {getCustomerCode(customer.id)}
                     </TableCell>
-                    <TableCell className="truncate font-medium">{customer.fullName}</TableCell>
-                    <TableCell className="truncate font-mono text-sm">{customer.phone}</TableCell>
-                    <TableCell className="truncate text-muted-foreground">{customer.email ?? "-"}</TableCell>
-                    <TableCell className="truncate text-muted-foreground text-xs">{customer.address ?? "-"}</TableCell>
+                    <TableCell className="truncate font-medium">
+                      {customer.fullName}
+                    </TableCell>
+                    <TableCell className="truncate font-mono text-sm">
+                      {customer.phone}
+                    </TableCell>
+                    <TableCell className="truncate text-muted-foreground">
+                      {customer.email ?? "-"}
+                    </TableCell>
+                    <TableCell className="truncate text-xs text-muted-foreground">
+                      {customer.address ?? "-"}
+                    </TableCell>
                     <TableCell>
                       <div className="flex justify-end gap-1">
                         <Button
@@ -278,12 +343,16 @@ export default function CustomersPage() {
           >
             <div className="flex items-start justify-between border-b px-5 py-4">
               <div>
-                <h2 className="text-lg font-semibold flex items-center gap-2">
+                <h2 className="flex items-center gap-2 text-lg font-semibold">
                   <User className="h-5 w-5 text-gold" />
-                  {formMode === "create" ? "Thêm khách hàng" : "Cập nhật thông tin"}
+                  {formMode === "create"
+                    ? "Thêm khách hàng"
+                    : "Cập nhật thông tin"}
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {formMode === "create" ? "Nhập thông tin cho khách hàng mới." : "Chỉnh sửa thông tin khách hàng hiện tại."}
+                  {formMode === "create"
+                    ? "Nhập thông tin cho khách hàng mới."
+                    : "Chỉnh sửa thông tin khách hàng hiện tại."}
                 </p>
               </div>
               <Button
@@ -303,29 +372,37 @@ export default function CustomersPage() {
                   <div className="space-y-2">
                     <Label>Mã khách hàng</Label>
                     <Input
-                      value={formMode === "create" ? getCustomerCode(getNextCustomerId(customers)) : getCustomerCode(editingId!)}
+                      value={
+                        formMode === "create"
+                          ? getCustomerCode(getNextCustomerId(customers))
+                          : getCustomerCode(editingId!)
+                      }
                       readOnly
                       className={SYSTEM_CODE_INPUT_CLASS}
                     />
                     <p className={SYSTEM_CODE_NOTE_CLASS}>Mã tự động.</p>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="cust-phone">Số điện thoại <span className="text-destructive">*</span></Label>
+                    <Label htmlFor="cust-phone">
+                      Số điện thoại <span className="text-destructive">*</span>
+                    </Label>
                     <Input
                       id="cust-phone"
                       value={draft.phone}
-                      onChange={(e) => updateDraft("phone", e.target.value)}
+                      onChange={(event) => updateDraft("phone", event.target.value)}
                       placeholder="VD: 0901234567"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="cust-name">Họ và tên <span className="text-destructive">*</span></Label>
+                  <Label htmlFor="cust-name">
+                    Họ và tên <span className="text-destructive">*</span>
+                  </Label>
                   <Input
                     id="cust-name"
                     value={draft.fullName}
-                    onChange={(e) => updateDraft("fullName", e.target.value)}
+                    onChange={(event) => updateDraft("fullName", event.target.value)}
                     placeholder="VD: Nguyễn Văn A"
                     autoFocus
                   />
@@ -337,7 +414,7 @@ export default function CustomersPage() {
                     id="cust-email"
                     type="email"
                     value={draft.email}
-                    onChange={(e) => updateDraft("email", e.target.value)}
+                    onChange={(event) => updateDraft("email", event.target.value)}
                     placeholder="VD: customer@example.com"
                   />
                 </div>
@@ -347,7 +424,7 @@ export default function CustomersPage() {
                   <Input
                     id="cust-address"
                     value={draft.address}
-                    onChange={(e) => updateDraft("address", e.target.value)}
+                    onChange={(event) => updateDraft("address", event.target.value)}
                     placeholder="VD: 123 Đường ABC, Quận X, TP. Y"
                   />
                 </div>
@@ -368,7 +445,10 @@ export default function CustomersPage() {
                 >
                   Hủy
                 </Button>
-                <Button type="submit" className="cursor-pointer bg-gold hover:bg-gold/90 text-gold-foreground">
+                <Button
+                  type="submit"
+                  className="cursor-pointer bg-gold text-gold-foreground hover:bg-gold/90"
+                >
                   {formMode === "create" ? "Thêm mới" : "Lưu thay đổi"}
                 </Button>
               </div>
