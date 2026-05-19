@@ -8,6 +8,7 @@ import com.se104.goldstore.service.LoaiDichVuService;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -19,7 +20,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping(ApiPaths.LOAI_DICH_VU)
+@RequestMapping({ ApiPaths.LOAI_DICH_VU, ApiPaths.SERVICE_TYPES })
 public class LoaiDichVuController {
 
     private final LoaiDichVuService loaiDichVuService;
@@ -54,6 +55,7 @@ public class LoaiDichVuController {
     }
 
     @DeleteMapping("/{maLoaiDichVu}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<Object>> delete(@PathVariable String maLoaiDichVu) {
         loaiDichVuService.delete(maLoaiDichVu);
         return ResponseEntity.ok(ApiResponse.success("Xoa loai dich vu thanh cong", null));

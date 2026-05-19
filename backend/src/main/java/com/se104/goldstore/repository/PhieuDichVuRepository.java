@@ -7,6 +7,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface PhieuDichVuRepository extends JpaRepository<PhieuDichVu, String> {
 
+    boolean existsByMaKhachHang(String maKhachHang);
+
     List<PhieuDichVu> findBySoPhieuDichVuContainingIgnoreCase(String soPhieuDichVu);
 
     Optional<PhieuDichVu> findTopBySoPhieuDichVuStartingWithOrderBySoPhieuDichVuDesc(String prefix);

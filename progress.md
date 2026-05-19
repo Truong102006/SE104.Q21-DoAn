@@ -1,4 +1,24 @@
-﻿## 0. Update 2026-05-19 (Auth + RBAC)
+﻿## 0. Update 2026-05-19 (Catalog BM1-BM4 + QD1-QD4-QD13)
+
+- Da hoan thien 5 module danh muc voi route song song:
+  - Legacy: `/api/v1/nha-cung-cap`, `/api/v1/khach-hang`, `/api/v1/don-vi-tinh`, `/api/v1/loai-dich-vu`, `/api/v1/loai-san-pham`
+  - New theo BM: `/api/suppliers`, `/api/customers`, `/api/units`, `/api/service-types`, `/api/product-types`
+- Da cap nhat rule nghiep vu:
+  - QD1 (Nha cung cap): ten khong trung, so dien thoai 10 chu so, khong trung SDT.
+  - QD2 (Khach hang): chan trung cap ten + SDT, chan trung SDT theo schema.
+  - QD3 (Don vi tinh): ten khong trung, he so quy doi >= 0 (Hibernate Validator), chan xoa khi da duoc su dung.
+  - QD4 (Loai dich vu): ten khong trung, don gia >= 0, chan xoa khi da phat sinh phieu dich vu.
+  - QD13 (Loai san pham): ti le loi nhuan >= 0, chan xoa khi da co san pham thuoc loai.
+- Da bo sung phan quyen delete chat hon:
+  - `DELETE` 5 module danh muc yeu cau `ADMIN` (method-level security).
+  - STAFF va ADMIN van duoc xem/them/sua theo SecurityConfig.
+- Da bo sung test unit cho rule trung ten/trung SDT:
+  - `KhachHangServiceImplTest` (2 test)
+  - `NhaCungCapServiceImplTest` (2 test)
+- Ket qua xac minh:
+  - `cd backend && ./mvnw test` => BUILD SUCCESS (6 tests pass).
+
+## 0. Update 2026-05-19 (Auth + RBAC)
 
 - Backend da implement Spring Security + JWT stateless:
   - POST /api/auth/login
@@ -505,5 +525,6 @@ Giải thích ngắn:
 3. Chuẩn hóa response/error và logging.
 4. Rà soát dependency chưa dùng (MapStruct/JWT chưa wire) và dependency local-link frontend.
 5. Bổ sung Dockerfile/backend+frontend và tài liệu deploy tối thiểu.
+
 
 

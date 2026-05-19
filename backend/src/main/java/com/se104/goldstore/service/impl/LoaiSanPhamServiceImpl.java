@@ -8,6 +8,7 @@ import com.se104.goldstore.entity.LoaiSanPham;
 import com.se104.goldstore.exception.BusinessException;
 import com.se104.goldstore.exception.ResourceNotFoundException;
 import com.se104.goldstore.repository.LoaiSanPhamRepository;
+import com.se104.goldstore.repository.SanPhamRepository;
 import com.se104.goldstore.service.LoaiSanPhamService;
 import java.util.List;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -21,9 +22,14 @@ public class LoaiSanPhamServiceImpl implements LoaiSanPhamService {
     private static final String PREFIX = "LSP";
 
     private final LoaiSanPhamRepository loaiSanPhamRepository;
+    private final SanPhamRepository sanPhamRepository;
 
-    public LoaiSanPhamServiceImpl(LoaiSanPhamRepository loaiSanPhamRepository) {
+    public LoaiSanPhamServiceImpl(
+        LoaiSanPhamRepository loaiSanPhamRepository,
+        SanPhamRepository sanPhamRepository
+    ) {
         this.loaiSanPhamRepository = loaiSanPhamRepository;
+        this.sanPhamRepository = sanPhamRepository;
     }
 
     @Override
@@ -88,6 +94,9 @@ public class LoaiSanPhamServiceImpl implements LoaiSanPhamService {
     @Transactional
     public void delete(String maLoaiSanPham) {
         LoaiSanPham entity = findByIdOrThrow(maLoaiSanPham);
+        if (sanPhamRepository.existsByMaLoaiSanPham(maLoaiSanPham)) {
+            throw new BusinessException("Khong the xoa loai san pham da co san pham thuoc loai nay");
+        }
         try {
             loaiSanPhamRepository.delete(entity);
         } catch (DataIntegrityViolationException ex) {

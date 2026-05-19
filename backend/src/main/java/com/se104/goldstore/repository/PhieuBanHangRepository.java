@@ -7,6 +7,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface PhieuBanHangRepository extends JpaRepository<PhieuBanHang, String> {
 
+    boolean existsByMaKhachHang(String maKhachHang);
+
     List<PhieuBanHang> findBySoPhieuBanContainingIgnoreCase(String soPhieuBan);
 
     Optional<PhieuBanHang> findTopBySoPhieuBanStartingWithOrderBySoPhieuBanDesc(String prefix);

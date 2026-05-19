@@ -7,6 +7,16 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface KhachHangRepository extends JpaRepository<KhachHang, String> {
 
+    boolean existsByTenKhachHangIgnoreCase(String tenKhachHang);
+
+    boolean existsByTenKhachHangIgnoreCaseAndSoDienThoaiKhachHang(String tenKhachHang, String soDienThoaiKhachHang);
+
+    boolean existsByTenKhachHangIgnoreCaseAndSoDienThoaiKhachHangAndMaKhachHangNot(
+        String tenKhachHang,
+        String soDienThoaiKhachHang,
+        String maKhachHang
+    );
+
     boolean existsBySoDienThoaiKhachHang(String soDienThoaiKhachHang);
 
     boolean existsBySoDienThoaiKhachHangAndMaKhachHangNot(String soDienThoaiKhachHang, String maKhachHang);

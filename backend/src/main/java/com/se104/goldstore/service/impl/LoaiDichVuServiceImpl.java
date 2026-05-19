@@ -7,6 +7,7 @@ import com.se104.goldstore.dto.response.LoaiDichVuResponse;
 import com.se104.goldstore.entity.LoaiDichVu;
 import com.se104.goldstore.exception.BusinessException;
 import com.se104.goldstore.exception.ResourceNotFoundException;
+import com.se104.goldstore.repository.ChiTietPhieuDichVuRepository;
 import com.se104.goldstore.repository.LoaiDichVuRepository;
 import com.se104.goldstore.service.LoaiDichVuService;
 import java.util.List;
@@ -21,9 +22,14 @@ public class LoaiDichVuServiceImpl implements LoaiDichVuService {
     private static final String PREFIX = "DV";
 
     private final LoaiDichVuRepository loaiDichVuRepository;
+    private final ChiTietPhieuDichVuRepository chiTietPhieuDichVuRepository;
 
-    public LoaiDichVuServiceImpl(LoaiDichVuRepository loaiDichVuRepository) {
+    public LoaiDichVuServiceImpl(
+        LoaiDichVuRepository loaiDichVuRepository,
+        ChiTietPhieuDichVuRepository chiTietPhieuDichVuRepository
+    ) {
         this.loaiDichVuRepository = loaiDichVuRepository;
+        this.chiTietPhieuDichVuRepository = chiTietPhieuDichVuRepository;
     }
 
     @Override
@@ -88,6 +94,9 @@ public class LoaiDichVuServiceImpl implements LoaiDichVuService {
     @Transactional
     public void delete(String maLoaiDichVu) {
         LoaiDichVu entity = findByIdOrThrow(maLoaiDichVu);
+        if (chiTietPhieuDichVuRepository.existsByMaLoaiDichVu(maLoaiDichVu)) {
+            throw new BusinessException("Khong the xoa loai dich vu da phat sinh phieu dich vu");
+        }
         try {
             loaiDichVuRepository.delete(entity);
         } catch (DataIntegrityViolationException ex) {

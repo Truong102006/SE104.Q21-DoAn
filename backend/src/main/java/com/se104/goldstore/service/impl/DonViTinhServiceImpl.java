@@ -7,7 +7,9 @@ import com.se104.goldstore.dto.response.DonViTinhResponse;
 import com.se104.goldstore.entity.DonViTinh;
 import com.se104.goldstore.exception.BusinessException;
 import com.se104.goldstore.exception.ResourceNotFoundException;
+import com.se104.goldstore.repository.ChiTietPhieuMuaRepository;
 import com.se104.goldstore.repository.DonViTinhRepository;
+import com.se104.goldstore.repository.SanPhamRepository;
 import com.se104.goldstore.service.DonViTinhService;
 import java.util.List;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -21,9 +23,17 @@ public class DonViTinhServiceImpl implements DonViTinhService {
     private static final String PREFIX = "DVT";
 
     private final DonViTinhRepository donViTinhRepository;
+    private final SanPhamRepository sanPhamRepository;
+    private final ChiTietPhieuMuaRepository chiTietPhieuMuaRepository;
 
-    public DonViTinhServiceImpl(DonViTinhRepository donViTinhRepository) {
+    public DonViTinhServiceImpl(
+        DonViTinhRepository donViTinhRepository,
+        SanPhamRepository sanPhamRepository,
+        ChiTietPhieuMuaRepository chiTietPhieuMuaRepository
+    ) {
         this.donViTinhRepository = donViTinhRepository;
+        this.sanPhamRepository = sanPhamRepository;
+        this.chiTietPhieuMuaRepository = chiTietPhieuMuaRepository;
     }
 
     @Override
@@ -64,9 +74,9 @@ public class DonViTinhServiceImpl implements DonViTinhService {
         DonViTinh entity = new DonViTinh();
         entity.setMaDonViTinh(maDonViTinh);
         entity.setTenDonViTinh(request.getTenDonViTinh().trim());
-        entity.setLoaiDonVi(request.getLoaiDonVi());
+        entity.setLoaiDonVi(emptyToNull(request.getLoaiDonVi()));
         entity.setHeSoQuyDoi(request.getHeSoQuyDoi());
-        entity.setGhiChu(request.getGhiChu());
+        entity.setGhiChu(emptyToNull(request.getGhiChu()));
 
         return toResponse(donViTinhRepository.save(entity));
     }
@@ -81,9 +91,9 @@ public class DonViTinhServiceImpl implements DonViTinhService {
         }
 
         entity.setTenDonViTinh(request.getTenDonViTinh().trim());
-        entity.setLoaiDonVi(request.getLoaiDonVi());
+        entity.setLoaiDonVi(emptyToNull(request.getLoaiDonVi()));
         entity.setHeSoQuyDoi(request.getHeSoQuyDoi());
-        entity.setGhiChu(request.getGhiChu());
+        entity.setGhiChu(emptyToNull(request.getGhiChu()));
 
         return toResponse(donViTinhRepository.save(entity));
     }
@@ -92,6 +102,9 @@ public class DonViTinhServiceImpl implements DonViTinhService {
     @Transactional
     public void delete(String maDonViTinh) {
         DonViTinh entity = findByIdOrThrow(maDonViTinh);
+        if (sanPhamRepository.existsByMaDonViTinh(maDonViTinh) || chiTietPhieuMuaRepository.existsByMaDonViTinh(maDonViTinh)) {
+            throw new BusinessException("Khong the xoa don vi tinh da duoc su dung trong san pham hoac chi tiet phieu");
+        }
         try {
             donViTinhRepository.delete(entity);
         } catch (DataIntegrityViolationException ex) {
@@ -102,6 +115,13 @@ public class DonViTinhServiceImpl implements DonViTinhService {
     private DonViTinh findByIdOrThrow(String maDonViTinh) {
         return donViTinhRepository.findById(maDonViTinh)
             .orElseThrow(() -> new ResourceNotFoundException("Khong tim thay don vi tinh: " + maDonViTinh));
+    }
+
+    private String emptyToNull(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value.trim();
     }
 
     private DonViTinhResponse toResponse(DonViTinh entity) {

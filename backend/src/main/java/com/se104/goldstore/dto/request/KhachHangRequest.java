@@ -1,6 +1,7 @@
 package com.se104.goldstore.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 
 public class KhachHangRequest {
 
@@ -10,6 +11,7 @@ public class KhachHangRequest {
     private String tenKhachHang;
 
     @NotBlank(message = "So dien thoai khach hang khong duoc de trong")
+    @Pattern(regexp = "^\\d{10}$", message = "So dien thoai khach hang phai gom dung 10 chu so")
     private String soDienThoaiKhachHang;
 
     private String diaChiKhachHang;
