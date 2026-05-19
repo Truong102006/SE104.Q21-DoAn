@@ -7,6 +7,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface NhaCungCapRepository extends JpaRepository<NhaCungCap, String> {
 
+    boolean existsByTenNhaCungCapIgnoreCase(String tenNhaCungCap);
+
+    boolean existsByTenNhaCungCapIgnoreCaseAndMaNhaCungCapNot(String tenNhaCungCap, String maNhaCungCap);
+
     boolean existsBySoDienThoai(String soDienThoai);
 
     boolean existsBySoDienThoaiAndMaNhaCungCapNot(String soDienThoai, String maNhaCungCap);

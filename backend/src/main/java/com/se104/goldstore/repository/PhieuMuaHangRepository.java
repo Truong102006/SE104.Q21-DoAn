@@ -7,6 +7,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface PhieuMuaHangRepository extends JpaRepository<PhieuMuaHang, String> {
 
+    boolean existsByMaNhaCungCap(String maNhaCungCap);
+
     List<PhieuMuaHang> findBySoPhieuMuaContainingIgnoreCase(String soPhieuMua);
 
     Optional<PhieuMuaHang> findTopBySoPhieuMuaStartingWithOrderBySoPhieuMuaDesc(String prefix);

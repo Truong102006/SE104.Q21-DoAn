@@ -8,6 +8,7 @@ import com.se104.goldstore.entity.NhaCungCap;
 import com.se104.goldstore.exception.BusinessException;
 import com.se104.goldstore.exception.ResourceNotFoundException;
 import com.se104.goldstore.repository.NhaCungCapRepository;
+import com.se104.goldstore.repository.PhieuMuaHangRepository;
 import com.se104.goldstore.service.NhaCungCapService;
 import com.se104.goldstore.validation.PhoneValidator;
 import java.util.List;
@@ -22,9 +23,14 @@ public class NhaCungCapServiceImpl implements NhaCungCapService {
     private static final String PREFIX = "NCC";
 
     private final NhaCungCapRepository nhaCungCapRepository;
+    private final PhieuMuaHangRepository phieuMuaHangRepository;
 
-    public NhaCungCapServiceImpl(NhaCungCapRepository nhaCungCapRepository) {
+    public NhaCungCapServiceImpl(
+        NhaCungCapRepository nhaCungCapRepository,
+        PhieuMuaHangRepository phieuMuaHangRepository
+    ) {
         this.nhaCungCapRepository = nhaCungCapRepository;
+        this.phieuMuaHangRepository = phieuMuaHangRepository;
     }
 
     @Override
@@ -46,9 +52,16 @@ public class NhaCungCapServiceImpl implements NhaCungCapService {
     @Override
     @Transactional
     public NhaCungCapResponse create(NhaCungCapRequest request) {
-        PhoneValidator.validateOrThrow(request.getSoDienThoai(), "So dien thoai");
+        String tenNhaCungCap = request.getTenNhaCungCap().trim();
+        String soDienThoai = request.getSoDienThoai().trim();
 
-        if (nhaCungCapRepository.existsBySoDienThoai(request.getSoDienThoai().trim())) {
+        PhoneValidator.validateOrThrow(soDienThoai, "So dien thoai");
+
+        if (nhaCungCapRepository.existsByTenNhaCungCapIgnoreCase(tenNhaCungCap)) {
+            throw new BusinessException("Ten nha cung cap da ton tai");
+        }
+
+        if (nhaCungCapRepository.existsBySoDienThoai(soDienThoai)) {
             throw new BusinessException("So dien thoai da ton tai");
         }
 
@@ -67,8 +80,8 @@ public class NhaCungCapServiceImpl implements NhaCungCapService {
 
         NhaCungCap entity = new NhaCungCap();
         entity.setMaNhaCungCap(maNhaCungCap);
-        entity.setTenNhaCungCap(request.getTenNhaCungCap().trim());
-        entity.setSoDienThoai(request.getSoDienThoai().trim());
+        entity.setTenNhaCungCap(tenNhaCungCap);
+        entity.setSoDienThoai(soDienThoai);
         entity.setDiaChi(emptyToNull(request.getDiaChi()));
         entity.setGhiChu(emptyToNull(request.getGhiChu()));
 
@@ -79,15 +92,21 @@ public class NhaCungCapServiceImpl implements NhaCungCapService {
     @Transactional
     public NhaCungCapResponse update(String maNhaCungCap, NhaCungCapRequest request) {
         NhaCungCap entity = findByIdOrThrow(maNhaCungCap);
+        String tenNhaCungCap = request.getTenNhaCungCap().trim();
+        String soDienThoai = request.getSoDienThoai().trim();
 
-        PhoneValidator.validateOrThrow(request.getSoDienThoai(), "So dien thoai");
+        PhoneValidator.validateOrThrow(soDienThoai, "So dien thoai");
 
-        if (nhaCungCapRepository.existsBySoDienThoaiAndMaNhaCungCapNot(request.getSoDienThoai().trim(), maNhaCungCap)) {
+        if (nhaCungCapRepository.existsByTenNhaCungCapIgnoreCaseAndMaNhaCungCapNot(tenNhaCungCap, maNhaCungCap)) {
+            throw new BusinessException("Ten nha cung cap da ton tai");
+        }
+
+        if (nhaCungCapRepository.existsBySoDienThoaiAndMaNhaCungCapNot(soDienThoai, maNhaCungCap)) {
             throw new BusinessException("So dien thoai da ton tai");
         }
 
-        entity.setTenNhaCungCap(request.getTenNhaCungCap().trim());
-        entity.setSoDienThoai(request.getSoDienThoai().trim());
+        entity.setTenNhaCungCap(tenNhaCungCap);
+        entity.setSoDienThoai(soDienThoai);
         entity.setDiaChi(emptyToNull(request.getDiaChi()));
         entity.setGhiChu(emptyToNull(request.getGhiChu()));
 
@@ -98,6 +117,9 @@ public class NhaCungCapServiceImpl implements NhaCungCapService {
     @Transactional
     public void delete(String maNhaCungCap) {
         NhaCungCap entity = findByIdOrThrow(maNhaCungCap);
+        if (phieuMuaHangRepository.existsByMaNhaCungCap(maNhaCungCap)) {
+            throw new BusinessException("Khong the xoa nha cung cap da phat sinh phieu mua hang");
+        }
         try {
             nhaCungCapRepository.delete(entity);
         } catch (DataIntegrityViolationException ex) {
