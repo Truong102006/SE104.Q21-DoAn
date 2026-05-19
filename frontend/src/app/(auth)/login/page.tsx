@@ -3,7 +3,7 @@
 import { useState, useEffect, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/auth-store";
-import { mockLogin } from "@/lib/mock-data";
+import { loginWithPassword } from "@/services/auth-service";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -49,7 +49,7 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const { token, user } = await mockLogin(username, password);
+      const { token, user } = await loginWithPassword({ username, password });
       login(token, user);
       router.replace("/dashboard");
     } catch (err) {

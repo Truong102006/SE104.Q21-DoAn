@@ -11,6 +11,7 @@ import com.se104.goldstore.repository.NhomNguoiDungRepository;
 import com.se104.goldstore.service.NguoiDungService;
 import java.util.List;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,13 +21,16 @@ public class NguoiDungServiceImpl implements NguoiDungService {
 
     private final NguoiDungRepository nguoiDungRepository;
     private final NhomNguoiDungRepository nhomNguoiDungRepository;
+    private final PasswordEncoder passwordEncoder;
 
     public NguoiDungServiceImpl(
         NguoiDungRepository nguoiDungRepository,
-        NhomNguoiDungRepository nhomNguoiDungRepository
+        NhomNguoiDungRepository nhomNguoiDungRepository,
+        PasswordEncoder passwordEncoder
     ) {
         this.nguoiDungRepository = nguoiDungRepository;
         this.nhomNguoiDungRepository = nhomNguoiDungRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Override
@@ -61,7 +65,7 @@ public class NguoiDungServiceImpl implements NguoiDungService {
 
         NguoiDung entity = new NguoiDung();
         entity.setTenDangNhap(tenDangNhap);
-        entity.setMatKhau(request.getMatKhau().trim());
+        entity.setMatKhau(passwordEncoder.encode(request.getMatKhau().trim()));
         entity.setMaNhom(maNhom);
 
         return toResponse(nguoiDungRepository.save(entity));
@@ -74,7 +78,7 @@ public class NguoiDungServiceImpl implements NguoiDungService {
 
         String maNhom = normalizeAndValidateNhom(request.getMaNhom());
 
-        entity.setMatKhau(request.getMatKhau().trim());
+        entity.setMatKhau(passwordEncoder.encode(request.getMatKhau().trim()));
         entity.setMaNhom(maNhom);
 
         return toResponse(nguoiDungRepository.save(entity));

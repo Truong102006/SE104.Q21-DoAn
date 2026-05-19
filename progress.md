@@ -1,3 +1,31 @@
+﻿## 0. Update 2026-05-19 (Auth + RBAC)
+
+- Backend da implement Spring Security + JWT stateless:
+  - POST /api/auth/login
+  - POST /api/auth/logout
+  - GET /api/auth/me
+- Da them JWT filter + auth entrypoint/denied handler + SecurityConfig phan quyen theo nhom:
+  - ADMIN only cho nhom endpoint quan tri va bao cao.
+  - ADMIN/STAFF cho nhom endpoint nghiep vu.
+- Tai khoan dang dung bang nguoi_dung:
+  - ten_dang_nhap = username
+  - ma_nhom = group code
+  - mat_khau duoc hash BCrypt
+- Da bo sung seed account (co the override bang env):
+  - admin/admin123
+  - staff/staff123
+  - Co migration plaintext password sang BCrypt neu gap du lieu cu.
+- Da bo sung test endpoint auth:
+  - File test: backend/src/test/java/com/se104/goldstore/unit/controller/AuthControllerTest.java
+  - Da verify login va me pass.
+- Frontend da bo mock auth, da goi API that:
+  - Login goi /api/auth/login
+  - Dashboard goi /api/auth/me voi header Authorization: Bearer <token>
+  - Logout goi /api/auth/logout voi Bearer token
+  - Menu role da cap nhat theo ADMIN/STAFF context tu backend.
+- Ket qua verify:
+  - cd backend && ./mvnw test => BUILD SUCCESS (2 tests pass)
+  - cd frontend && npm run type-check => SUCCESS
 ## 0. Cập Nhật Mới Nhất (2026-05-15)
 
 - Backend đã bổ sung thêm nền tảng CRUD + service + dto + controller cho các module:
@@ -477,4 +505,5 @@ Giải thích ngắn:
 3. Chuẩn hóa response/error và logging.
 4. Rà soát dependency chưa dùng (MapStruct/JWT chưa wire) và dependency local-link frontend.
 5. Bổ sung Dockerfile/backend+frontend và tài liệu deploy tối thiểu.
+
 

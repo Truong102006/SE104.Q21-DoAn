@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/auth-store";
+import { fetchCurrentUser } from "@/services/auth-service";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import { Loader2 } from "lucide-react";
@@ -13,7 +14,7 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const { isAuthenticated, hydrate, isHydrated } = useAuthStore();
+  const { token, isAuthenticated, hydrate, isHydrated, login, logout } = useAuthStore();
 
   useEffect(() => {
     hydrate();
@@ -24,6 +25,30 @@ export default function DashboardLayout({
       router.replace("/login");
     }
   }, [isHydrated, isAuthenticated, router]);
+
+  useEffect(() => {
+    if (!isHydrated || !token) {
+      return;
+    }
+
+    let cancelled = false;
+    fetchCurrentUser(token)
+      .then((user) => {
+        if (!cancelled) {
+          login(token, user);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          logout();
+          router.replace("/login");
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isHydrated, token, login, logout, router]);
 
   if (!isHydrated || !isAuthenticated()) {
     return (

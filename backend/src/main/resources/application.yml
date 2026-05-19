@@ -37,3 +37,10 @@ application:
     jwt:
       secret: ${JWT_SECRET:change-this-secret-before-development}
       expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+    seed:
+      admin:
+        username: ${AUTH_ADMIN_USERNAME:admin}
+        password: ${AUTH_ADMIN_PASSWORD:admin123}
+      staff:
+        username: ${AUTH_STAFF_USERNAME:staff}
+        password: ${AUTH_STAFF_PASSWORD:staff123}
