@@ -52,7 +52,7 @@ const NAV_GROUPS: NavGroup[] = [
         title: "Nhà cung cấp",
         href: "/dashboard/suppliers",
         icon: Truck,
-        roles: ["ADMIN"],
+        roles: ["ADMIN", "STAFF"],
         badge: "BM1",
       },
       {
@@ -80,7 +80,7 @@ const NAV_GROUPS: NavGroup[] = [
         title: "Phiếu mua hàng",
         href: "/dashboard/purchase-orders",
         icon: ClipboardList,
-        roles: ["ADMIN"],
+        roles: ["ADMIN", "STAFF"],
         badge: "BM5",
       },
       {
@@ -125,7 +125,7 @@ const NAV_GROUPS: NavGroup[] = [
         title: "Báo cáo tổng hợp",
         href: "/dashboard/reports",
         icon: BarChart3,
-        roles: ["ADMIN", "STAFF"],
+        roles: ["ADMIN"],
         badge: "BM10-12",
       },
     ],

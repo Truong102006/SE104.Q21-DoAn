@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/auth-store";
+import { requestLogout } from "@/services/auth-service";
 import {
   formatRelativeTime,
   getUnreadNotificationCount,
@@ -50,7 +51,7 @@ function resolvePageMeta(pathname: string): { title: string; subtitle: string } 
 export function Header() {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, logout, isAdmin } = useAuthStore();
+  const { token, user, logout, isAdmin } = useAuthStore();
   const unreadNotificationCount = getUnreadNotificationCount();
   const previewNotifications = MOCK_NOTIFICATIONS.slice(0, 4);
 
@@ -78,9 +79,13 @@ export function Header() {
     router.push("/dashboard/notifications");
   }
 
-  function handleLogout() {
-    logout();
-    router.replace("/login");
+  async function handleLogout() {
+    try {
+      await requestLogout(token);
+    } finally {
+      logout();
+      router.replace("/login");
+    }
   }
 
   const initials = user?.fullName
@@ -191,14 +196,16 @@ export function Header() {
                 <Avatar className="h-8 w-8 border border-border/60 bg-muted/60">
                   <AvatarFallback className="text-xs font-semibold text-primary">{initials}</AvatarFallback>
                 </Avatar>
-                <span className="hidden max-w-[140px] truncate text-sm font-medium md:block">{user?.fullName}</span>
+                <span className="hidden max-w-[140px] truncate text-sm font-medium md:block">
+                  {user?.fullName ?? user?.username}
+                </span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col gap-1">
-                  <p className="text-sm font-medium">{user?.fullName}</p>
-                  <p className="text-xs text-muted-foreground">{user?.email}</p>
+                  <p className="text-sm font-medium">{user?.fullName ?? user?.username}</p>
+                  <p className="text-xs text-muted-foreground">{user?.email ?? "-"}</p>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />

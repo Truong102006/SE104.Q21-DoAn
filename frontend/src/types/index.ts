@@ -11,6 +11,9 @@ export interface User {
   fullName: string;
   email: string;
   role: UserRole;
+  groupCode?: string;
+  roles?: string[];
+  permissions?: string[];
   avatar?: string;
 }
 

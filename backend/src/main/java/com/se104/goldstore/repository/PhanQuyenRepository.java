@@ -8,5 +8,7 @@ public interface PhanQuyenRepository extends JpaRepository<PhanQuyen, PhanQuyen.
 
     boolean existsByMaNhomAndMaChucNang(String maNhom, String maChucNang);
 
+    java.util.List<PhanQuyen> findByMaNhom(String maNhom);
+
     List<PhanQuyen> findByMaNhomContainingIgnoreCaseOrMaChucNangContainingIgnoreCase(String maNhom, String maChucNang);
 }
