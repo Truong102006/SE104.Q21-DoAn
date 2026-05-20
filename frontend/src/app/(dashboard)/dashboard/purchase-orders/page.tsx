@@ -1,441 +1,359 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { PageHeader, StatusBadge } from "@/components/dashboard/management";
-import { DatePickerInput } from "@/components/ui/date-picker";
+import { Card, CardContent } from "@/components/ui/card";
+import { EmptyState, PageHeader, TableToolbar } from "@/components/dashboard/management";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { MoneyInput, parseMoneyInput } from "@/components/ui/money-input";
-import { QuantityStepper } from "@/components/ui/quantity-stepper";
 import { Select } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { SYSTEM_CODE_INPUT_CLASS, SYSTEM_CODE_NOTE_CLASS } from "@/lib/form-styles";
-import { formatVND } from "@/lib/mock-data";
-import { useUnitStore } from "@/stores/unit-store";
-import { Plus, Save, Trash2 } from "lucide-react";
+import { backendApi } from "@/services/backend-api";
+import type {
+  ProductResponse,
+  PurchaseRequest,
+  PurchaseResponse,
+  SupplierResponse,
+  UnitResponse,
+} from "@/types/backend";
+import { getApiErrorMessage } from "@/lib/api-error";
+import { formatCurrency, formatNumber, todayIsoDate, toPositiveInt, toPositiveNumber } from "@/lib/format";
+import { Plus, Trash2 } from "lucide-react";
 
-interface SupplierOption {
-  id: number;
-  name: string;
-  phone: string;
-  address: string;
-}
+type PurchaseItemDraft = {
+  maSanPham: string;
+  maDonViTinh: string;
+  soLuongMua: string;
+  donGia: string;
+};
 
-interface ProductOption {
-  id: number;
-  name: string;
-  type: string;
-  unit: string;
-  defaultPrice: number;
-}
-
-interface PurchaseLine {
-  id: number;
-  productId: number;
-  quantity: string;
-  unit: string;
-  unitPrice: string;
-}
-
-const SUPPLIERS: SupplierOption[] = [
-  {
-    id: 1,
-    name: "Công ty Vàng Bạc A",
-    phone: "0909000111",
-    address: "Q1, TP.HCM",
-  },
-  {
-    id: 2,
-    name: "Nhà phân phối Kim Hoàn B",
-    phone: "0909000222",
-    address: "Hà Nội",
-  },
-  {
-    id: 3,
-    name: "Đối tác nguyên liệu C",
-    phone: "0909000333",
-    address: "Đà Nẵng",
-  },
-];
-
-const PRODUCTS: ProductOption[] = [
-  {
-    id: 1,
-    name: "Vàng 24K nguyên liệu",
-    type: "Vàng",
-    unit: "Lượng",
-    defaultPrice: 92_500_000,
-  },
-  {
-    id: 2,
-    name: "Bạc 925 nguyên liệu",
-    type: "Bạc",
-    unit: "Kg",
-    defaultPrice: 22_000_000,
-  },
-  {
-    id: 3,
-    name: "Đá CZ trang sức",
-    type: "Đá quý",
-    unit: "Viên",
-    defaultPrice: 120_000,
-  },
-];
-
-function getTodayValue(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function getVoucherCode(): string {
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = String(now.getMonth() + 1).padStart(2, "0");
-  const d = String(now.getDate()).padStart(2, "0");
-  return `PMH-${y}${m}${d}-001`;
-}
-
-function parsePositiveNumber(raw: string): number {
-  const cleaned = raw.replace(/[^\d.]/g, "");
-  const parsed = Number.parseFloat(cleaned);
-  if (Number.isNaN(parsed) || parsed <= 0) {
-    return 0;
-  }
-  return parsed;
-}
-
-function buildDefaultLine(id: number): PurchaseLine {
-  return {
-    id,
-    productId: PRODUCTS[0].id,
-    quantity: "1",
-    unit: PRODUCTS[0].unit,
-    unitPrice: PRODUCTS[0].defaultPrice.toString(),
-  };
-}
+const EMPTY_ITEM: PurchaseItemDraft = {
+  maSanPham: "",
+  maDonViTinh: "",
+  soLuongMua: "1",
+  donGia: "0",
+};
 
 export default function PurchaseOrdersPage() {
-  const { units, hydrate, isHydrated } = useUnitStore();
-  const [voucherCode] = useState(getVoucherCode());
-  const [createdDate, setCreatedDate] = useState(getTodayValue());
-  const [supplierId, setSupplierId] = useState<number>(SUPPLIERS[0].id);
-  const [lines, setLines] = useState<PurchaseLine[]>([buildDefaultLine(1)]);
-  const [message, setMessage] = useState<string>("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!isHydrated) {
-      hydrate();
-    }
-  }, [hydrate, isHydrated]);
+  const [suppliers, setSuppliers] = useState<SupplierResponse[]>([]);
+  const [products, setProducts] = useState<ProductResponse[]>([]);
+  const [units, setUnits] = useState<UnitResponse[]>([]);
 
-  const unitOptions = useMemo(
-    () => units.map((unit) => ({ value: unit.name, label: unit.name })),
-    [units],
-  );
+  const [purchaseList, setPurchaseList] = useState<PurchaseResponse[]>([]);
+  const [latestCreated, setLatestCreated] = useState<PurchaseResponse | null>(null);
+
+  const [soPhieuMua, setSoPhieuMua] = useState("");
+  const [ngayLapPhieuMua, setNgayLapPhieuMua] = useState(todayIsoDate());
+  const [maNhaCungCap, setMaNhaCungCap] = useState("");
+  const [items, setItems] = useState<PurchaseItemDraft[]>([{ ...EMPTY_ITEM }]);
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const selectedSupplier = useMemo(
-    () => SUPPLIERS.find((supplier) => supplier.id === supplierId) ?? SUPPLIERS[0],
-    [supplierId],
+    () => suppliers.find((item) => item.maNhaCungCap === maNhaCungCap) ?? null,
+    [maNhaCungCap, suppliers],
   );
-
-  const lineWithMeta = useMemo(() => {
-    return lines.map((line) => {
-      const product = PRODUCTS.find((item) => item.id === line.productId) ?? PRODUCTS[0];
-      const quantity = parsePositiveNumber(line.quantity);
-      const unitPrice = parseMoneyInput(line.unitPrice);
-      return {
-        ...line,
-        product,
-        quantity,
-        unitPrice,
-        amount: quantity * unitPrice,
-      };
-    });
-  }, [lines]);
 
   const totalAmount = useMemo(
-    () => lineWithMeta.reduce((sum, line) => sum + line.amount, 0),
-    [lineWithMeta],
-  );
-  const invalidLineIndexes = useMemo(
     () =>
-      lineWithMeta
-        .map((line, index) => (line.quantity <= 0 || line.unitPrice <= 0 ? index + 1 : null))
-        .filter((value): value is number => value !== null),
-    [lineWithMeta],
+      items.reduce((sum, item) => {
+        const soLuong = toPositiveInt(item.soLuongMua);
+        const donGia = toPositiveNumber(item.donGia);
+        return sum + soLuong * donGia;
+      }, 0),
+    [items],
   );
-  const hasDateError = !createdDate;
-  const hasSupplierError = !supplierId;
-  const hasLineError = invalidLineIndexes.length > 0;
-  const hasTotalError = totalAmount <= 0;
-  const canSaveOrder = !hasDateError && !hasSupplierError && !hasLineError && !hasTotalError;
-  const voucherStatus = canSaveOrder ? "Sẵn sàng nhập kho" : "Cần bổ sung";
 
-  function handleAddLine() {
-    setLines((previous) => {
-      const nextId =
-        previous.length === 0 ? 1 : Math.max(...previous.map((line) => line.id)) + 1;
-      return [...previous, buildDefaultLine(nextId)];
-    });
-  }
+  async function loadData() {
+    setLoading(true);
+    setError(null);
+    try {
+      const [supplierData, productPage, unitData, purchases] = await Promise.all([
+        backendApi.suppliers.list(),
+        backendApi.products.list({ page: 0, size: 200 }),
+        backendApi.units.list(),
+        backendApi.purchases.list(),
+      ]);
 
-  function handleRemoveLine(id: number) {
-    setLines((previous) => {
-      if (previous.length === 1) {
-        return previous;
+      setSuppliers(supplierData);
+      setProducts(productPage.content);
+      setUnits(unitData);
+      setPurchaseList(purchases);
+      if (!maNhaCungCap && supplierData.length > 0) {
+        setMaNhaCungCap(supplierData[0].maNhaCungCap);
       }
-      return previous.filter((line) => line.id !== id);
+    } catch (err) {
+      setError(getApiErrorMessage(err, "Khong tai duoc du lieu phieu mua"));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function addRow() {
+    setItems((prev) => [...prev, { ...EMPTY_ITEM }]);
+  }
+
+  function removeRow(index: number) {
+    setItems((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function updateItem(index: number, patch: Partial<PurchaseItemDraft>) {
+    setItems((prev) => prev.map((item, i) => (i === index ? { ...item, ...patch } : item)));
+    setFormError(null);
+  }
+
+  function onProductChange(index: number, maSanPham: string) {
+    const product = products.find((item) => item.maSanPham === maSanPham);
+    updateItem(index, {
+      maSanPham,
+      maDonViTinh: product?.maDonViTinh ?? "",
+      donGia: String(product?.donGiaMua ?? 0),
     });
   }
 
-  function handleUpdateLine(
-    id: number,
-    field: "productId" | "quantity" | "unit" | "unitPrice",
-    value: string,
-  ) {
-    setLines((previous) =>
-      previous.map((line) => {
-        if (line.id !== id) {
-          return line;
-        }
+  async function submit() {
+    setFormError(null);
 
-        if (field === "productId") {
-          const productId = Number.parseInt(value, 10);
-          const product = PRODUCTS.find((item) => item.id === productId) ?? PRODUCTS[0];
-          return {
-            ...line,
-            productId: product.id,
-            unit: product.unit,
-            unitPrice: product.defaultPrice.toString(),
-          };
-        }
-
-        return {
-          ...line,
-          [field]: value,
-        };
-      }),
-    );
-  }
-
-  function handleResetForm() {
-    setCreatedDate(getTodayValue());
-    setSupplierId(SUPPLIERS[0].id);
-    setLines([buildDefaultLine(1)]);
-    setMessage("Đã reset phiếu mua hàng.");
-  }
-
-  function handleSaveOrder() {
-    if (hasLineError) {
-      setMessage("Vui lòng nhập số lượng và đơn giá hợp lệ cho tất cả dòng.");
+    if (!maNhaCungCap) {
+      setFormError("Nha cung cap la bat buoc");
       return;
     }
 
-    if (hasTotalError) {
-      setMessage("Tổng tiền phải lớn hơn 0.");
+    if (items.length === 0) {
+      setFormError("Can it nhat 1 dong chi tiet");
       return;
     }
 
-    setMessage("Đã lưu phiếu mua hàng thành công (dữ liệu demo frontend).");
+    const seen = new Set<string>();
+    for (const item of items) {
+      if (!item.maSanPham) {
+        setFormError("San pham la bat buoc");
+        return;
+      }
+      if (seen.has(item.maSanPham)) {
+        setFormError("Khong duoc trung san pham trong cung mot phieu");
+        return;
+      }
+      seen.add(item.maSanPham);
+
+      if (toPositiveInt(item.soLuongMua) <= 0) {
+        setFormError("So luong mua phai > 0");
+        return;
+      }
+
+      if (toPositiveNumber(item.donGia) < 0) {
+        setFormError("Don gia phai >= 0");
+        return;
+      }
+
+      if (!item.maDonViTinh) {
+        setFormError("Don vi tinh la bat buoc");
+        return;
+      }
+    }
+
+    const payload: PurchaseRequest = {
+      soPhieuMua: soPhieuMua.trim() || undefined,
+      ngayLapPhieuMua,
+      maNhaCungCap,
+      items: items.map((item) => ({
+        maSanPham: item.maSanPham,
+        soLuongMua: toPositiveInt(item.soLuongMua),
+        maDonViTinh: item.maDonViTinh,
+        donGia: toPositiveNumber(item.donGia),
+      })),
+    };
+
+    setSubmitting(true);
+    try {
+      const created = await backendApi.purchases.create(payload);
+      setLatestCreated(created);
+      setSoPhieuMua("");
+      setItems([{ ...EMPTY_ITEM }]);
+      await loadData();
+    } catch (err) {
+      setFormError(getApiErrorMessage(err, "Tao phieu mua that bai"));
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
     <div className="space-y-3">
       <PageHeader
-        eyebrow="Nghiệp vụ nhập kho"
-        title="Phiếu mua hàng"
-        description="Tạo phiếu nhập, gắn nhà cung cấp và kiểm soát tổng tiền trước khi cộng tồn kho."
-        badges={
-          <>
-            <Badge variant="outline" className="border-border/70 bg-background/70">BM5</Badge>
-            <StatusBadge tone={canSaveOrder ? "success" : "warning"}>{voucherStatus}</StatusBadge>
-          </>
-        }
+        eyebrow="BM5"
+        title="Lap phieu mua hang"
+        description="Tao phieu mua, tinh thanh tien/tong tien realtime, cap nhat ton kho qua backend"
       />
 
-      <Card className="overflow-hidden border-border/70 shadow-sm">
-        <CardHeader className="border-b bg-muted/25 px-3 py-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <CardTitle className="text-base tracking-tight">Phiếu mua hàng</CardTitle>
-              <CardDescription className="text-xs">BM5 - Quản lý nhà cung cấp và sản phẩm nhập.</CardDescription>
-            </div>
-            <span className="rounded border border-gold/40 bg-gold/10 px-2 py-0.5 text-[10px] font-semibold text-gold">
-              Nhập kho
-            </span>
-          </div>
-        </CardHeader>
-
-        <CardContent className="space-y-3 p-3">
-          <div className="grid gap-3 md:grid-cols-4">
+      <Card>
+        <CardContent className="space-y-4 p-4">
+          <div className="grid gap-3 md:grid-cols-3">
             <div className="space-y-2">
-              <Label htmlFor="voucher-code">Số phiếu</Label>
-              <Input
-                id="voucher-code"
-                value={voucherCode}
-                readOnly
-                className={SYSTEM_CODE_INPUT_CLASS}
-                aria-describedby="voucher-code-note"
-              />
-              <p id="voucher-code-note" className={SYSTEM_CODE_NOTE_CLASS}>
-                Số phiếu tự phát sinh.
-              </p>
+              <Label>So phieu</Label>
+              <Input value={soPhieuMua} onChange={(e) => setSoPhieuMua(e.target.value)} placeholder="De trong de tu sinh" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="created-date">Ngày lập</Label>
-              <DatePickerInput
-                id="created-date"
-                value={createdDate}
-                onValueChange={setCreatedDate}
-              />
-              {hasDateError && (
-                <p className="text-xs text-destructive">Vui lòng chọn ngày lập.</p>
-              )}
+              <Label>Ngay lap</Label>
+              <Input type="date" value={ngayLapPhieuMua} onChange={(e) => setNgayLapPhieuMua(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="supplier">Nhà cung cấp</Label>
+              <Label>Nha cung cap</Label>
               <Select
-                id="supplier"
-                value={supplierId}
-                onValueChange={(value) => setSupplierId(Number.parseInt(value, 10))}
-                options={SUPPLIERS.map((supplier) => ({
-                  value: supplier.id,
-                  label: supplier.name,
-                }))}
+                value={maNhaCungCap || ""}
+                onValueChange={setMaNhaCungCap}
+                options={suppliers.map((item) => ({ value: item.maNhaCungCap, label: `${item.maNhaCungCap} - ${item.tenNhaCungCap}` }))}
               />
-              {hasSupplierError && (
-                <p className="text-xs text-destructive">Vui lòng chọn nhà cung cấp.</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="supplier-phone">Số điện thoại</Label>
-              <Input id="supplier-phone" value={selectedSupplier.phone} readOnly />
-            </div>
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="supplier-address">Địa chỉ</Label>
-              <Input id="supplier-address" value={selectedSupplier.address} readOnly />
             </div>
           </div>
 
-          <div className="space-y-2 rounded-lg border bg-background p-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-sm font-semibold">Chi tiết sản phẩm nhập</h2>
-              <Button onClick={handleAddLine} variant="outline" size="sm" className="h-7 cursor-pointer">
-                <Plus className="mr-1.5 h-3.5 w-3.5" />
-                Thêm dòng
-              </Button>
+          {selectedSupplier && (
+            <div className="rounded-lg border p-3 text-sm text-muted-foreground">
+              <p>So dien thoai: {selectedSupplier.soDienThoai || "-"}</p>
+              <p>Dia chi: {selectedSupplier.diaChi || "-"}</p>
             </div>
+          )}
 
-            <div className="rounded-lg border">
-              <Table className="table-fixed [&_th]:whitespace-normal [&_th]:leading-4 [&_td]:align-middle">
-                <TableHeader>
-                  <TableRow className="bg-muted/40 hover:bg-muted/40">
-                    <TableHead className="w-14 text-center">STT</TableHead>
-                    <TableHead className="w-[27%]">Sản phẩm</TableHead>
-                    <TableHead className="w-[14%]">Loại sản phẩm</TableHead>
-                    <TableHead className="w-[11%]">Số lượng</TableHead>
-                    <TableHead className="w-[11%]">Đơn vị tính</TableHead>
-                    <TableHead className="w-[15%]">Đơn giá</TableHead>
-                    <TableHead className="w-[16%]">Thành tiền</TableHead>
-                    <TableHead className="w-12"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {lineWithMeta.map((line, index) => (
-                    <TableRow key={line.id}>
-                      <TableCell className="text-center font-medium">{index + 1}</TableCell>
-                      <TableCell>
-                        <Select
-                          value={line.productId}
-                          onValueChange={(value) =>
-                            handleUpdateLine(line.id, "productId", value)
-                          }
-                          options={PRODUCTS.map((product) => ({
-                            value: product.id,
-                            label: product.name,
-                          }))}
-                        />
-                      </TableCell>
-                      <TableCell className="truncate text-sm">{line.product.type}</TableCell>
-                      <TableCell>
-                        <QuantityStepper
-                          value={String(line.quantity)}
-                          onValueChange={(value) => handleUpdateLine(line.id, "quantity", value)}
-                          min={1}
-                          step={1}
-                          inputMode="decimal"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Select
-                          value={line.unit}
-                          onValueChange={(value) => handleUpdateLine(line.id, "unit", value)}
-                          options={unitOptions}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <MoneyInput
-                          value={String(line.unitPrice)}
-                          onValueChange={(value) => handleUpdateLine(line.id, "unitPrice", value)}
-                          inputClassName="h-8 text-[13px]"
-                        />
-                      </TableCell>
-                      <TableCell className="truncate text-sm font-semibold">
-                        {formatVND(line.amount)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          size="icon-sm"
-                          variant="destructive"
-                          onClick={() => handleRemoveLine(line.id)}
-                          className="cursor-pointer"
-                          aria-label="Xóa dòng"
-                          disabled={lineWithMeta.length === 1}
-                        >
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>San pham</TableHead>
+                <TableHead>Don vi tinh</TableHead>
+                <TableHead>So luong</TableHead>
+                <TableHead>Don gia</TableHead>
+                <TableHead>Thanh tien</TableHead>
+                <TableHead className="text-right">Tac vu</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {items.map((item, index) => {
+                const soLuong = toPositiveInt(item.soLuongMua);
+                const donGia = toPositiveNumber(item.donGia);
+                const thanhTien = soLuong * donGia;
+
+                return (
+                  <TableRow key={index}>
+                    <TableCell>
+                      <Select
+                        value={item.maSanPham || ""}
+                        onValueChange={(value) => onProductChange(index, value)}
+                        options={products.map((product) => ({ value: product.maSanPham, label: `${product.maSanPham} - ${product.tenSanPham}` }))}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Select
+                        value={item.maDonViTinh || ""}
+                        onValueChange={(value) => updateItem(index, { maDonViTinh: value })}
+                        options={units.map((unit) => ({ value: unit.maDonViTinh, label: unit.tenDonViTinh }))}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Input value={item.soLuongMua} onChange={(e) => updateItem(index, { soLuongMua: e.target.value })} />
+                    </TableCell>
+                    <TableCell>
+                      <Input value={item.donGia} onChange={(e) => updateItem(index, { donGia: e.target.value })} />
+                    </TableCell>
+                    <TableCell>{formatCurrency(thanhTien)}</TableCell>
+                    <TableCell>
+                      <div className="flex justify-end">
+                        <Button variant="destructive" size="icon-sm" onClick={() => removeRow(index)} disabled={items.length <= 1}>
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+
+          <div className="flex items-center justify-between">
+            <Button variant="outline" onClick={addRow}>
+              <Plus className="mr-1.5 h-3.5 w-3.5" />
+              Them dong
+            </Button>
+            <Badge variant="outline">Tong tien: {formatCurrency(totalAmount)}</Badge>
           </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-muted/25 px-3 py-2">
-            <span className="text-sm font-semibold">Tổng tiền</span>
-            <span className="text-lg font-bold text-gold">{formatVND(totalAmount)}</span>
+          {formError && <p className="text-sm text-destructive">{formError}</p>}
+          {error && <p className="text-sm text-destructive">{error}</p>}
+
+          <div className="flex justify-end">
+            <Button onClick={submit} disabled={submitting || loading}>
+              {submitting ? "Dang tao..." : "Tao phieu mua"}
+            </Button>
           </div>
+        </CardContent>
+      </Card>
 
-          {hasLineError && (
-            <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
-              Dòng không hợp lệ: {invalidLineIndexes.join(", ")}. Số lượng và đơn giá phải lớn hơn 0.
-            </p>
-          )}
-
-          {message && (
-            <p className="rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm">
-              {message}
-            </p>
-          )}
-
-          <div className="flex flex-wrap justify-end gap-2">
+      {latestCreated && (
+        <Card>
+          <CardContent className="space-y-2 p-4">
+            <p className="font-semibold">Phieu vua tao: {latestCreated.soPhieuMua}</p>
+            <p className="text-sm text-muted-foreground">Tong tien: {formatCurrency(latestCreated.tongTien)}</p>
             <Button
               variant="outline"
-              onClick={handleResetForm}
-              className="cursor-pointer"
+              size="sm"
+              onClick={async () => {
+                try {
+                  const printData = await backendApi.purchases.printData(latestCreated.soPhieuMua);
+                  setLatestCreated(printData);
+                } catch (err) {
+                  setError(getApiErrorMessage(err, "Khong lay duoc du lieu in phieu"));
+                }
+              }}
             >
-              Làm mới
+              Xem du lieu in phieu
             </Button>
-            <Button onClick={handleSaveOrder} className="cursor-pointer" disabled={!canSaveOrder}>
-              <Save className="mr-2 h-4 w-4" />
-              Lưu phiếu mua hàng
-            </Button>
-          </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <Card>
+        <TableToolbar title="Lich su phieu mua" description="Danh sach phieu mua da tao" />
+        <CardContent className="px-0">
+          {loading ? (
+            <p className="px-4 py-6 text-sm text-muted-foreground">Dang tai...</p>
+          ) : purchaseList.length === 0 ? (
+            <div className="p-4">
+              <EmptyState title="Chua co phieu mua" description="Tao phieu mua dau tien" />
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>So phieu</TableHead>
+                  <TableHead>Ngay lap</TableHead>
+                  <TableHead>Nha cung cap</TableHead>
+                  <TableHead>So dong</TableHead>
+                  <TableHead>Tong tien</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {purchaseList.map((item) => (
+                  <TableRow key={item.soPhieuMua}>
+                    <TableCell>{item.soPhieuMua}</TableCell>
+                    <TableCell>{item.ngayLapPhieuMua}</TableCell>
+                    <TableCell>{item.nhaCungCap?.tenNhaCungCap ?? item.maNhaCungCap}</TableCell>
+                    <TableCell>{formatNumber(item.items.length)}</TableCell>
+                    <TableCell>{formatCurrency(item.tongTien)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
     </div>
   );
 }
+

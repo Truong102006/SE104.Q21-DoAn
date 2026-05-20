@@ -9,43 +9,44 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { backendApi } from "@/services/backend-api";
-import type { SupplierRequest, SupplierResponse } from "@/types/backend";
+import type { UnitRequest, UnitResponse } from "@/types/backend";
 import { getApiErrorMessage } from "@/lib/api-error";
-import { isValidPhone10Digits } from "@/lib/format";
+import { toPositiveNumber } from "@/lib/format";
 import { useAuthStore } from "@/stores/auth-store";
 import { Pencil, Plus, Search, Trash2, X } from "lucide-react";
 
-const EMPTY_FORM: SupplierRequest = {
-  tenNhaCungCap: "",
-  soDienThoai: "",
-  diaChi: "",
+const EMPTY_FORM: UnitRequest = {
+  tenDonViTinh: "",
+  loaiDonVi: "",
+  heSoQuyDoi: 0,
   ghiChu: "",
 };
 
-export default function SuppliersPage() {
+export default function UnitsPage() {
   const role = useAuthStore((state) => state.user?.role ?? "STAFF");
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [items, setItems] = useState<SupplierResponse[]>([]);
+  const [items, setItems] = useState<UnitResponse[]>([]);
   const [keyword, setKeyword] = useState("");
 
   const [openForm, setOpenForm] = useState(false);
-  const [editing, setEditing] = useState<SupplierResponse | null>(null);
-  const [form, setForm] = useState<SupplierRequest>(EMPTY_FORM);
+  const [editing, setEditing] = useState<UnitResponse | null>(null);
+  const [form, setForm] = useState<UnitRequest>(EMPTY_FORM);
+  const [heSoText, setHeSoText] = useState("0");
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const [deleting, setDeleting] = useState<SupplierResponse | null>(null);
+  const [deleting, setDeleting] = useState<UnitResponse | null>(null);
 
   async function loadData(query?: string) {
     setLoading(true);
     setError(null);
     try {
-      const data = await backendApi.suppliers.list(query?.trim() || undefined);
+      const data = await backendApi.units.list(query?.trim() || undefined);
       setItems(data);
     } catch (err) {
-      setError(getApiErrorMessage(err, "Khong tai duoc nha cung cap"));
+      setError(getApiErrorMessage(err, "Khong tai duoc don vi tinh"));
     } finally {
       setLoading(false);
     }
@@ -61,31 +62,33 @@ export default function SuppliersPage() {
       return items;
     }
     return items.filter((item) =>
-      `${item.maNhaCungCap} ${item.tenNhaCungCap} ${item.soDienThoai} ${item.diaChi ?? ""}`.toLowerCase().includes(q),
+      `${item.maDonViTinh} ${item.tenDonViTinh} ${item.loaiDonVi ?? ""} ${item.ghiChu ?? ""}`.toLowerCase().includes(q),
     );
   }, [items, keyword]);
 
   function openCreate() {
     setEditing(null);
     setForm(EMPTY_FORM);
+    setHeSoText("0");
     setFormError(null);
     setOpenForm(true);
   }
 
-  function openEdit(item: SupplierResponse) {
+  function openEdit(item: UnitResponse) {
     setEditing(item);
     setForm({
-      maNhaCungCap: item.maNhaCungCap,
-      tenNhaCungCap: item.tenNhaCungCap,
-      soDienThoai: item.soDienThoai,
-      diaChi: item.diaChi ?? "",
+      maDonViTinh: item.maDonViTinh,
+      tenDonViTinh: item.tenDonViTinh,
+      loaiDonVi: item.loaiDonVi ?? "",
+      heSoQuyDoi: item.heSoQuyDoi ?? 0,
       ghiChu: item.ghiChu ?? "",
     });
+    setHeSoText(String(item.heSoQuyDoi ?? 0));
     setFormError(null);
     setOpenForm(true);
   }
 
-  function updateField<K extends keyof SupplierRequest>(key: K, value: SupplierRequest[K]) {
+  function updateField<K extends keyof UnitRequest>(key: K, value: UnitRequest[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
     setFormError(null);
   }
@@ -93,41 +96,38 @@ export default function SuppliersPage() {
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
 
-    if (!form.tenNhaCungCap?.trim()) {
-      setFormError("Ten nha cung cap la bat buoc");
+    if (!form.tenDonViTinh?.trim()) {
+      setFormError("Ten don vi tinh la bat buoc");
       return;
     }
 
-    if (!isValidPhone10Digits(form.soDienThoai ?? "")) {
-      setFormError("So dien thoai phai dung 10 chu so");
+    const heSo = toPositiveNumber(heSoText);
+    if (heSo < 0) {
+      setFormError("He so quy doi phai >= 0");
       return;
     }
 
     setSubmitting(true);
     setFormError(null);
     try {
+      const payload: UnitRequest = {
+        ...form,
+        tenDonViTinh: form.tenDonViTinh.trim(),
+        loaiDonVi: form.loaiDonVi?.trim(),
+        heSoQuyDoi: heSo,
+        ghiChu: form.ghiChu?.trim(),
+      };
+
       if (editing) {
-        await backendApi.suppliers.update(editing.maNhaCungCap, {
-          ...form,
-          tenNhaCungCap: form.tenNhaCungCap.trim(),
-          soDienThoai: form.soDienThoai.trim(),
-          diaChi: form.diaChi?.trim(),
-          ghiChu: form.ghiChu?.trim(),
-        });
+        await backendApi.units.update(editing.maDonViTinh, payload);
       } else {
-        await backendApi.suppliers.create({
-          ...form,
-          tenNhaCungCap: form.tenNhaCungCap.trim(),
-          soDienThoai: form.soDienThoai.trim(),
-          diaChi: form.diaChi?.trim(),
-          ghiChu: form.ghiChu?.trim(),
-        });
+        await backendApi.units.create(payload);
       }
 
       setOpenForm(false);
       await loadData();
     } catch (err) {
-      setFormError(getApiErrorMessage(err, "Luu nha cung cap that bai"));
+      setFormError(getApiErrorMessage(err, "Luu don vi tinh that bai"));
     } finally {
       setSubmitting(false);
     }
@@ -139,11 +139,11 @@ export default function SuppliersPage() {
     }
 
     try {
-      await backendApi.suppliers.remove(deleting.maNhaCungCap);
+      await backendApi.units.remove(deleting.maDonViTinh);
       setDeleting(null);
       await loadData();
     } catch (err) {
-      setError(getApiErrorMessage(err, "Xoa nha cung cap that bai"));
+      setError(getApiErrorMessage(err, "Xoa don vi tinh that bai"));
       setDeleting(null);
     }
   }
@@ -151,9 +151,9 @@ export default function SuppliersPage() {
   return (
     <div className="space-y-3">
       <PageHeader
-        eyebrow="BM1"
-        title="Nha cung cap"
-        description="Quan ly danh muc nha cung cap"
+        eyebrow="BM3"
+        title="Don vi tinh"
+        description="Quan ly danh muc don vi tinh"
         badges={<Badge variant="outline">{items.length} ban ghi</Badge>}
         actions={
           <Button size="sm" onClick={openCreate}>
@@ -166,7 +166,7 @@ export default function SuppliersPage() {
       <Card>
         <TableToolbar
           title="Danh sach"
-          description="Tim theo ma, ten, so dien thoai"
+          description="Tim theo ma, ten, loai don vi"
           search={
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -188,21 +188,21 @@ export default function SuppliersPage() {
                 <TableRow>
                   <TableHead>STT</TableHead>
                   <TableHead>Ma</TableHead>
-                  <TableHead>Ten</TableHead>
-                  <TableHead>So dien thoai</TableHead>
-                  <TableHead>Dia chi</TableHead>
+                  <TableHead>Ten don vi</TableHead>
+                  <TableHead>Loai don vi</TableHead>
+                  <TableHead>He so quy doi</TableHead>
                   <TableHead>Ghi chu</TableHead>
                   <TableHead className="text-right">Tac vu</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filtered.map((item, index) => (
-                  <TableRow key={item.maNhaCungCap}>
+                  <TableRow key={item.maDonViTinh}>
                     <TableCell>{index + 1}</TableCell>
-                    <TableCell>{item.maNhaCungCap}</TableCell>
-                    <TableCell>{item.tenNhaCungCap}</TableCell>
-                    <TableCell>{item.soDienThoai}</TableCell>
-                    <TableCell>{item.diaChi || "-"}</TableCell>
+                    <TableCell>{item.maDonViTinh}</TableCell>
+                    <TableCell>{item.tenDonViTinh}</TableCell>
+                    <TableCell>{item.loaiDonVi || "-"}</TableCell>
+                    <TableCell>{item.heSoQuyDoi ?? 0}</TableCell>
                     <TableCell>{item.ghiChu || "-"}</TableCell>
                     <TableCell>
                       <div className="flex justify-end gap-1">
@@ -228,7 +228,7 @@ export default function SuppliersPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={() => setOpenForm(false)}>
           <div className="w-full max-w-xl rounded-xl border bg-background shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between border-b px-5 py-4">
-              <h2 className="text-lg font-semibold">{editing ? "Cap nhat" : "Them"} nha cung cap</h2>
+              <h2 className="text-lg font-semibold">{editing ? "Cap nhat" : "Them"} don vi tinh</h2>
               <Button variant="ghost" size="icon-sm" onClick={() => setOpenForm(false)}>
                 <X className="h-4 w-4" />
               </Button>
@@ -236,16 +236,16 @@ export default function SuppliersPage() {
             <form className="space-y-3 px-5 py-4" onSubmit={onSubmit}>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-2 sm:col-span-2">
-                  <Label>Ten nha cung cap</Label>
-                  <Input value={form.tenNhaCungCap} onChange={(e) => updateField("tenNhaCungCap", e.target.value)} />
+                  <Label>Ten don vi tinh</Label>
+                  <Input value={form.tenDonViTinh} onChange={(e) => updateField("tenDonViTinh", e.target.value)} />
                 </div>
                 <div className="space-y-2">
-                  <Label>So dien thoai</Label>
-                  <Input value={form.soDienThoai} onChange={(e) => updateField("soDienThoai", e.target.value)} />
+                  <Label>Loai don vi</Label>
+                  <Input value={form.loaiDonVi ?? ""} onChange={(e) => updateField("loaiDonVi", e.target.value)} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Dia chi</Label>
-                  <Input value={form.diaChi ?? ""} onChange={(e) => updateField("diaChi", e.target.value)} />
+                  <Label>He so quy doi</Label>
+                  <Input value={heSoText} onChange={(e) => setHeSoText(e.target.value)} />
                 </div>
                 <div className="space-y-2 sm:col-span-2">
                   <Label>Ghi chu</Label>
@@ -270,8 +270,8 @@ export default function SuppliersPage() {
 
       <ConfirmDialog
         open={deleting !== null}
-        title="Xoa nha cung cap"
-        description={deleting ? `Ban chac chan muon xoa ${deleting.tenNhaCungCap}?` : ""}
+        title="Xoa don vi tinh"
+        description={deleting ? `Ban chac chan muon xoa ${deleting.tenDonViTinh}?` : ""}
         confirmLabel="Xoa"
         destructive
         onCancel={() => setDeleting(null)}

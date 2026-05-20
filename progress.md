@@ -1,4 +1,61 @@
-﻿## 0. Cập Nhật 2026-05-20 (Thay Đổi Quy Định QĐ13)
+## 0. Cập Nhật 2026-05-20 (Frontend Next.js/React TypeScript - Nghiệp Vụ BM1-BM12 + QĐ13)
+
+- Đã triển khai frontend theo API backend thật (không dùng mock cho luồng chính):
+  - Auth: login lưu JWT, gọi `/api/auth/me` sau đăng nhập, logout.
+  - Layout chính: sidebar + header + nội dung; menu hiển thị theo role `ADMIN/STAFF`.
+  - Dashboard: số sản phẩm, tổng tồn kho, doanh thu tháng hiện tại, số phiếu dịch vụ chưa hoàn thành.
+- Đã hoàn thành các màn hình nghiệp vụ:
+  - BM1 Nhà cung cấp: CRUD + search + validate SĐT 10 số.
+  - BM2 Khách hàng: CRUD + search + validate SĐT 10 số.
+  - BM3 Đơn vị tính: CRUD + search.
+  - BM4 Loại dịch vụ: CRUD + search + validate đơn giá >= 0.
+  - QĐ6/QĐ13 Loại sản phẩm: CRUD + cập nhật tỉ lệ lợi nhuận.
+  - BM8 Sản phẩm: danh sách phân trang, lọc theo loại, search tương đối, thêm/sửa/xóa.
+  - BM5 Phiếu mua: form nhiều dòng, tính thành tiền/tổng tiền realtime, submit `/api/purchases`, xem print-data.
+  - BM6 Phiếu bán: form nhiều dòng, hiển thị tồn kho, chặn nhập vượt tồn, submit `/api/sales`.
+  - BM7 Phiếu dịch vụ: form nhiều dòng, tính đơn giá được tính/thành tiền, validate trả trước theo `SERVICE_PREPAYMENT_RATE`, giao từng dòng/giao toàn bộ.
+  - BM9 Tra cứu phiếu dịch vụ: filter keyword/status/fromDate/toDate, phân trang, xem chi tiết.
+  - BM10/BM11/BM12 Báo cáo: generate/get tồn kho, doanh thu sản phẩm, doanh thu dịch vụ theo tháng/năm.
+  - QĐ13 Settings: màn hình thay đổi tỉ lệ trả trước dịch vụ + điều hướng quản lý danh mục quy định.
+  - Quản lý tài khoản/phân quyền (ADMIN): danh sách user, thêm/sửa/xóa user theo nhóm.
+- Đã bổ sung tầng kỹ thuật frontend:
+  - API client chung tự gắn `Authorization: Bearer <token>`.
+  - TypeScript types cho request/response backend (`ApiResponse`, `Page`, DTO nghiệp vụ).
+  - Chuẩn hóa hiển thị lỗi backend (`ApiResponse.errors`) cho form.
+  - Loading/empty/error state rõ ràng trên các trang chính.
+- Kết quả kiểm tra:
+- `npm run lint` => pass.
+  - `npm run build` => pass.
+
+### Danh sách file đã cập nhật (2026-05-20 - Frontend)
+
+- `frontend/eslint.config.mjs`
+- `frontend/src/types/backend.ts` (mới)
+- `frontend/src/services/api-client.ts` (mới)
+- `frontend/src/services/backend-api.ts` (mới)
+- `frontend/src/lib/api-error.ts` (mới)
+- `frontend/src/lib/format.ts` (mới)
+- `frontend/src/components/layout/sidebar.tsx`
+- `frontend/src/components/layout/header.tsx`
+- `frontend/src/app/(auth)/login/page.tsx`
+- `frontend/src/app/(dashboard)/dashboard/page.tsx`
+- `frontend/src/app/(dashboard)/dashboard/suppliers/page.tsx`
+- `frontend/src/app/(dashboard)/dashboard/customers/page.tsx`
+- `frontend/src/app/(dashboard)/dashboard/units/page.tsx` (mới)
+- `frontend/src/app/(dashboard)/dashboard/product-types/page.tsx` (mới)
+- `frontend/src/app/(dashboard)/dashboard/service-types/page.tsx` (mới)
+- `frontend/src/app/(dashboard)/dashboard/products/page.tsx`
+- `frontend/src/app/(dashboard)/dashboard/purchase-orders/page.tsx`
+- `frontend/src/app/(dashboard)/dashboard/orders/page.tsx`
+- `frontend/src/app/(dashboard)/dashboard/service-orders/page.tsx`
+- `frontend/src/app/(dashboard)/dashboard/service-voucher-lookup/page.tsx`
+- `frontend/src/app/(dashboard)/dashboard/reports/page.tsx`
+- `frontend/src/app/(dashboard)/dashboard/settings/page.tsx`
+- `frontend/src/app/(dashboard)/dashboard/staff/page.tsx`
+- `frontend/src/app/(dashboard)/dashboard/categories/page.tsx`
+- `frontend/src/app/(dashboard)/dashboard/services/page.tsx`
+- `progress.md`
+## 0. Cập Nhật 2026-05-20 (Thay Đổi Quy Định QĐ13)
 
 - Đã implement module thay đổi quy định theo QĐ13 với nhóm API settings (ADMIN):
   - `GET /api/settings/product-types`
