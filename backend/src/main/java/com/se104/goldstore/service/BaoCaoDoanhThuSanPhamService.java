@@ -8,6 +8,10 @@ public interface BaoCaoDoanhThuSanPhamService {
 
     List<BaoCaoDoanhThuSanPhamResponse> getAll(String keyword);
 
+    BaoCaoDoanhThuSanPhamResponse getByMonthYear(Integer thang, Integer nam);
+
+    BaoCaoDoanhThuSanPhamResponse generate(Integer thang, Integer nam);
+
     BaoCaoDoanhThuSanPhamResponse getById(String maBaoCaoDoanhThuSp);
 
     BaoCaoDoanhThuSanPhamResponse create(BaoCaoDoanhThuSanPhamRequest request);

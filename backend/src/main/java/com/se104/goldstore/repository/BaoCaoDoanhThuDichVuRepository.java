@@ -14,4 +14,6 @@ public interface BaoCaoDoanhThuDichVuRepository extends JpaRepository<BaoCaoDoan
     boolean existsByThangAndNamAndMaBaoCaoDoanhThuDvNot(Integer thang, Integer nam, String maBaoCaoDoanhThuDv);
 
     Optional<BaoCaoDoanhThuDichVu> findTopByMaBaoCaoDoanhThuDvStartingWithOrderByMaBaoCaoDoanhThuDvDesc(String prefix);
+
+    Optional<BaoCaoDoanhThuDichVu> findByThangAndNam(Integer thang, Integer nam);
 }

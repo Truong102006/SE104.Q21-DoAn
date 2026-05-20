@@ -31,8 +31,11 @@ public final class ApiPaths {
     public static final String SERVICE_TICKETS = API + "/service-tickets";
     public static final String THAM_SO = API_V1 + "/tham-so";
     public static final String BAO_CAO_TON_KHO = API_V1 + "/bao-cao-ton-kho";
+    public static final String REPORTS_INVENTORY = API + "/reports/inventory";
     public static final String BAO_CAO_DOANH_THU_SAN_PHAM = API_V1 + "/bao-cao-doanh-thu-san-pham";
     public static final String BAO_CAO_DOANH_THU_DICH_VU = API_V1 + "/bao-cao-doanh-thu-dich-vu";
+    public static final String REPORTS_REVENUE_PRODUCTS = API + "/reports/revenue/products";
+    public static final String REPORTS_REVENUE_SERVICES = API + "/reports/revenue/services";
     public static final String CHUC_NANG = API_V1 + "/chuc-nang";
     public static final String NHOM_NGUOI_DUNG = API_V1 + "/nhom-nguoi-dung";
     public static final String NGUOI_DUNG = API_V1 + "/nguoi-dung";
