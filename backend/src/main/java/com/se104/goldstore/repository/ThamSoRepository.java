@@ -13,5 +13,7 @@ public interface ThamSoRepository extends JpaRepository<ThamSo, String> {
 
     List<ThamSo> findByTenThamSoContainingIgnoreCase(String tenThamSo);
 
+    Optional<ThamSo> findByTenThamSoIgnoreCase(String tenThamSo);
+
     Optional<ThamSo> findTopByMaThamSoStartingWithOrderByMaThamSoDesc(String prefix);
 }
