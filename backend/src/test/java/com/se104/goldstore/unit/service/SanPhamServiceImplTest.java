@@ -2,6 +2,8 @@ package com.se104.goldstore.unit.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.se104.goldstore.dto.request.SanPhamRequest;
@@ -18,11 +20,15 @@ import com.se104.goldstore.repository.LoaiSanPhamRepository;
 import com.se104.goldstore.repository.SanPhamRepository;
 import com.se104.goldstore.service.impl.SanPhamServiceImpl;
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 
 class SanPhamServiceImplTest {
 
@@ -128,5 +134,27 @@ class SanPhamServiceImplTest {
 
         assertEquals(new BigDecimal("225000.00"), response.getDonGiaBan());
         assertEquals(12, response.getTonKho());
+    }
+
+    @Test
+    void getAllShouldSupportRelativeSearchByKeywordAndProductType() {
+        SanPham sanPham = new SanPham();
+        sanPham.setMaSanPham("SP001");
+        sanPham.setTenSanPham("Nhan vang 24K");
+        sanPham.setMaLoaiSanPham("LSP001");
+        sanPham.setMaDonViTinh("DVT001");
+        sanPham.setDonGiaMua(new BigDecimal("1000000"));
+        sanPham.setDonGiaBan(new BigDecimal("1020000"));
+        sanPham.setTonKho(5);
+
+        Page<SanPham> page = new PageImpl<>(List.of(sanPham));
+
+        when(sanPhamRepository.search(eq("nhan vang"), eq("LSP001"), any(Pageable.class))).thenReturn(page);
+
+        Page<SanPhamResponse> result = service.getAll("  Nhan   Vang  ", " LSP001 ", 0, 20);
+
+        assertEquals(1, result.getTotalElements());
+        assertEquals("SP001", result.getContent().getFirst().getMaSanPham());
+        verify(sanPhamRepository).search(eq("nhan vang"), eq("LSP001"), any(Pageable.class));
     }
 }

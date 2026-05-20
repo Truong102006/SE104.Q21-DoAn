@@ -51,4 +51,13 @@ class NhaCungCapServiceImplTest {
 
         assertThrows(BusinessException.class, () -> service.create(request));
     }
+
+    @Test
+    void createShouldThrowWhenPhoneFormatInvalid() {
+        NhaCungCapRequest request = new NhaCungCapRequest();
+        request.setTenNhaCungCap("Cong ty C");
+        request.setSoDienThoai("09012ABCD");
+
+        assertThrows(IllegalArgumentException.class, () -> service.create(request));
+    }
 }
