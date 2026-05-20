@@ -3,10 +3,13 @@ package com.se104.goldstore.service;
 import com.se104.goldstore.dto.request.SanPhamRequest;
 import com.se104.goldstore.dto.response.SanPhamResponse;
 import java.util.List;
+import org.springframework.data.domain.Page;
 
 public interface SanPhamService {
 
-    List<SanPhamResponse> getAll(String keyword);
+    Page<SanPhamResponse> getAll(String keyword, String productTypeId, int page, int size);
+
+    List<SanPhamResponse> search(String keyword);
 
     SanPhamResponse getById(String maSanPham);
 

@@ -21,6 +21,7 @@ public final class ApiPaths {
     public static final String LOAI_SAN_PHAM = API_V1 + "/loai-san-pham";
     public static final String PRODUCT_TYPES = API + "/product-types";
     public static final String SAN_PHAM = API_V1 + "/san-pham";
+    public static final String PRODUCTS = API + "/products";
     public static final String PHIEU_MUA_HANG = API_V1 + "/phieu-mua-hang";
     public static final String PHIEU_BAN_HANG = API_V1 + "/phieu-ban-hang";
     public static final String PHIEU_DICH_VU = API_V1 + "/phieu-dich-vu";

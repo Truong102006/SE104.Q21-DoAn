@@ -1,51 +1,156 @@
-﻿## 0. Update 2026-05-19 (Catalog BM1-BM4 + QD1-QD4-QD13)
+﻿## 0. Cập Nhật 2026-05-20 (Module Sản Phẩm BM8 + QĐ6 + QĐ8)
 
-- Da hoan thien 5 module danh muc voi route song song:
+- Đã implement module quản lý sản phẩm theo BM8 với route mới:
+  - `GET /api/products` hỗ trợ `keyword`, `productTypeId`, `page`, `size`
+  - `GET /api/products/{id}`
+  - `POST /api/products`
+  - `PUT /api/products/{id}`
+  - `DELETE /api/products/{id}`
+  - `GET /api/products/search?keyword=...`
+  - Vẫn giữ tương thích route legacy `/api/v1/san-pham`.
+- Đã bổ sung rule nghiệp vụ:
+  - QĐ6: tự động tính `donGiaBan = donGiaMua + donGiaMua * tiLeLoiNhuan / 100` (BigDecimal, làm tròn 2 chữ số thập phân).
+  - QĐ8: tìm kiếm tương đối theo mã/tên/loại sản phẩm.
+  - `tonKho` mặc định `0` khi tạo và không cho chỉnh trực tiếp (chỉ cập nhật qua phiếu mua/bán).
+  - Chặn xóa sản phẩm nếu đã phát sinh `ct_phieu_mua`, `ct_phieu_ban`, `ct_bao_cao_ton_kho`, `ct_bao_cao_doanh_thu_sp`.
+  - Thêm rule đơn vị tính phù hợp trong cùng loại sản phẩm (dựa trên `loaiDonVi` của đơn vị tính đã tồn tại trong loại).
+- Đã bổ sung tính nhất quán giá bán khi thay đổi tỷ lệ lợi nhuận loại sản phẩm:
+  - Khi update `LoaiSanPham.tiLeLoiNhuan`, backend tự động cập nhật lại `donGiaBan` cho tất cả sản phẩm thuộc loại đó.
+- Đã cập nhật response sản phẩm sang DTO nghiệp vụ:
+  - Trả về `loaiSanPham`, `donViTinh` (object thông tin) cùng các trường giá/tồn kho.
+- Đã bổ sung test cho công thức tính giá:
+  - `SanPhamServiceImplTest` (create/update tính `donGiaBan` đúng công thức).
+  - `LoaiSanPhamServiceImplTest` (đổi tỷ lệ lợi nhuận cập nhật lại giá bán sản phẩm).
+- Kết quả xác minh:
+  - `cd backend && ./mvnw test` => `BUILD SUCCESS` (9 tests pass).
+
+### Danh sách file đã cập nhật (2026-05-20)
+
+- `backend/src/main/java/com/se104/goldstore/common/ApiPaths.java`
+- `backend/src/main/java/com/se104/goldstore/common/PricingUtils.java` (mới)
+- `backend/src/main/java/com/se104/goldstore/controller/SanPhamController.java`
+- `backend/src/main/java/com/se104/goldstore/dto/request/SanPhamRequest.java`
+- `backend/src/main/java/com/se104/goldstore/dto/response/SanPhamResponse.java`
+- `backend/src/main/java/com/se104/goldstore/repository/SanPhamRepository.java`
+- `backend/src/main/java/com/se104/goldstore/repository/ChiTietPhieuMuaRepository.java`
+- `backend/src/main/java/com/se104/goldstore/repository/ChiTietPhieuBanRepository.java`
+- `backend/src/main/java/com/se104/goldstore/repository/ChiTietBaoCaoTonKhoRepository.java`
+- `backend/src/main/java/com/se104/goldstore/repository/ChiTietBaoCaoDoanhThuSanPhamRepository.java`
+- `backend/src/main/java/com/se104/goldstore/service/SanPhamService.java`
+- `backend/src/main/java/com/se104/goldstore/service/impl/SanPhamServiceImpl.java`
+- `backend/src/main/java/com/se104/goldstore/service/impl/LoaiSanPhamServiceImpl.java`
+- `backend/src/test/java/com/se104/goldstore/unit/service/SanPhamServiceImplTest.java` (mới)
+- `backend/src/test/java/com/se104/goldstore/unit/service/LoaiSanPhamServiceImplTest.java` (mới)
+- `progress.md`
+
+## 0. Cập Nhật 2026-05-19 (Catalog BM1-BM4 + QĐ1-QĐ4-QĐ13)
+
+- Đã hoàn thiện 5 module danh mục với route song song:
   - Legacy: `/api/v1/nha-cung-cap`, `/api/v1/khach-hang`, `/api/v1/don-vi-tinh`, `/api/v1/loai-dich-vu`, `/api/v1/loai-san-pham`
   - New theo BM: `/api/suppliers`, `/api/customers`, `/api/units`, `/api/service-types`, `/api/product-types`
-- Da cap nhat rule nghiep vu:
-  - QD1 (Nha cung cap): ten khong trung, so dien thoai 10 chu so, khong trung SDT.
-  - QD2 (Khach hang): chan trung cap ten + SDT, chan trung SDT theo schema.
-  - QD3 (Don vi tinh): ten khong trung, he so quy doi >= 0 (Hibernate Validator), chan xoa khi da duoc su dung.
-  - QD4 (Loai dich vu): ten khong trung, don gia >= 0, chan xoa khi da phat sinh phieu dich vu.
-  - QD13 (Loai san pham): ti le loi nhuan >= 0, chan xoa khi da co san pham thuoc loai.
-- Da bo sung phan quyen delete chat hon:
-  - `DELETE` 5 module danh muc yeu cau `ADMIN` (method-level security).
-  - STAFF va ADMIN van duoc xem/them/sua theo SecurityConfig.
-- Da bo sung test unit cho rule trung ten/trung SDT:
+- Đã cập nhật rule nghiệp vụ:
+  - QĐ1 (Nhà cung cấp): tên không trùng, số điện thoại 10 chữ số, không trùng SDT.
+  - QĐ2 (Khách hàng): chặn trùng cặp tên + SDT, chặn trùng SDT theo schema.
+  - QĐ3 (Đơn vị tính): tên không trùng, hệ số quy đổi >= 0 (Hibernate Validator), chặn xóa khi đã được sử dụng.
+  - QĐ4 (Loại dịch vụ): tên không trùng, đơn giá >= 0, chặn xóa khi đã phát sinh phiếu dịch vụ.
+  - QĐ13 (Loại sản phẩm): tỷ lệ lợi nhuận >= 0, chặn xóa khi đã có sản phẩm thuộc loại.
+- Đã bổ sung phân quyền delete chặt hơn:
+  - `DELETE` 5 module danh mục yêu cầu `ADMIN` (method-level security).
+  - `STAFF` và `ADMIN` vẫn được xem/thêm/sửa theo `SecurityConfig`.
+- Đã bổ sung test unit cho rule trùng tên/trùng SDT:
   - `KhachHangServiceImplTest` (2 test)
   - `NhaCungCapServiceImplTest` (2 test)
-- Ket qua xac minh:
-  - `cd backend && ./mvnw test` => BUILD SUCCESS (6 tests pass).
+- Kết quả xác minh:
+  - `cd backend && ./mvnw test` => `BUILD SUCCESS` (6 tests pass).
 
-## 0. Update 2026-05-19 (Auth + RBAC)
+### Danh sách file đã cập nhật (2026-05-19 - Catalog BM1-BM4 + QĐ1-QĐ4-QĐ13)
 
-- Backend da implement Spring Security + JWT stateless:
-  - POST /api/auth/login
-  - POST /api/auth/logout
-  - GET /api/auth/me
-- Da them JWT filter + auth entrypoint/denied handler + SecurityConfig phan quyen theo nhom:
-  - ADMIN only cho nhom endpoint quan tri va bao cao.
-  - ADMIN/STAFF cho nhom endpoint nghiep vu.
-- Tai khoan dang dung bang nguoi_dung:
-  - ten_dang_nhap = username
-  - ma_nhom = group code
-  - mat_khau duoc hash BCrypt
-- Da bo sung seed account (co the override bang env):
-  - admin/admin123
-  - staff/staff123
-  - Co migration plaintext password sang BCrypt neu gap du lieu cu.
-- Da bo sung test endpoint auth:
-  - File test: backend/src/test/java/com/se104/goldstore/unit/controller/AuthControllerTest.java
-  - Da verify login va me pass.
-- Frontend da bo mock auth, da goi API that:
-  - Login goi /api/auth/login
-  - Dashboard goi /api/auth/me voi header Authorization: Bearer <token>
-  - Logout goi /api/auth/logout voi Bearer token
-  - Menu role da cap nhat theo ADMIN/STAFF context tu backend.
-- Ket qua verify:
-  - cd backend && ./mvnw test => BUILD SUCCESS (2 tests pass)
-  - cd frontend && npm run type-check => SUCCESS
+- `backend/src/main/java/com/se104/goldstore/common/ApiPaths.java` `(+6 -0)`
+- `backend/src/main/java/com/se104/goldstore/controller/DonViTinhController.java` `(+3 -1)`
+- `backend/src/main/java/com/se104/goldstore/controller/KhachHangController.java` `(+3 -1)`
+- `backend/src/main/java/com/se104/goldstore/controller/LoaiDichVuController.java` `(+3 -1)`
+- `backend/src/main/java/com/se104/goldstore/controller/LoaiSanPhamController.java` `(+3 -1)`
+- `backend/src/main/java/com/se104/goldstore/controller/NhaCungCapController.java` `(+3 -1)`
+- `backend/src/main/java/com/se104/goldstore/dto/request/KhachHangRequest.java` `(+2 -0)`
+- `backend/src/main/java/com/se104/goldstore/dto/request/NhaCungCapRequest.java` `(+2 -0)`
+- `backend/src/main/java/com/se104/goldstore/repository/ChiTietPhieuDichVuRepository.java` `(+2 -0)`
+- `backend/src/main/java/com/se104/goldstore/repository/ChiTietPhieuMuaRepository.java` `(+2 -0)`
+- `backend/src/main/java/com/se104/goldstore/repository/KhachHangRepository.java` `(+10 -0)`
+- `backend/src/main/java/com/se104/goldstore/repository/NhaCungCapRepository.java` `(+4 -0)`
+- `backend/src/main/java/com/se104/goldstore/repository/PhieuBanHangRepository.java` `(+2 -0)`
+- `backend/src/main/java/com/se104/goldstore/repository/PhieuDichVuRepository.java` `(+2 -0)`
+- `backend/src/main/java/com/se104/goldstore/repository/PhieuMuaHangRepository.java` `(+2 -0)`
+- `backend/src/main/java/com/se104/goldstore/security/SecurityConfig.java` `(+2 -0)`
+- `backend/src/main/java/com/se104/goldstore/service/impl/DonViTinhServiceImpl.java` `(+26 -6)`
+- `backend/src/main/java/com/se104/goldstore/service/impl/KhachHangServiceImpl.java` `(+51 -14)`
+- `backend/src/main/java/com/se104/goldstore/service/impl/LoaiDichVuServiceImpl.java` `(+10 -1)`
+- `backend/src/main/java/com/se104/goldstore/service/impl/LoaiSanPhamServiceImpl.java` `(+10 -1)`
+- `backend/src/main/java/com/se104/goldstore/service/impl/NhaCungCapServiceImpl.java` `(+31 -9)`
+- `backend/src/test/java/com/se104/goldstore/unit/service/KhachHangServiceImplTest.java` `(+60 -0)`
+- `backend/src/test/java/com/se104/goldstore/unit/service/NhaCungCapServiceImplTest.java` `(+54 -0)`
+- `progress.md` `(+22 -1)`
+
+## 0. Cập Nhật 2026-05-19 (Auth + RBAC)
+
+- Backend đã implement Spring Security + JWT stateless:
+  - `POST /api/auth/login`
+  - `POST /api/auth/logout`
+  - `GET /api/auth/me`
+- Đã thêm JWT filter + auth entrypoint/denied handler + `SecurityConfig` phân quyền theo nhóm:
+  - `ADMIN` only cho nhóm endpoint quản trị và báo cáo.
+  - `ADMIN/STAFF` cho nhóm endpoint nghiệp vụ.
+- Tài khoản đang dùng bảng `nguoi_dung`:
+  - `ten_dang_nhap = username`
+  - `ma_nhom = group code`
+  - `mat_khau` được hash BCrypt
+- Đã bổ sung seed account (có thể override bằng env):
+  - `admin/admin123`
+  - `staff/staff123`
+  - Có migration plaintext password sang BCrypt nếu gặp dữ liệu cũ.
+- Đã bổ sung test endpoint auth:
+  - File test: `backend/src/test/java/com/se104/goldstore/unit/controller/AuthControllerTest.java`
+  - Đã verify login và me pass.
+- Frontend đã bỏ mock auth, đã gọi API thật:
+  - Login gọi `/api/auth/login`
+  - Dashboard gọi `/api/auth/me` với header `Authorization: Bearer <token>`
+  - Logout gọi `/api/auth/logout` với Bearer token
+  - Menu role đã cập nhật theo context `ADMIN/STAFF` từ backend.
+- Kết quả verify:
+  - `cd backend && ./mvnw test` => `BUILD SUCCESS` (2 tests pass)
+  - `cd frontend && npm run type-check` => `SUCCESS`
+
+### Danh sách file đã cập nhật (2026-05-19 - Auth + RBAC)
+
+- `backend/src/main/java/com/se104/goldstore/controller/AuthController.java` `(+46 -0)`
+- `backend/src/main/java/com/se104/goldstore/dto/request/AuthLoginRequest.java` `(+28 -0)`
+- `backend/src/main/java/com/se104/goldstore/dto/response/AuthLoginResponse.java` `(+62 -0)`
+- `backend/src/main/java/com/se104/goldstore/dto/response/AuthMeResponse.java` `(+44 -0)`
+- `backend/src/main/java/com/se104/goldstore/repository/PhanQuyenRepository.java` `(+2 -0)`
+- `backend/src/main/java/com/se104/goldstore/security/AuthSeedDataInitializer.java` `(+106 -0)`
+- `backend/src/main/java/com/se104/goldstore/security/AuthUserDetailsService.java` `(+81 -0)`
+- `backend/src/main/java/com/se104/goldstore/security/AuthUserPrincipal.java` `(+79 -0)`
+- `backend/src/main/java/com/se104/goldstore/security/JwtAuthenticationFilter.java` `(+71 -0)`
+- `backend/src/main/java/com/se104/goldstore/security/JwtService.java` `(+76 -0)`
+- `backend/src/main/java/com/se104/goldstore/security/RestAccessDeniedHandler.java` `(+38 -0)`
+- `backend/src/main/java/com/se104/goldstore/security/RestAuthenticationEntryPoint.java` `(+38 -0)`
+- `backend/src/main/java/com/se104/goldstore/security/SecurityConfig.java` `(+97 -2)`
+- `backend/src/main/java/com/se104/goldstore/service/AuthService.java` `(+14 -0)`
+- `backend/src/main/java/com/se104/goldstore/service/impl/AuthServiceImpl.java` `(+98 -0)`
+- `backend/src/main/java/com/se104/goldstore/service/impl/NguoiDungServiceImpl.java` `(+8 -4)`
+- `backend/src/main/resources/application.yml` `(+7 -0)`
+- `backend/src/test/java/com/se104/goldstore/unit/controller/AuthControllerTest.java` `(+86 -0)`
+- `frontend/src/app/(auth)/login/page.tsx` `(+2 -2)`
+- `frontend/src/app/(dashboard)/layout.tsx` `(+26 -1)`
+- `frontend/src/components/layout/header.tsx` `(+14 -7)`
+- `frontend/src/components/layout/sidebar.tsx` `(+3 -3)`
+- `frontend/src/services/auth-service.ts` `(+96 -0)`
+- `frontend/src/types/index.ts` `(+3 -0)`
+- `progress.md` `(+29 -0)`
+
+### Danh sách file đã cập nhật
+
+- Đã bổ sung truy vết và liệt kê file cho các mốc `2026-05-19` và `2026-05-15`.
+- Từ nay, mỗi update mới sẽ kèm danh sách file đã chỉnh theo format `(+/-)` để dễ review.
 ## 0. Cập Nhật Mới Nhất (2026-05-15)
 
 - Backend đã bổ sung thêm nền tảng CRUD + service + dto + controller cho các module:
@@ -61,6 +166,77 @@
 - Trạng thái build/test backend:
   - Lệnh đã chạy: `cd backend && ./mvnw test`
   - Kết quả: `BUILD SUCCESS` (lần gần nhất trong ngày 2026-05-15)
+
+### Danh sách file đã cập nhật (2026-05-15 - Scaffold nền tảng backend)
+
+- `backend/src/main/java/com/se104/goldstore/common/ApiPaths.java` `(+11 -0)`
+- `backend/src/main/java/com/se104/goldstore/controller/BaoCaoDoanhThuDichVuController.java` `(+61 -0)`
+- `backend/src/main/java/com/se104/goldstore/controller/BaoCaoDoanhThuSanPhamController.java` `(+61 -0)`
+- `backend/src/main/java/com/se104/goldstore/controller/BaoCaoTonKhoController.java` `(+61 -0)`
+- `backend/src/main/java/com/se104/goldstore/controller/ChucNangController.java` `(+61 -0)`
+- `backend/src/main/java/com/se104/goldstore/controller/NguoiDungController.java` `(+61 -0)`
+- `backend/src/main/java/com/se104/goldstore/controller/NhomNguoiDungController.java` `(+61 -0)`
+- `backend/src/main/java/com/se104/goldstore/controller/PhanQuyenController.java` `(+58 -0)`
+- `backend/src/main/java/com/se104/goldstore/controller/PhieuBanHangController.java` `(+61 -0)`
+- `backend/src/main/java/com/se104/goldstore/controller/PhieuDichVuController.java` `(+61 -0)`
+- `backend/src/main/java/com/se104/goldstore/controller/PhieuMuaHangController.java` `(+61 -0)`
+- `backend/src/main/java/com/se104/goldstore/controller/ThamSoController.java` `(+61 -0)`
+- `backend/src/main/java/com/se104/goldstore/dto/request/BaoCaoDoanhThuDichVuRequest.java` `(+52 -0)`
+- `backend/src/main/java/com/se104/goldstore/dto/request/BaoCaoDoanhThuSanPhamRequest.java` `(+52 -0)`
+- `backend/src/main/java/com/se104/goldstore/dto/request/BaoCaoTonKhoRequest.java` `(+38 -0)`
+- `backend/src/main/java/com/se104/goldstore/dto/request/ChucNangRequest.java` `(+37 -0)`
+- `backend/src/main/java/com/se104/goldstore/dto/request/NguoiDungRequest.java` `(+37 -0)`
+- `backend/src/main/java/com/se104/goldstore/dto/request/NhomNguoiDungRequest.java` `(+27 -0)`
+- `backend/src/main/java/com/se104/goldstore/dto/request/PhanQuyenRequest.java` `(+28 -0)`
+- `backend/src/main/java/com/se104/goldstore/dto/request/PhieuBanHangRequest.java` `(+54 -0)`
+- `backend/src/main/java/com/se104/goldstore/dto/request/PhieuDichVuRequest.java` `(+89 -0)`
+- `backend/src/main/java/com/se104/goldstore/dto/request/PhieuMuaHangRequest.java` `(+54 -0)`
+- `backend/src/main/java/com/se104/goldstore/dto/request/ThamSoRequest.java` `(+38 -0)`
+- `backend/src/main/java/com/se104/goldstore/dto/response/BaoCaoDoanhThuDichVuResponse.java` `(+43 -0)`
+- `backend/src/main/java/com/se104/goldstore/dto/response/BaoCaoDoanhThuSanPhamResponse.java` `(+43 -0)`
+- `backend/src/main/java/com/se104/goldstore/dto/response/BaoCaoTonKhoResponse.java` `(+32 -0)`
+- `backend/src/main/java/com/se104/goldstore/dto/response/ChucNangResponse.java` `(+32 -0)`
+- `backend/src/main/java/com/se104/goldstore/dto/response/NguoiDungResponse.java` `(+23 -0)`
+- `backend/src/main/java/com/se104/goldstore/dto/response/NhomNguoiDungResponse.java` `(+23 -0)`
+- `backend/src/main/java/com/se104/goldstore/dto/response/PhanQuyenResponse.java` `(+23 -0)`
+- `backend/src/main/java/com/se104/goldstore/dto/response/PhieuBanHangResponse.java` `(+44 -0)`
+- `backend/src/main/java/com/se104/goldstore/dto/response/PhieuDichVuResponse.java` `(+71 -0)`
+- `backend/src/main/java/com/se104/goldstore/dto/response/PhieuMuaHangResponse.java` `(+44 -0)`
+- `backend/src/main/java/com/se104/goldstore/dto/response/ThamSoResponse.java` `(+34 -0)`
+- `backend/src/main/java/com/se104/goldstore/repository/BaoCaoDoanhThuDichVuRepository.java` `(+10 -0)`
+- `backend/src/main/java/com/se104/goldstore/repository/BaoCaoDoanhThuSanPhamRepository.java` `(+10 -0)`
+- `backend/src/main/java/com/se104/goldstore/repository/BaoCaoTonKhoRepository.java` `(+10 -0)`
+- `backend/src/main/java/com/se104/goldstore/repository/ChucNangRepository.java` `(+10 -0)`
+- `backend/src/main/java/com/se104/goldstore/repository/NguoiDungRepository.java` `(+3 -0)`
+- `backend/src/main/java/com/se104/goldstore/repository/NhomNguoiDungRepository.java` `(+10 -0)`
+- `backend/src/main/java/com/se104/goldstore/repository/PhanQuyenRepository.java` `(+5 -0)`
+- `backend/src/main/java/com/se104/goldstore/repository/PhieuBanHangRepository.java` `(+6 -0)`
+- `backend/src/main/java/com/se104/goldstore/repository/PhieuDichVuRepository.java` `(+6 -0)`
+- `backend/src/main/java/com/se104/goldstore/repository/PhieuMuaHangRepository.java` `(+6 -0)`
+- `backend/src/main/java/com/se104/goldstore/repository/ThamSoRepository.java` `(+10 -0)`
+- `backend/src/main/java/com/se104/goldstore/service/BaoCaoDoanhThuDichVuService.java` `(+18 -0)`
+- `backend/src/main/java/com/se104/goldstore/service/BaoCaoDoanhThuSanPhamService.java` `(+18 -0)`
+- `backend/src/main/java/com/se104/goldstore/service/BaoCaoTonKhoService.java` `(+18 -0)`
+- `backend/src/main/java/com/se104/goldstore/service/ChucNangService.java` `(+18 -0)`
+- `backend/src/main/java/com/se104/goldstore/service/NguoiDungService.java` `(+18 -0)`
+- `backend/src/main/java/com/se104/goldstore/service/NhomNguoiDungService.java` `(+18 -0)`
+- `backend/src/main/java/com/se104/goldstore/service/PhanQuyenService.java` `(+16 -0)`
+- `backend/src/main/java/com/se104/goldstore/service/PhieuBanHangService.java` `(+18 -0)`
+- `backend/src/main/java/com/se104/goldstore/service/PhieuDichVuService.java` `(+18 -0)`
+- `backend/src/main/java/com/se104/goldstore/service/PhieuMuaHangService.java` `(+18 -0)`
+- `backend/src/main/java/com/se104/goldstore/service/ThamSoService.java` `(+18 -0)`
+- `backend/src/main/java/com/se104/goldstore/service/impl/BaoCaoDoanhThuDichVuServiceImpl.java` `(+124 -0)`
+- `backend/src/main/java/com/se104/goldstore/service/impl/BaoCaoDoanhThuSanPhamServiceImpl.java` `(+124 -0)`
+- `backend/src/main/java/com/se104/goldstore/service/impl/BaoCaoTonKhoServiceImpl.java` `(+121 -0)`
+- `backend/src/main/java/com/se104/goldstore/service/impl/ChucNangServiceImpl.java` `(+119 -0)`
+- `backend/src/main/java/com/se104/goldstore/service/impl/NguoiDungServiceImpl.java` `(+116 -0)`
+- `backend/src/main/java/com/se104/goldstore/service/impl/NhomNguoiDungServiceImpl.java` `(+109 -0)`
+- `backend/src/main/java/com/se104/goldstore/service/impl/PhanQuyenServiceImpl.java` `(+102 -0)`
+- `backend/src/main/java/com/se104/goldstore/service/impl/PhieuBanHangServiceImpl.java` `(+123 -0)`
+- `backend/src/main/java/com/se104/goldstore/service/impl/PhieuDichVuServiceImpl.java` `(+132 -0)`
+- `backend/src/main/java/com/se104/goldstore/service/impl/PhieuMuaHangServiceImpl.java` `(+123 -0)`
+- `backend/src/main/java/com/se104/goldstore/service/impl/ThamSoServiceImpl.java` `(+112 -0)`
+- `progress.md` `(+17 -0)`
 
 ---
 # SE104.Q21 - Web Quản Lý Cửa Hàng Vàng Bạc Đá Quý - Báo Cáo Tiến Độ Tổng Thể
@@ -525,6 +701,9 @@ Giải thích ngắn:
 3. Chuẩn hóa response/error và logging.
 4. Rà soát dependency chưa dùng (MapStruct/JWT chưa wire) và dependency local-link frontend.
 5. Bổ sung Dockerfile/backend+frontend và tài liệu deploy tối thiểu.
+
+
+
 
 
 

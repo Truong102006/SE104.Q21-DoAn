@@ -6,8 +6,12 @@ import com.se104.goldstore.dto.response.ApiResponse;
 import com.se104.goldstore.dto.response.SanPhamResponse;
 import com.se104.goldstore.service.SanPhamService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import java.util.List;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -19,7 +23,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping(ApiPaths.SAN_PHAM)
+@RequestMapping({ ApiPaths.SAN_PHAM, ApiPaths.PRODUCTS })
 public class SanPhamController {
 
     private final SanPhamService sanPhamService;
@@ -29,10 +33,25 @@ public class SanPhamController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<SanPhamResponse>>> getAll(
-        @RequestParam(name = "q", required = false) String keyword
+    public ResponseEntity<ApiResponse<Page<SanPhamResponse>>> getAll(
+        @RequestParam(name = "keyword", required = false) String keyword,
+        @RequestParam(name = "q", required = false) String keywordLegacy,
+        @RequestParam(name = "productTypeId", required = false) String productTypeId,
+        @RequestParam(name = "page", defaultValue = "0") @Min(0) int page,
+        @RequestParam(name = "size", defaultValue = "20") @Min(1) @Max(100) int size
     ) {
-        return ResponseEntity.ok(ApiResponse.success("Lay danh sach san pham thanh cong", sanPhamService.getAll(keyword)));
+        String resolvedKeyword = keyword != null ? keyword : keywordLegacy;
+        return ResponseEntity.ok(
+            ApiResponse.success(
+                "Lay danh sach san pham thanh cong",
+                sanPhamService.getAll(resolvedKeyword, productTypeId, page, size)
+            )
+        );
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<ApiResponse<List<SanPhamResponse>>> search(@RequestParam(name = "keyword") String keyword) {
+        return ResponseEntity.ok(ApiResponse.success("Tim kiem san pham thanh cong", sanPhamService.search(keyword)));
     }
 
     @GetMapping("/{maSanPham}")
@@ -54,6 +73,7 @@ public class SanPhamController {
     }
 
     @DeleteMapping("/{maSanPham}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<Object>> delete(@PathVariable String maSanPham) {
         sanPhamService.delete(maSanPham);
         return ResponseEntity.ok(ApiResponse.success("Xoa san pham thanh cong", null));

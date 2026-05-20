@@ -6,6 +6,8 @@ public class SanPhamResponse {
 
     private String maSanPham;
     private String tenSanPham;
+    private LoaiSanPhamInfo loaiSanPham;
+    private DonViTinhInfo donViTinh;
     private String maLoaiSanPham;
     private String maDonViTinh;
     private BigDecimal donGiaMua;
@@ -26,6 +28,22 @@ public class SanPhamResponse {
 
     public void setTenSanPham(String tenSanPham) {
         this.tenSanPham = tenSanPham;
+    }
+
+    public LoaiSanPhamInfo getLoaiSanPham() {
+        return loaiSanPham;
+    }
+
+    public void setLoaiSanPham(LoaiSanPhamInfo loaiSanPham) {
+        this.loaiSanPham = loaiSanPham;
+    }
+
+    public DonViTinhInfo getDonViTinh() {
+        return donViTinh;
+    }
+
+    public void setDonViTinh(DonViTinhInfo donViTinh) {
+        this.donViTinh = donViTinh;
     }
 
     public String getMaLoaiSanPham() {
@@ -66,5 +84,58 @@ public class SanPhamResponse {
 
     public void setTonKho(Integer tonKho) {
         this.tonKho = tonKho;
+    }
+
+    public static class LoaiSanPhamInfo {
+
+        private String maLoaiSanPham;
+        private String tenLoaiSanPham;
+
+        public String getMaLoaiSanPham() {
+            return maLoaiSanPham;
+        }
+
+        public void setMaLoaiSanPham(String maLoaiSanPham) {
+            this.maLoaiSanPham = maLoaiSanPham;
+        }
+
+        public String getTenLoaiSanPham() {
+            return tenLoaiSanPham;
+        }
+
+        public void setTenLoaiSanPham(String tenLoaiSanPham) {
+            this.tenLoaiSanPham = tenLoaiSanPham;
+        }
+    }
+
+    public static class DonViTinhInfo {
+
+        private String maDonViTinh;
+        private String tenDonViTinh;
+        private String loaiDonVi;
+
+        public String getMaDonViTinh() {
+            return maDonViTinh;
+        }
+
+        public void setMaDonViTinh(String maDonViTinh) {
+            this.maDonViTinh = maDonViTinh;
+        }
+
+        public String getTenDonViTinh() {
+            return tenDonViTinh;
+        }
+
+        public void setTenDonViTinh(String tenDonViTinh) {
+            this.tenDonViTinh = tenDonViTinh;
+        }
+
+        public String getLoaiDonVi() {
+            return loaiDonVi;
+        }
+
+        public void setLoaiDonVi(String loaiDonVi) {
+            this.loaiDonVi = loaiDonVi;
+        }
     }
 }
