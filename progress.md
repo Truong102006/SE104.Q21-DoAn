@@ -1,4 +1,51 @@
-﻿## 0. Cập Nhật 2026-05-20 (Module Sản Phẩm BM8 + QĐ6 + QĐ8)
+﻿## 0. Cập Nhật 2026-05-20 (Phiếu Mua Hàng BM5 + QĐ5)
+
+- Đã implement nghiệp vụ lập phiếu mua hàng theo BM5 và QĐ5:
+  - Tạo phiếu qua `POST /api/purchases` (song song legacy `/api/v1/phieu-mua-hang`).
+  - Lấy danh sách qua `GET /api/purchases`.
+  - Lấy chi tiết qua `GET /api/purchases/{soPhieuMua}`.
+  - Bổ sung endpoint in/xem phiếu: `GET /api/purchases/{soPhieuMua}/print-data`.
+  - Không còn expose API `DELETE` và `PUT` cho phiếu mua đã lưu.
+- Đã cập nhật request BM5:
+  - Header: `soPhieuMua` (optional), `ngayLapPhieuMua`, `maNhaCungCap`.
+  - Chi tiết: `items[]` gồm `maSanPham`, `soLuongMua`, `maDonViTinh`, `donGia`.
+- Đã bổ sung validate nghiệp vụ:
+  - Nhà cung cấp phải tồn tại.
+  - `items` không được rỗng.
+  - Mỗi sản phẩm và đơn vị tính phải tồn tại.
+  - `soLuongMua > 0`, `donGia >= 0`.
+  - Không cho trùng sản phẩm trong cùng một phiếu (chọn phương án báo lỗi rõ ràng).
+  - `thanhTien = soLuongMua * donGia`, `tongTien = tổng thanhTien`.
+- Đã triển khai transaction lập phiếu mua:
+  - Tạo `PHIEUMUAHANG`.
+  - Tạo `CT_PHIEUMUA`.
+  - Cập nhật `SANPHAM`:
+    - `tonKho = tonKho + soLuongMua`.
+    - `donGiaMua = donGia` của lần mua mới nhất.
+    - `donGiaBan` tính lại theo `TiLeLoiNhuan` của loại sản phẩm.
+  - Nếu lỗi giữa chừng, rollback toàn bộ transaction.
+- Đã mở rộng response phiếu mua:
+  - Thông tin phiếu đầy đủ.
+  - Thông tin nhà cung cấp (tên, số điện thoại, địa chỉ).
+  - Danh sách chi tiết (sản phẩm, loại sản phẩm, đơn vị tính, số lượng, đơn giá, thành tiền).
+- Đã bổ sung test kiểm tra tồn kho tăng sau khi tạo phiếu:
+  - `PhieuMuaHangServiceImplTest#createShouldIncreaseStockAfterPurchaseCreated`.
+- Kết quả xác minh:
+  - `cd backend && ./mvnw test` => `BUILD SUCCESS` (10 tests pass).
+
+### Danh sách file đã cập nhật (2026-05-20 - Phiếu Mua Hàng BM5 + QĐ5)
+
+- `backend/src/main/java/com/se104/goldstore/common/ApiPaths.java` `(+1 -0)`
+- `backend/src/main/java/com/se104/goldstore/controller/PhieuMuaHangController.java` `(+17 -20)`
+- `backend/src/main/java/com/se104/goldstore/dto/request/PhieuMuaHangRequest.java` `(+59 -7)`
+- `backend/src/main/java/com/se104/goldstore/dto/response/PhieuMuaHangResponse.java` `(+144 -0)`
+- `backend/src/main/java/com/se104/goldstore/repository/ChiTietPhieuMuaRepository.java` `(+3 -0)`
+- `backend/src/main/java/com/se104/goldstore/service/PhieuMuaHangService.java` `(+2 -4)`
+- `backend/src/main/java/com/se104/goldstore/service/impl/PhieuMuaHangServiceImpl.java` `(+192 -46)`
+- `backend/src/test/java/com/se104/goldstore/unit/service/PhieuMuaHangServiceImplTest.java` `(+116 -0)` (mới)
+- `progress.md`
+
+## 0. Cập Nhật 2026-05-20 (Module Sản Phẩm BM8 + QĐ6 + QĐ8)
 
 - Đã implement module quản lý sản phẩm theo BM8 với route mới:
   - `GET /api/products` hỗ trợ `keyword`, `productTypeId`, `page`, `size`
@@ -701,6 +748,7 @@ Giải thích ngắn:
 3. Chuẩn hóa response/error và logging.
 4. Rà soát dependency chưa dùng (MapStruct/JWT chưa wire) và dependency local-link frontend.
 5. Bổ sung Dockerfile/backend+frontend và tài liệu deploy tối thiểu.
+
 
 
 
