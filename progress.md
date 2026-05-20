@@ -1,4 +1,50 @@
-﻿## 0. Cập Nhật 2026-05-20 (Báo Cáo Tồn Kho BM10)
+﻿## 0. Cập Nhật 2026-05-20 (Thay Đổi Quy Định QĐ13)
+
+- Đã implement module thay đổi quy định theo QĐ13 với nhóm API settings (ADMIN):
+  - `GET /api/settings/product-types`
+  - `GET /api/settings/units`
+  - `GET /api/settings/service-types`
+  - `GET /api/settings/service-prepayment-rate`
+  - `PUT /api/settings/service-prepayment-rate`
+- Đã bổ sung service quản lý quy định:
+  - Lấy danh mục loại sản phẩm/đơn vị tính/loại dịch vụ phục vụ màn hình cài đặt.
+  - Quản lý tham số `SERVICE_PREPAYMENT_RATE` theo cơ chế upsert vào bảng `THAMSO`.
+  - Validate tỉ lệ trả trước trong khoảng `[0, 100]`, mặc định `50` nếu chưa có dữ liệu.
+- Đã siết phân quyền thay đổi quy định:
+  - `POST/PUT /api/product-types` => chỉ `ADMIN`.
+  - `POST/PUT /api/units` => chỉ `ADMIN`.
+  - `POST/PUT /api/service-types` => chỉ `ADMIN`.
+- Ảnh hưởng nghiệp vụ sau thay đổi:
+  - QĐ6/QĐ13: khi cập nhật `TiLeLoiNhuan` loại sản phẩm, giá bán `DonGiaBan` của sản phẩm thuộc loại đó được tính lại theo logic đã chọn (đã có trong service).
+  - QĐ7: khi cập nhật `SERVICE_PREPAYMENT_RATE`, phiếu dịch vụ mới tạo sẽ validate theo tỉ lệ mới.
+  - Không làm thay đổi dữ liệu lịch sử của các phiếu đã lưu: các phiếu dịch vụ cũ vẫn giữ `donGiaDuocTinh`, `thanhTien`, `tienTraTruoc`, `tienConLai` đã chốt ở chi tiết phiếu.
+- Đã bổ sung test theo yêu cầu:
+  - `PhieuDichVuServiceImplTest#createShouldValidateUpdatedPrepaymentRateToSixtyPercent`:
+    - đổi tỉ lệ từ 50 lên 60 thì phiếu dịch vụ mới bắt buộc theo mức 60%.
+  - `LoaiSanPhamServiceImplTest#updateShouldRecalculateSellingPriceForProductsInType`:
+    - đổi phần trăm lợi nhuận thì giá bán sản phẩm hiện tại được tính lại đúng.
+- Bổ sung test service settings:
+  - `SettingsServiceImplTest#updateServicePrepaymentRateShouldUseUpdatedValue`.
+- Kết quả xác minh:
+  - `mvn -f backend/pom.xml test "-Dtest=SettingsServiceImplTest,PhieuDichVuServiceImplTest,LoaiSanPhamServiceImplTest"` => `BUILD SUCCESS`.
+  - `mvn -f backend/pom.xml test` => `BUILD SUCCESS` (24 tests pass).
+
+### Danh sách file đã cập nhật (2026-05-20 - QĐ13)
+
+- `backend/src/main/java/com/se104/goldstore/common/ApiPaths.java`
+- `backend/src/main/java/com/se104/goldstore/controller/SettingsController.java` (mới)
+- `backend/src/main/java/com/se104/goldstore/controller/LoaiSanPhamController.java`
+- `backend/src/main/java/com/se104/goldstore/controller/DonViTinhController.java`
+- `backend/src/main/java/com/se104/goldstore/controller/LoaiDichVuController.java`
+- `backend/src/main/java/com/se104/goldstore/dto/request/ServicePrepaymentRateRequest.java` (mới)
+- `backend/src/main/java/com/se104/goldstore/dto/response/ServicePrepaymentRateResponse.java` (mới)
+- `backend/src/main/java/com/se104/goldstore/service/SettingsService.java` (mới)
+- `backend/src/main/java/com/se104/goldstore/service/impl/SettingsServiceImpl.java` (mới)
+- `backend/src/test/java/com/se104/goldstore/unit/service/PhieuDichVuServiceImplTest.java`
+- `backend/src/test/java/com/se104/goldstore/unit/service/SettingsServiceImplTest.java` (mới)
+- `progress.md`
+
+## 0. Cập Nhật 2026-05-20 (Báo Cáo Tồn Kho BM10)
 
 - Đã implement báo cáo tồn kho theo BM10 với route mới (ADMIN):
   - `POST /api/reports/inventory/generate?month=&year=`
@@ -1001,3 +1047,4 @@ Giải thích ngắn:
 - `backend/src/test/java/com/se104/goldstore/unit/service/BaoCaoDoanhThuSanPhamServiceImplTest.java` (mới)
 - `backend/src/test/java/com/se104/goldstore/unit/service/BaoCaoDoanhThuDichVuServiceImplTest.java` (mới)
 - `progress.md`
+

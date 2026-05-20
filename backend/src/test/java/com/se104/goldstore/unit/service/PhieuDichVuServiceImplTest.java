@@ -95,6 +95,39 @@ class PhieuDichVuServiceImplTest {
     }
 
     @Test
+    void createShouldValidateUpdatedPrepaymentRateToSixtyPercent() {
+        PhieuDichVuRequest.ItemRequest item = new PhieuDichVuRequest.ItemRequest();
+        item.setMaLoaiDichVu("LDV001");
+        item.setSoLuongDichVu(1);
+        item.setTienTraTruoc(new BigDecimal("55000"));
+
+        PhieuDichVuRequest request = new PhieuDichVuRequest();
+        request.setNgayLapPhieuDichVu(LocalDate.of(2026, 5, 20));
+        request.setMaKhachHang("KH001");
+        request.setItems(List.of(item));
+
+        KhachHang khachHang = new KhachHang();
+        khachHang.setMaKhachHang("KH001");
+
+        LoaiDichVu loaiDichVu = new LoaiDichVu();
+        loaiDichVu.setMaLoaiDichVu("LDV001");
+        loaiDichVu.setTenLoaiDichVu("Gia cong");
+        loaiDichVu.setDonGiaDichVu(new BigDecimal("100000"));
+
+        ThamSo thamSo = new ThamSo();
+        thamSo.setTenThamSo("SERVICE_PREPAYMENT_RATE");
+        thamSo.setGiaTri(new BigDecimal("60"));
+
+        when(khachHangRepository.findById("KH001")).thenReturn(Optional.of(khachHang));
+        when(phieuDichVuRepository.findTopBySoPhieuDichVuStartingWithOrderBySoPhieuDichVuDesc("DV")).thenReturn(Optional.empty());
+        when(phieuDichVuRepository.existsById("DV001")).thenReturn(false);
+        when(loaiDichVuRepository.findById("LDV001")).thenReturn(Optional.of(loaiDichVu));
+        when(thamSoRepository.findByTenThamSoIgnoreCase("SERVICE_PREPAYMENT_RATE")).thenReturn(Optional.of(thamSo));
+
+        assertThrows(BusinessException.class, () -> service.create(request));
+    }
+
+    @Test
     void deliverItemShouldSetRemainingToZero() {
         KhachHang khachHang = buildKhachHang("KH001");
         PhieuDichVu voucher = buildVoucher("DV001", "KH001");

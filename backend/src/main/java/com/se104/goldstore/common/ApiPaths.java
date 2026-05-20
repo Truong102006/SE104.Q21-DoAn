@@ -36,6 +36,7 @@ public final class ApiPaths {
     public static final String BAO_CAO_DOANH_THU_DICH_VU = API_V1 + "/bao-cao-doanh-thu-dich-vu";
     public static final String REPORTS_REVENUE_PRODUCTS = API + "/reports/revenue/products";
     public static final String REPORTS_REVENUE_SERVICES = API + "/reports/revenue/services";
+    public static final String SETTINGS = API + "/settings";
     public static final String CHUC_NANG = API_V1 + "/chuc-nang";
     public static final String NHOM_NGUOI_DUNG = API_V1 + "/nhom-nguoi-dung";
     public static final String NGUOI_DUNG = API_V1 + "/nguoi-dung";
