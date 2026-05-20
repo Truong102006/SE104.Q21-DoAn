@@ -5,6 +5,8 @@ import com.se104.goldstore.dto.response.ApiResponse;
 import jakarta.validation.ConstraintViolationException;
 import java.util.ArrayList;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -16,6 +18,10 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+    private static final String GENERIC_INTERNAL_ERROR_MESSAGE =
+        "\u0110\u00e3 c\u00f3 l\u1ed7i h\u1ec7 th\u1ed1ng. Vui l\u00f2ng th\u1eed l\u1ea1i sau.";
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Object>> handleValidation(MethodArgumentNotValidException ex) {
@@ -61,7 +67,13 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Object>> handleInternal(Exception ex) {
+        LOGGER.error("Unhandled internal server error", ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-            .body(ApiResponse.failure("Internal server error", List.of(new ApiError("internal", ex.getMessage()))));
+            .body(
+                ApiResponse.failure(
+                    GENERIC_INTERNAL_ERROR_MESSAGE,
+                    List.of(new ApiError("internal", GENERIC_INTERNAL_ERROR_MESSAGE))
+                )
+            );
     }
 }

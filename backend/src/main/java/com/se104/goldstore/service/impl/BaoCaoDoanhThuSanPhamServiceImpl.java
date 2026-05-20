@@ -246,7 +246,7 @@ public class BaoCaoDoanhThuSanPhamServiceImpl implements BaoCaoDoanhThuSanPhamSe
             return bigDecimal.setScale(2, RoundingMode.HALF_UP);
         }
         if (row[2] instanceof Number number) {
-            return BigDecimal.valueOf(number.doubleValue()).setScale(2, RoundingMode.HALF_UP);
+            return new BigDecimal(number.toString()).setScale(2, RoundingMode.HALF_UP);
         }
         return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
     }
