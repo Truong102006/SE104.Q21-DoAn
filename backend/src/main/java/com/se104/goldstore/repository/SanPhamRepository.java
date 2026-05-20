@@ -6,8 +6,10 @@ import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import jakarta.persistence.LockModeType;
 
 public interface SanPhamRepository extends JpaRepository<SanPham, String> {
 
@@ -53,4 +55,8 @@ public interface SanPhamRepository extends JpaRepository<SanPham, String> {
         """
     )
     List<SanPham> searchByKeyword(@Param("keyword") String keyword);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT sp FROM SanPham sp WHERE sp.maSanPham = :maSanPham")
+    Optional<SanPham> findByIdForUpdate(@Param("maSanPham") String maSanPham);
 }

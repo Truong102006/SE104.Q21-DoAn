@@ -1,10 +1,12 @@
 package com.se104.goldstore.dto.request;
 
-import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
-import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 public class PhieuBanHangRequest {
 
@@ -16,9 +18,8 @@ public class PhieuBanHangRequest {
     @NotBlank(message = "Ma khach hang khong duoc de trong")
     private String maKhachHang;
 
-    @NotNull(message = "Tong tien khong duoc de trong")
-    @DecimalMin(value = "0", inclusive = true, message = "Tong tien phai >= 0")
-    private BigDecimal tongTien;
+    @NotEmpty(message = "Danh sach san pham ban khong duoc de trong")
+    private List<@Valid ItemRequest> items;
 
     public String getSoPhieuBan() {
         return soPhieuBan;
@@ -44,11 +45,37 @@ public class PhieuBanHangRequest {
         this.maKhachHang = maKhachHang;
     }
 
-    public BigDecimal getTongTien() {
-        return tongTien;
+    public List<ItemRequest> getItems() {
+        return items;
     }
 
-    public void setTongTien(BigDecimal tongTien) {
-        this.tongTien = tongTien;
+    public void setItems(List<ItemRequest> items) {
+        this.items = items;
+    }
+
+    public static class ItemRequest {
+
+        @NotBlank(message = "Ma san pham khong duoc de trong")
+        private String maSanPham;
+
+        @NotNull(message = "So luong khong duoc de trong")
+        @Min(value = 1, message = "So luong phai > 0")
+        private Integer soLuong;
+
+        public String getMaSanPham() {
+            return maSanPham;
+        }
+
+        public void setMaSanPham(String maSanPham) {
+            this.maSanPham = maSanPham;
+        }
+
+        public Integer getSoLuong() {
+            return soLuong;
+        }
+
+        public void setSoLuong(Integer soLuong) {
+            this.soLuong = soLuong;
+        }
     }
 }
