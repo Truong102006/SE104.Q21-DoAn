@@ -11,8 +11,4 @@ public interface PhieuBanHangService {
     PhieuBanHangResponse getById(String soPhieuBan);
 
     PhieuBanHangResponse create(PhieuBanHangRequest request);
-
-    PhieuBanHangResponse update(String soPhieuBan, PhieuBanHangRequest request);
-
-    void delete(String soPhieuBan);
 }

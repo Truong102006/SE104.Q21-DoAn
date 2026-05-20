@@ -8,18 +8,16 @@ import com.se104.goldstore.service.PhieuBanHangService;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping(ApiPaths.PHIEU_BAN_HANG)
+@RequestMapping({ ApiPaths.PHIEU_BAN_HANG, ApiPaths.SALES })
 public class PhieuBanHangController {
 
     private final PhieuBanHangService phieuBanHangService;
@@ -30,32 +28,24 @@ public class PhieuBanHangController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<PhieuBanHangResponse>>> getAll(
-        @RequestParam(name = "q", required = false) String keyword
+        @RequestParam(name = "keyword", required = false) String keyword,
+        @RequestParam(name = "q", required = false) String keywordLegacy
     ) {
-        return ResponseEntity.ok(ApiResponse.success("Lay danh sach phieu ban hang thanh cong", phieuBanHangService.getAll(keyword)));
+        String resolvedKeyword = keyword != null ? keyword : keywordLegacy;
+        return ResponseEntity.ok(
+            ApiResponse.success("Lay danh sach phieu ban hang thanh cong", phieuBanHangService.getAll(resolvedKeyword))
+        );
     }
 
     @GetMapping("/{soPhieuBan}")
     public ResponseEntity<ApiResponse<PhieuBanHangResponse>> getById(@PathVariable String soPhieuBan) {
-        return ResponseEntity.ok(ApiResponse.success("Lay chi tiet phieu ban hang thanh cong", phieuBanHangService.getById(soPhieuBan)));
+        return ResponseEntity.ok(
+            ApiResponse.success("Lay chi tiet phieu ban hang thanh cong", phieuBanHangService.getById(soPhieuBan))
+        );
     }
 
     @PostMapping
     public ResponseEntity<ApiResponse<PhieuBanHangResponse>> create(@Valid @RequestBody PhieuBanHangRequest request) {
         return ResponseEntity.ok(ApiResponse.success("Tao phieu ban hang thanh cong", phieuBanHangService.create(request)));
-    }
-
-    @PutMapping("/{soPhieuBan}")
-    public ResponseEntity<ApiResponse<PhieuBanHangResponse>> update(
-        @PathVariable String soPhieuBan,
-        @Valid @RequestBody PhieuBanHangRequest request
-    ) {
-        return ResponseEntity.ok(ApiResponse.success("Cap nhat phieu ban hang thanh cong", phieuBanHangService.update(soPhieuBan, request)));
-    }
-
-    @DeleteMapping("/{soPhieuBan}")
-    public ResponseEntity<ApiResponse<Object>> delete(@PathVariable String soPhieuBan) {
-        phieuBanHangService.delete(soPhieuBan);
-        return ResponseEntity.ok(ApiResponse.success("Xoa phieu ban hang thanh cong", null));
     }
 }

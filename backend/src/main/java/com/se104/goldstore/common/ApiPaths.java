@@ -25,6 +25,7 @@ public final class ApiPaths {
     public static final String PHIEU_MUA_HANG = API_V1 + "/phieu-mua-hang";
     public static final String PURCHASES = API + "/purchases";
     public static final String PHIEU_BAN_HANG = API_V1 + "/phieu-ban-hang";
+    public static final String SALES = API + "/sales";
     public static final String PHIEU_DICH_VU = API_V1 + "/phieu-dich-vu";
     public static final String THAM_SO = API_V1 + "/tham-so";
     public static final String BAO_CAO_TON_KHO = API_V1 + "/bao-cao-ton-kho";

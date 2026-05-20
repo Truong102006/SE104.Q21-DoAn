@@ -1,4 +1,55 @@
-﻿## 0. Cập Nhật 2026-05-20 (Phiếu Mua Hàng BM5 + QĐ5)
+﻿## 0. Cập Nhật 2026-05-20 (Phiếu Bán Hàng BM6 + QĐ6)
+
+- Đã implement nghiệp vụ lập phiếu bán hàng theo BM6 và QĐ6:
+  - Tạo phiếu qua `POST /api/sales` (song song legacy `/api/v1/phieu-ban-hang`).
+  - Lấy danh sách qua `GET /api/sales`.
+  - Lấy chi tiết qua `GET /api/sales/{soPhieuBan}`.
+  - Không còn expose API `DELETE` và `PUT` cho phiếu bán đã lưu.
+- Đã cập nhật request BM6:
+  - Header: `soPhieuBan` (optional), `ngayLapPhieuBan`, `maKhachHang`.
+  - Chi tiết: `items[]` gồm `maSanPham`, `soLuong`.
+- Đã bổ sung validate nghiệp vụ:
+  - Khách hàng phải tồn tại.
+  - `items` không được rỗng.
+  - Sản phẩm phải tồn tại.
+  - `soLuong > 0`.
+  - `soLuong <= tonKho` hiện tại.
+  - Không cho trùng sản phẩm trong cùng một phiếu (chọn phương án báo lỗi rõ ràng).
+  - Đơn giá bán lấy theo công thức QĐ6 từ `DonGiaMua` + `TiLeLoiNhuan` của loại sản phẩm.
+  - `thanhTien = soLuong * donGia`, `tongTien = tổng thanhTien`.
+- Đã triển khai transaction và xử lý đồng thời:
+  - Đọc sản phẩm bằng lock ghi (`PESSIMISTIC_WRITE`) để tránh âm tồn khi nhiều request cùng lúc.
+  - Tạo `PHIEUBANHANG`.
+  - Tạo `CT_PHIEUBAN`.
+  - Cập nhật `SANPHAM.TonKho = TonKho - SoLuong`.
+  - Commit thành công hoặc rollback toàn bộ khi lỗi.
+- Đã mở rộng response phiếu bán:
+  - Thông tin phiếu bán.
+  - Thông tin khách hàng.
+  - Danh sách chi tiết sản phẩm (loại, đơn vị tính, đơn giá, thành tiền).
+- Đã bổ sung test theo yêu cầu:
+  - Tạo phiếu bán thành công thì tồn kho giảm đúng.
+  - Bán vượt tồn kho thì báo lỗi và tồn kho không đổi (service-level).
+  - Giá bán đúng công thức QĐ6.
+  - API trả lỗi `400` khi nghiệp vụ bán vượt tồn kho (controller-level).
+- Kết quả xác minh:
+  - `cd backend && ./mvnw test` => `BUILD SUCCESS` (14 tests pass).
+
+### Danh sách file đã cập nhật (2026-05-20 - Phiếu Bán Hàng BM6 + QĐ6)
+
+- `backend/src/main/java/com/se104/goldstore/common/ApiPaths.java` `(+1 -0)`
+- `backend/src/main/java/com/se104/goldstore/controller/PhieuBanHangController.java` `(+10 -20)`
+- `backend/src/main/java/com/se104/goldstore/dto/request/PhieuBanHangRequest.java` `(+36 -9)`
+- `backend/src/main/java/com/se104/goldstore/dto/response/PhieuBanHangResponse.java` `(+144 -0)`
+- `backend/src/main/java/com/se104/goldstore/repository/ChiTietPhieuBanRepository.java` `(+3 -0)`
+- `backend/src/main/java/com/se104/goldstore/repository/SanPhamRepository.java` `(+6 -0)`
+- `backend/src/main/java/com/se104/goldstore/service/PhieuBanHangService.java` `(+0 -4)`
+- `backend/src/main/java/com/se104/goldstore/service/impl/PhieuBanHangServiceImpl.java` `(+181 -46)`
+- `backend/src/test/java/com/se104/goldstore/unit/service/PhieuBanHangServiceImplTest.java` `(+148 -0)` (mới)
+- `backend/src/test/java/com/se104/goldstore/unit/controller/PhieuBanHangControllerTest.java` `(+52 -0)` (mới)
+- `progress.md`
+
+## 0. Cập Nhật 2026-05-20 (Phiếu Mua Hàng BM5 + QĐ5)
 
 - Đã implement nghiệp vụ lập phiếu mua hàng theo BM5 và QĐ5:
   - Tạo phiếu qua `POST /api/purchases` (song song legacy `/api/v1/phieu-mua-hang`).
@@ -748,6 +799,7 @@ Giải thích ngắn:
 3. Chuẩn hóa response/error và logging.
 4. Rà soát dependency chưa dùng (MapStruct/JWT chưa wire) và dependency local-link frontend.
 5. Bổ sung Dockerfile/backend+frontend và tài liệu deploy tối thiểu.
+
 
 
 
