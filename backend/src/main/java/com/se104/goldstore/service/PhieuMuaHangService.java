@@ -10,9 +10,7 @@ public interface PhieuMuaHangService {
 
     PhieuMuaHangResponse getById(String soPhieuMua);
 
+    PhieuMuaHangResponse getPrintData(String soPhieuMua);
+
     PhieuMuaHangResponse create(PhieuMuaHangRequest request);
-
-    PhieuMuaHangResponse update(String soPhieuMua, PhieuMuaHangRequest request);
-
-    void delete(String soPhieuMua);
 }
