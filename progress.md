@@ -1,4 +1,48 @@
-﻿## 0. Cập Nhật 2026-05-20 (Tra Cứu BM8 + QĐ8, BM9 + QĐ9)
+﻿## 0. Cập Nhật 2026-05-20 (Báo Cáo Tồn Kho BM10)
+
+- Đã implement báo cáo tồn kho theo BM10 với route mới (ADMIN):
+  - `POST /api/reports/inventory/generate?month=&year=`
+  - `GET /api/reports/inventory?month=&year=`
+  - `GET /api/reports/inventory/{maBaoCaoTonKho}`
+- Đã bổ sung logic generate/regenerate theo tháng-năm:
+  - Nhận `month`, `year` và validate hợp lệ.
+  - Với từng sản phẩm, tính:
+    - `SoLuongMuaVao` từ `CT_PHIEUMUA` join `PHIEUMUAHANG` theo tháng/năm.
+    - `SoLuongBanRa` từ `CT_PHIEUBAN` join `PHIEUBANHANG` theo tháng/năm.
+    - `TonDau` ưu tiên lấy `TonCuoi` của báo cáo tháng trước nếu có.
+    - Nếu chưa có snapshot tháng trước: `TonDau = TonCuoi - SoLuongMuaVao + SoLuongBanRa`.
+    - `TonCuoi` không để null, chuẩn hóa không âm.
+  - Nếu báo cáo tháng/năm đã tồn tại: chọn convention **regenerate** (xóa chi tiết cũ và tính lại toàn bộ).
+  - Lưu đầy đủ vào `BAOCAOTONKHO` và `CT_BAOCAOTONKHO` trong transaction.
+- Đã mở rộng response BM10:
+  - Header: `maBaoCaoTonKho`, `thang`, `nam`.
+  - Chi tiết gồm: `stt`, `maSanPham`, `tenSanPham`, `tonDau`, `soLuongMuaVao`, `soLuongBanRa`, `tonCuoi`, `tenDonViTinh`.
+- Đã bổ sung phân quyền chặt cho route báo cáo mới:
+  - Controller mới dùng `@PreAuthorize("hasRole('ADMIN')")`.
+- Đã bổ sung test theo yêu cầu:
+  - `BaoCaoTonKhoServiceImplTest` kiểm tra 1 sản phẩm có mua/bán trong tháng, xác nhận công thức tồn kho đúng.
+- Kết quả xác minh:
+  - `mvn -f backend/pom.xml test -Dtest=BaoCaoTonKhoServiceImplTest` => `BUILD SUCCESS`.
+  - `mvn -f backend/pom.xml test` => `BUILD SUCCESS` (20 tests pass).
+  - Runtime check:
+    - `POST /api/reports/inventory/generate?month=5&year=2026` => success.
+    - `GET /api/reports/inventory?month=5&year=2026` => success.
+    - `GET /api/reports/inventory/{maBaoCaoTonKho}` => success.
+
+### Danh sách file đã cập nhật (2026-05-20 - Báo Cáo Tồn Kho BM10)
+
+- `backend/src/main/java/com/se104/goldstore/common/ApiPaths.java` `(+1 -0)`
+- `backend/src/main/java/com/se104/goldstore/controller/BaoCaoTonKhoReportController.java` `(+45 -0)` (mới)
+- `backend/src/main/java/com/se104/goldstore/dto/response/BaoCaoTonKhoResponse.java` `(+88 -1)`
+- `backend/src/main/java/com/se104/goldstore/repository/BaoCaoTonKhoRepository.java` `(+2 -0)`
+- `backend/src/main/java/com/se104/goldstore/repository/ChiTietBaoCaoTonKhoRepository.java` `(+5 -0)`
+- `backend/src/main/java/com/se104/goldstore/repository/ChiTietPhieuMuaRepository.java` `(+14 -0)`
+- `backend/src/main/java/com/se104/goldstore/repository/ChiTietPhieuBanRepository.java` `(+14 -0)`
+- `backend/src/main/java/com/se104/goldstore/service/BaoCaoTonKhoService.java` `(+5 -1)`
+- `backend/src/main/java/com/se104/goldstore/service/impl/BaoCaoTonKhoServiceImpl.java` `(+180 -7)`
+- `backend/src/test/java/com/se104/goldstore/unit/service/BaoCaoTonKhoServiceImplTest.java` `(+92 -0)` (mới)
+- `progress.md`
+## 0. Cập Nhật 2026-05-20 (Tra Cứu BM8 + QĐ8, BM9 + QĐ9)
 
 - Đã implement module tra cứu mới theo đúng BM8/BM9 qua route:
   - `GET /api/search/products?keyword=&page=&size=`
@@ -902,3 +946,58 @@ Giải thích ngắn:
 
 
 
+## 0. Cập Nhật 2026-05-20 (Báo Cáo Doanh Thu BM11 + BM12)
+
+- Đã implement báo cáo doanh thu tháng theo sản phẩm (BM11):
+  - `POST /api/reports/revenue/products/generate?month=&year=`
+  - `GET /api/reports/revenue/products?month=&year=`
+- Đã implement báo cáo doanh thu tháng theo dịch vụ (BM12):
+  - `POST /api/reports/revenue/services/generate?month=&year=`
+  - `GET /api/reports/revenue/services?month=&year=`
+- Đã bổ sung logic nghiệp vụ generate/regenerate theo tháng-năm:
+  - Validate `month` trong khoảng `1..12`, `year > 0`.
+  - Nếu báo cáo đã tồn tại thì chọn convention **regenerate**: xóa chi tiết cũ rồi tính lại.
+  - Tính doanh thu theo `BigDecimal`, làm tròn 2 chữ số thập phân.
+  - Nếu tổng doanh thu bằng `0` thì tỉ lệ từng dòng bằng `0`.
+- BM11 (doanh thu sản phẩm):
+  - Lấy dữ liệu từ `CT_PHIEUBAN` join `PHIEUBANHANG` theo tháng/năm.
+  - Group theo `maSanPham`, tính:
+    - `soLuongBan = SUM(soLuong)`
+    - `doanhThuSanPham = SUM(thanhTien)`
+    - `tiLeSanPham = doanhThuSanPham / tongDoanhThu * 100`
+  - Lưu vào `BAOCAODOANHTHUSP` + `CT_BAOCAODOANHTHUSP`.
+- BM12 (doanh thu dịch vụ):
+  - Lấy dữ liệu từ `CT_PHIEUDICHVU` join `PHIEUDICHVU` theo ngày lập tháng/năm.
+  - Group theo `maLoaiDichVu`, tính:
+    - `doanhThuDichVu = SUM(thanhTien)`
+    - `tiLeDichVu = doanhThuDichVu / tongDoanhThu * 100`
+  - Lưu vào `BAOCAODOANHTHUDV` + `CT_BAOCAODOANHTHUDV`.
+- Đã bổ sung response DTO đúng form BM11/BM12 (header + danh sách chi tiết: STT, mã, tên, doanh thu, tỉ lệ; riêng BM11 có thêm số lượng bán).
+- Đã bổ sung controller báo cáo mới với `@PreAuthorize("hasRole('ADMIN')")` để chỉ ADMIN truy cập.
+- Đã bổ sung test cho cả 2 loại báo cáo:
+  - `BaoCaoDoanhThuSanPhamServiceImplTest`
+  - `BaoCaoDoanhThuDichVuServiceImplTest`
+- Kết quả xác minh:
+  - `mvn -f backend/pom.xml test "-Dtest=BaoCaoDoanhThuSanPhamServiceImplTest,BaoCaoDoanhThuDichVuServiceImplTest"` => `BUILD SUCCESS`.
+  - `mvn -f backend/pom.xml test` => `BUILD SUCCESS` (22 tests pass).
+
+### Danh sách file đã cập nhật (2026-05-20 - Báo Cáo Doanh Thu BM11 + BM12)
+
+- `backend/src/main/java/com/se104/goldstore/common/ApiPaths.java`
+- `backend/src/main/java/com/se104/goldstore/controller/BaoCaoDoanhThuSanPhamReportController.java` (mới)
+- `backend/src/main/java/com/se104/goldstore/controller/BaoCaoDoanhThuDichVuReportController.java` (mới)
+- `backend/src/main/java/com/se104/goldstore/dto/response/BaoCaoDoanhThuSanPhamResponse.java`
+- `backend/src/main/java/com/se104/goldstore/dto/response/BaoCaoDoanhThuDichVuResponse.java`
+- `backend/src/main/java/com/se104/goldstore/repository/BaoCaoDoanhThuSanPhamRepository.java`
+- `backend/src/main/java/com/se104/goldstore/repository/BaoCaoDoanhThuDichVuRepository.java`
+- `backend/src/main/java/com/se104/goldstore/repository/ChiTietBaoCaoDoanhThuSanPhamRepository.java`
+- `backend/src/main/java/com/se104/goldstore/repository/ChiTietBaoCaoDoanhThuDichVuRepository.java`
+- `backend/src/main/java/com/se104/goldstore/repository/ChiTietPhieuBanRepository.java`
+- `backend/src/main/java/com/se104/goldstore/repository/ChiTietPhieuDichVuRepository.java`
+- `backend/src/main/java/com/se104/goldstore/service/BaoCaoDoanhThuSanPhamService.java`
+- `backend/src/main/java/com/se104/goldstore/service/BaoCaoDoanhThuDichVuService.java`
+- `backend/src/main/java/com/se104/goldstore/service/impl/BaoCaoDoanhThuSanPhamServiceImpl.java`
+- `backend/src/main/java/com/se104/goldstore/service/impl/BaoCaoDoanhThuDichVuServiceImpl.java`
+- `backend/src/test/java/com/se104/goldstore/unit/service/BaoCaoDoanhThuSanPhamServiceImplTest.java` (mới)
+- `backend/src/test/java/com/se104/goldstore/unit/service/BaoCaoDoanhThuDichVuServiceImplTest.java` (mới)
+- `progress.md`

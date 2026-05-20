@@ -14,4 +14,6 @@ public interface BaoCaoTonKhoRepository extends JpaRepository<BaoCaoTonKho, Stri
     boolean existsByThangAndNamAndMaBaoCaoTonKhoNot(Integer thang, Integer nam, String maBaoCaoTonKho);
 
     Optional<BaoCaoTonKho> findTopByMaBaoCaoTonKhoStartingWithOrderByMaBaoCaoTonKhoDesc(String prefix);
+
+    Optional<BaoCaoTonKho> findByThangAndNam(Integer thang, Integer nam);
 }
