@@ -1,4 +1,57 @@
-﻿## 0. Cập Nhật 2026-05-20 (Phiếu Bán Hàng BM6 + QĐ6)
+﻿## 0. Cập Nhật 2026-05-20 (Phiếu Dịch Vụ BM7 + QĐ7 + QĐ9)
+
+- Đã implement module phiếu dịch vụ theo BM7, QĐ7 và QĐ9 với route mới:
+  - `POST /api/service-tickets` (tương thích song song legacy `/api/v1/phieu-dich-vu`).
+  - `GET /api/service-tickets`.
+  - `GET /api/service-tickets/{soPhieuDichVu}`.
+  - `PATCH /api/service-tickets/{soPhieuDichVu}/items/{maLoaiDichVu}/deliver`.
+  - `PATCH /api/service-tickets/{soPhieuDichVu}/deliver-all`.
+- Đã cập nhật request BM7:
+  - Header: `soPhieuDichVu` (optional), `ngayLapPhieuDichVu`, `maKhachHang`.
+  - Chi tiết: `items[]` gồm `maLoaiDichVu`, `soLuongDichVu`, `chiPhiRieng`, `donGiaDuocTinh`, `tienTraTruoc`, `ngayGiao`.
+- Đã bổ sung validate nghiệp vụ:
+  - Khách hàng và loại dịch vụ phải tồn tại.
+  - `items` không được rỗng.
+  - `soLuongDichVu > 0`.
+  - Không cho trùng `maLoaiDichVu` trong cùng một phiếu.
+  - `donGiaDuocTinh`:
+    - Nếu có `chiPhiRieng` thì tính `donGiaDichVu + chiPhiRieng`.
+    - Nếu truyền trực tiếp thì phải `>= donGiaDichVu`.
+  - `thanhTien = soLuongDichVu * donGiaDuocTinh`.
+  - `tienTraTruoc` từng dòng phải `>= SERVICE_PREPAYMENT_RATE% * thanhTien` (đọc từ `THAMSO`, mặc định 50%).
+  - `tienTraTruoc` không được lớn hơn `thanhTien`.
+  - `tienConLai = thanhTien - tienTraTruoc`.
+- Đã triển khai logic trạng thái và giao hàng:
+  - Khi tạo mới: item mặc định `Chua giao`, phiếu `Chua hoan thanh`.
+  - `deliver` một dòng:
+    - cập nhật dòng sang `Da giao`,
+    - set `ngayGiao` (ngày request hoặc ngày hiện tại),
+    - thu đủ phần còn lại (`tienTraTruoc = thanhTien`, `tienConLai = 0`).
+  - Sau mỗi lần giao: tự tính lại tổng tiền/trả trước/còn lại và trạng thái phiếu.
+  - Khi tất cả dòng đều `Da giao`: phiếu chuyển `Hoan thanh`.
+- Đã mở rộng response phiếu dịch vụ:
+  - Thông tin phiếu.
+  - Thông tin khách hàng.
+  - Danh sách chi tiết (loại dịch vụ, đơn giá dịch vụ, đơn giá được tính, số lượng, thành tiền, trả trước, còn lại, ngày giao, tình trạng).
+- Kết quả xác minh:
+  - `cd backend && ./mvnw -Dtest=PhieuDichVuServiceImplTest test` => `BUILD SUCCESS` (3 tests pass).
+  - `cd backend && ./mvnw test` => `BUILD SUCCESS` (17 tests pass).
+
+### Danh sách file đã cập nhật (2026-05-20 - Phiếu Dịch Vụ BM7 + QĐ7 + QĐ9)
+
+- `backend/src/main/java/com/se104/goldstore/common/ApiPaths.java` `(+1 -0)`
+- `backend/src/main/java/com/se104/goldstore/controller/PhieuDichVuController.java` `(+30 -13)`
+- `backend/src/main/java/com/se104/goldstore/dto/request/PhieuDichVuDeliverRequest.java` `(+11 -0)` (mới)
+- `backend/src/main/java/com/se104/goldstore/dto/request/PhieuDichVuRequest.java` `(+73 -35)`
+- `backend/src/main/java/com/se104/goldstore/dto/response/PhieuDichVuResponse.java` `(+153 -0)`
+- `backend/src/main/java/com/se104/goldstore/repository/ChiTietPhieuDichVuRepository.java` `(+3 -0)`
+- `backend/src/main/java/com/se104/goldstore/repository/ThamSoRepository.java` `(+2 -0)`
+- `backend/src/main/java/com/se104/goldstore/service/PhieuDichVuService.java` `(+3 -2)`
+- `backend/src/main/java/com/se104/goldstore/service/impl/PhieuDichVuServiceImpl.java` `(+306 -53)`
+- `backend/src/test/java/com/se104/goldstore/unit/service/PhieuDichVuServiceImplTest.java` `(+174 -0)` (mới)
+- `progress.md`
+
+## 0. Cập Nhật 2026-05-20 (Phiếu Bán Hàng BM6 + QĐ6)
 
 - Đã implement nghiệp vụ lập phiếu bán hàng theo BM6 và QĐ6:
   - Tạo phiếu qua `POST /api/sales` (song song legacy `/api/v1/phieu-ban-hang`).
@@ -799,6 +852,7 @@ Giải thích ngắn:
 3. Chuẩn hóa response/error và logging.
 4. Rà soát dependency chưa dùng (MapStruct/JWT chưa wire) và dependency local-link frontend.
 5. Bổ sung Dockerfile/backend+frontend và tài liệu deploy tối thiểu.
+
 
 
 

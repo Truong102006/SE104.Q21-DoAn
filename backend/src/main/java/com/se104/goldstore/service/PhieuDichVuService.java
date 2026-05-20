@@ -2,6 +2,7 @@ package com.se104.goldstore.service;
 
 import com.se104.goldstore.dto.request.PhieuDichVuRequest;
 import com.se104.goldstore.dto.response.PhieuDichVuResponse;
+import java.time.LocalDate;
 import java.util.List;
 
 public interface PhieuDichVuService {
@@ -12,7 +13,7 @@ public interface PhieuDichVuService {
 
     PhieuDichVuResponse create(PhieuDichVuRequest request);
 
-    PhieuDichVuResponse update(String soPhieuDichVu, PhieuDichVuRequest request);
+    PhieuDichVuResponse deliverItem(String soPhieuDichVu, String maLoaiDichVu, LocalDate ngayGiao);
 
-    void delete(String soPhieuDichVu);
+    PhieuDichVuResponse deliverAll(String soPhieuDichVu, LocalDate ngayGiao);
 }
