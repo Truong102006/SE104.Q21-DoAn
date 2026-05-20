@@ -42,11 +42,13 @@ public class LoaiDichVuController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<LoaiDichVuResponse>> create(@Valid @RequestBody LoaiDichVuRequest request) {
         return ResponseEntity.ok(ApiResponse.success("Tao loai dich vu thanh cong", loaiDichVuService.create(request)));
     }
 
     @PutMapping("/{maLoaiDichVu}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<LoaiDichVuResponse>> update(
         @PathVariable String maLoaiDichVu,
         @Valid @RequestBody LoaiDichVuRequest request

@@ -42,11 +42,13 @@ public class LoaiSanPhamController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<LoaiSanPhamResponse>> create(@Valid @RequestBody LoaiSanPhamRequest request) {
         return ResponseEntity.ok(ApiResponse.success("Tao loai san pham thanh cong", loaiSanPhamService.create(request)));
     }
 
     @PutMapping("/{maLoaiSanPham}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<LoaiSanPhamResponse>> update(
         @PathVariable String maLoaiSanPham,
         @Valid @RequestBody LoaiSanPhamRequest request

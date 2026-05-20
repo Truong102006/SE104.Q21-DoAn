@@ -42,11 +42,13 @@ public class DonViTinhController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<DonViTinhResponse>> create(@Valid @RequestBody DonViTinhRequest request) {
         return ResponseEntity.ok(ApiResponse.success("Tao don vi tinh thanh cong", donViTinhService.create(request)));
     }
 
     @PutMapping("/{maDonViTinh}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<DonViTinhResponse>> update(
         @PathVariable String maDonViTinh,
         @Valid @RequestBody DonViTinhRequest request
