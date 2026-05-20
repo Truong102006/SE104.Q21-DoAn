@@ -1,327 +1,221 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  ConfirmDialog,
-  EmptyState,
-  PageHeader,
-  TableToolbar,
-} from "@/components/dashboard/management";
+import { ConfirmDialog, EmptyState, PageHeader, TableToolbar } from "@/components/dashboard/management";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { SYSTEM_CODE_INPUT_CLASS, SYSTEM_CODE_NOTE_CLASS } from "@/lib/form-styles";
-import { MOCK_CUSTOMERS } from "@/lib/mock-data";
-import { type Customer } from "@/types";
-import { Contact, Pencil, Plus, Search, Trash2, X, User } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { backendApi } from "@/services/backend-api";
+import type { CustomerRequest, CustomerResponse } from "@/types/backend";
+import { getApiErrorMessage } from "@/lib/api-error";
+import { isValidPhone10Digits } from "@/lib/format";
+import { useAuthStore } from "@/stores/auth-store";
+import { Pencil, Plus, Search, Trash2, X } from "lucide-react";
 
-interface CustomerDraft {
-  fullName: string;
-  phone: string;
-  email: string;
-  address: string;
-}
-
-type FormMode = "create" | "edit";
-
-const EMPTY_DRAFT: CustomerDraft = {
-  fullName: "",
-  phone: "",
-  email: "",
-  address: "",
+const EMPTY_FORM: CustomerRequest = {
+  tenKhachHang: "",
+  soDienThoaiKhachHang: "",
+  diaChiKhachHang: "",
+  ghiChu: "",
 };
 
-function getCustomerCode(id: number): string {
-  return `KH-${String(id).padStart(4, "0")}`;
-}
-
-function getNextCustomerId(customers: Customer[]): number {
-  return customers.length === 0
-    ? 1
-    : Math.max(...customers.map((customer) => customer.id)) + 1;
-}
-
-function normalizeText(value: string): string {
-  return value.trim().toLowerCase();
-}
-
-function normalizePhone(value: string): string {
-  return value.replace(/\D/g, "");
-}
-
 export default function CustomersPage() {
-  const [customers, setCustomers] = useState<Customer[]>(MOCK_CUSTOMERS);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [formMode, setFormMode] = useState<FormMode>("create");
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [draft, setDraft] = useState<CustomerDraft>(EMPTY_DRAFT);
-  const [errorMessage, setErrorMessage] = useState("");
-  const [deletingCustomer, setDeletingCustomer] = useState<Customer | null>(null);
+  const role = useAuthStore((state) => state.user?.role ?? "STAFF");
 
-  const filteredCustomers = useMemo(() => {
-    const query = normalizeText(searchQuery);
-    if (!query) {
-      return customers;
-    }
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [items, setItems] = useState<CustomerResponse[]>([]);
+  const [keyword, setKeyword] = useState("");
 
-    return customers.filter((customer) => {
-      const content = normalizeText(
-        `${getCustomerCode(customer.id)} ${customer.fullName} ${customer.phone} ${customer.email ?? ""} ${customer.address ?? ""}`,
-      );
-      return content.includes(query);
-    });
-  }, [customers, searchQuery]);
+  const [openForm, setOpenForm] = useState(false);
+  const [editing, setEditing] = useState<CustomerResponse | null>(null);
+  const [form, setForm] = useState<CustomerRequest>(EMPTY_FORM);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  function openCreateModal() {
-    setFormMode("create");
-    setEditingId(null);
-    setDraft(EMPTY_DRAFT);
-    setErrorMessage("");
-    setIsModalOpen(true);
-  }
+  const [deleting, setDeleting] = useState<CustomerResponse | null>(null);
 
-  function openEditModal(customer: Customer) {
-    setFormMode("edit");
-    setEditingId(customer.id);
-    setDraft({
-      fullName: customer.fullName,
-      phone: customer.phone,
-      email: customer.email ?? "",
-      address: customer.address ?? "",
-    });
-    setErrorMessage("");
-    setIsModalOpen(true);
-  }
-
-  function closeModal() {
-    setIsModalOpen(false);
-    setErrorMessage("");
-  }
-
-  function updateDraft(field: keyof CustomerDraft, value: string) {
-    setDraft((previous) => ({ ...previous, [field]: value }));
-    if (errorMessage) {
-      setErrorMessage("");
+  async function loadData(query?: string) {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await backendApi.customers.list(query?.trim() || undefined);
+      setItems(data);
+    } catch (err) {
+      setError(getApiErrorMessage(err, "Khong tai duoc khach hang"));
+    } finally {
+      setLoading(false);
     }
   }
 
-  function validateDraft(): boolean {
-    const fullName = draft.fullName.trim();
-    const phone = draft.phone.trim();
+  useEffect(() => {
+    loadData();
+  }, []);
 
-    if (!fullName) {
-      setErrorMessage("Vui lòng nhập họ tên khách hàng.");
-      return false;
+  const filtered = useMemo(() => {
+    const q = keyword.trim().toLowerCase();
+    if (!q) {
+      return items;
     }
-
-    if (!phone) {
-      setErrorMessage("Vui lòng nhập số điện thoại.");
-      return false;
-    }
-
-    if (!/^[0-9+]{10,12}$/.test(phone)) {
-      setErrorMessage("Số điện thoại không hợp lệ.");
-      return false;
-    }
-
-    const existingPhoneCustomer = customers.find(
-      (customer) =>
-        customer.id !== editingId &&
-        normalizePhone(customer.phone) === normalizePhone(phone),
+    return items.filter((item) =>
+      `${item.maKhachHang} ${item.tenKhachHang} ${item.soDienThoaiKhachHang} ${item.diaChiKhachHang ?? ""}`
+        .toLowerCase()
+        .includes(q),
     );
+  }, [items, keyword]);
 
-    if (!existingPhoneCustomer) {
-      return true;
-    }
-
-    if (normalizeText(existingPhoneCustomer.fullName) === normalizeText(fullName)) {
-      setErrorMessage(
-        "Khách hàng đã tồn tại trong hệ thống với số điện thoại này.",
-      );
-      return false;
-    }
-
-    setErrorMessage(
-      `Số điện thoại này đã được gắn với khách hàng "${existingPhoneCustomer.fullName}".`,
-    );
-    return false;
+  function openCreate() {
+    setEditing(null);
+    setForm(EMPTY_FORM);
+    setFormError(null);
+    setOpenForm(true);
   }
 
-  function submitCustomer(event: React.FormEvent<HTMLFormElement>) {
+  function openEdit(item: CustomerResponse) {
+    setEditing(item);
+    setForm({
+      maKhachHang: item.maKhachHang,
+      tenKhachHang: item.tenKhachHang,
+      soDienThoaiKhachHang: item.soDienThoaiKhachHang,
+      diaChiKhachHang: item.diaChiKhachHang ?? "",
+      ghiChu: item.ghiChu ?? "",
+    });
+    setFormError(null);
+    setOpenForm(true);
+  }
+
+  function updateField<K extends keyof CustomerRequest>(key: K, value: CustomerRequest[K]) {
+    setForm((prev) => ({ ...prev, [key]: value }));
+    setFormError(null);
+  }
+
+  async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
 
-    if (!validateDraft()) {
+    if (!form.tenKhachHang?.trim()) {
+      setFormError("Ten khach hang la bat buoc");
       return;
     }
 
-    if (formMode === "create") {
-      const nextId = getNextCustomerId(customers);
-
-      setCustomers((previous) => [
-        ...previous,
-        {
-          id: nextId,
-          fullName: draft.fullName.trim(),
-          phone: draft.phone.trim(),
-          email: draft.email.trim() || undefined,
-          address: draft.address.trim() || undefined,
-          createdAt: new Date().toISOString(),
-        },
-      ]);
-      closeModal();
+    if (!isValidPhone10Digits(form.soDienThoaiKhachHang ?? "")) {
+      setFormError("So dien thoai phai dung 10 chu so");
       return;
     }
 
-    setCustomers((previous) =>
-      previous.map((customer) =>
-        customer.id === editingId
-          ? {
-              ...customer,
-              fullName: draft.fullName.trim(),
-              phone: draft.phone.trim(),
-              email: draft.email.trim() || undefined,
-              address: draft.address.trim() || undefined,
-            }
-          : customer,
-      ),
-    );
-    closeModal();
+    setSubmitting(true);
+    setFormError(null);
+    try {
+      if (editing) {
+        await backendApi.customers.update(editing.maKhachHang, {
+          ...form,
+          tenKhachHang: form.tenKhachHang.trim(),
+          soDienThoaiKhachHang: form.soDienThoaiKhachHang.trim(),
+          diaChiKhachHang: form.diaChiKhachHang?.trim(),
+          ghiChu: form.ghiChu?.trim(),
+        });
+      } else {
+        await backendApi.customers.create({
+          ...form,
+          tenKhachHang: form.tenKhachHang.trim(),
+          soDienThoaiKhachHang: form.soDienThoaiKhachHang.trim(),
+          diaChiKhachHang: form.diaChiKhachHang?.trim(),
+          ghiChu: form.ghiChu?.trim(),
+        });
+      }
+
+      setOpenForm(false);
+      await loadData();
+    } catch (err) {
+      setFormError(getApiErrorMessage(err, "Luu khach hang that bai"));
+    } finally {
+      setSubmitting(false);
+    }
   }
 
-  function removeCustomer(customer: Customer) {
-    setCustomers((previous) => previous.filter((item) => item.id !== customer.id));
-    setDeletingCustomer(null);
+  async function doDelete() {
+    if (!deleting) {
+      return;
+    }
+
+    try {
+      await backendApi.customers.remove(deleting.maKhachHang);
+      setDeleting(null);
+      await loadData();
+    } catch (err) {
+      setError(getApiErrorMessage(err, "Xoa khach hang that bai"));
+      setDeleting(null);
+    }
   }
 
   return (
     <div className="space-y-3">
       <PageHeader
         eyebrow="BM2"
-        title="Danh sách khách hàng"
-        description="Quản lý thông tin khách hàng. Số điện thoại là định danh duy nhất cho mỗi khách hàng."
-        badges={
-          <>
-            <Badge variant="outline" className="border-border/70 bg-background/70">
-              BM2
-            </Badge>
-            <Badge variant="outline" className="border-border/70 bg-background/70">
-              Tổng số {customers.length}
-            </Badge>
-          </>
-        }
+        title="Khach hang"
+        description="Quan ly danh muc khach hang"
+        badges={<Badge variant="outline">{items.length} ban ghi</Badge>}
         actions={
-          <Button onClick={openCreateModal} size="sm" className="h-8 cursor-pointer">
+          <Button size="sm" onClick={openCreate}>
             <Plus className="mr-1.5 h-3.5 w-3.5" />
-            Thêm khách hàng
+            Them
           </Button>
         }
       />
 
       <Card>
         <TableToolbar
-          title="Danh sách khách hàng"
-          description="Tra cứu khách hàng theo mã, tên, số điện thoại, email hoặc địa chỉ."
-          meta={
-            <Badge
-              variant="outline"
-              className="h-5 border-border/80 bg-card px-2 text-[10px]"
-            >
-              {filteredCustomers.length}/{customers.length} khách hàng
-            </Badge>
-          }
+          title="Danh sach"
+          description="Tim theo ma, ten, so dien thoai"
           search={
             <div className="relative">
-              <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder="Tìm theo mã, tên, SĐT..."
-                className="pl-9"
-              />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="Nhap tu khoa..." className="pl-9" />
             </div>
           }
         />
-
         <CardContent className="px-0">
-          {filteredCustomers.length === 0 ? (
+          {error && <p className="px-4 pb-2 text-sm text-destructive">{error}</p>}
+          {loading ? (
+            <p className="px-4 py-6 text-sm text-muted-foreground">Dang tai...</p>
+          ) : filtered.length === 0 ? (
             <div className="p-4">
-              <EmptyState
-                icon={Contact}
-                title="Không tìm thấy khách hàng"
-                description="Thử đổi từ khóa tìm kiếm hoặc thêm khách hàng mới."
-                action={
-                  <Button onClick={openCreateModal} size="sm" className="cursor-pointer">
-                    <Plus className="mr-1.5 h-3.5 w-3.5" />
-                    Thêm khách hàng
-                  </Button>
-                }
-              />
+              <EmptyState title="Khong co du lieu" description="Thu doi tu khoa hoac them moi" />
             </div>
           ) : (
-            <Table className="table-fixed [&_td]:align-middle [&_th]:whitespace-normal [&_th]:leading-4">
+            <Table>
               <TableHeader>
-                <TableRow className="bg-muted/40 hover:bg-muted/40">
-                  <TableHead className="w-14 text-center">STT</TableHead>
-                  <TableHead className="w-[12%]">Mã KH</TableHead>
-                  <TableHead className="w-[20%]">Họ tên</TableHead>
-                  <TableHead className="w-[15%]">Số điện thoại</TableHead>
-                  <TableHead className="w-[20%]">Email</TableHead>
-                  <TableHead className="w-[23%]">Địa chỉ</TableHead>
-                  <TableHead className="w-24 text-right">Tác vụ</TableHead>
+                <TableRow>
+                  <TableHead>STT</TableHead>
+                  <TableHead>Ma</TableHead>
+                  <TableHead>Ten</TableHead>
+                  <TableHead>So dien thoai</TableHead>
+                  <TableHead>Dia chi</TableHead>
+                  <TableHead>Ghi chu</TableHead>
+                  <TableHead className="text-right">Tac vu</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredCustomers.map((customer, index) => (
-                  <TableRow key={customer.id}>
-                    <TableCell className="text-center font-medium">
-                      {index + 1}
-                    </TableCell>
-                    <TableCell className="font-mono text-xs text-muted-foreground">
-                      {getCustomerCode(customer.id)}
-                    </TableCell>
-                    <TableCell className="truncate font-medium">
-                      {customer.fullName}
-                    </TableCell>
-                    <TableCell className="truncate font-mono text-sm">
-                      {customer.phone}
-                    </TableCell>
-                    <TableCell className="truncate text-muted-foreground">
-                      {customer.email ?? "-"}
-                    </TableCell>
-                    <TableCell className="truncate text-xs text-muted-foreground">
-                      {customer.address ?? "-"}
-                    </TableCell>
+                {filtered.map((item, index) => (
+                  <TableRow key={item.maKhachHang}>
+                    <TableCell>{index + 1}</TableCell>
+                    <TableCell>{item.maKhachHang}</TableCell>
+                    <TableCell>{item.tenKhachHang}</TableCell>
+                    <TableCell>{item.soDienThoaiKhachHang}</TableCell>
+                    <TableCell>{item.diaChiKhachHang || "-"}</TableCell>
+                    <TableCell>{item.ghiChu || "-"}</TableCell>
                     <TableCell>
                       <div className="flex justify-end gap-1">
-                        <Button
-                          variant="outline"
-                          size="icon-sm"
-                          className="cursor-pointer"
-                          onClick={() => openEditModal(customer)}
-                          aria-label="Sửa thông tin"
-                        >
+                        <Button variant="outline" size="icon-sm" onClick={() => openEdit(item)}>
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
-                        <Button
-                          variant="destructive"
-                          size="icon-sm"
-                          className="cursor-pointer"
-                          onClick={() => setDeletingCustomer(customer)}
-                          aria-label="Xóa khách hàng"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                        {role === "ADMIN" && (
+                          <Button variant="destructive" size="icon-sm" onClick={() => setDeleting(item)}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -332,124 +226,46 @@ export default function CustomersPage() {
         </CardContent>
       </Card>
 
-      {isModalOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4 backdrop-blur-xs"
-          onClick={closeModal}
-        >
-          <div
-            className="w-full max-w-lg rounded-xl border bg-background shadow-2xl"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="flex items-start justify-between border-b px-5 py-4">
-              <div>
-                <h2 className="flex items-center gap-2 text-lg font-semibold">
-                  <User className="h-5 w-5 text-gold" />
-                  {formMode === "create"
-                    ? "Thêm khách hàng"
-                    : "Cập nhật thông tin"}
-                </h2>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {formMode === "create"
-                    ? "Nhập thông tin cho khách hàng mới."
-                    : "Chỉnh sửa thông tin khách hàng hiện tại."}
-                </p>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                className="cursor-pointer"
-                onClick={closeModal}
-                aria-label="Đóng cửa sổ"
-              >
+      {openForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={() => setOpenForm(false)}>
+          <div className="w-full max-w-xl rounded-xl border bg-background shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b px-5 py-4">
+              <h2 className="text-lg font-semibold">{editing ? "Cap nhat" : "Them"} khach hang</h2>
+              <Button variant="ghost" size="icon-sm" onClick={() => setOpenForm(false)}>
                 <X className="h-4 w-4" />
               </Button>
             </div>
-
-            <form onSubmit={submitCustomer} className="space-y-4 px-5 py-4">
-              <div className="grid gap-4">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label>Mã khách hàng</Label>
-                    <Input
-                      value={
-                        formMode === "create"
-                          ? getCustomerCode(getNextCustomerId(customers))
-                          : getCustomerCode(editingId!)
-                      }
-                      readOnly
-                      className={SYSTEM_CODE_INPUT_CLASS}
-                    />
-                    <p className={SYSTEM_CODE_NOTE_CLASS}>Mã tự động.</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="cust-phone">
-                      Số điện thoại <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      id="cust-phone"
-                      value={draft.phone}
-                      onChange={(event) => updateDraft("phone", event.target.value)}
-                      placeholder="VD: 0901234567"
-                    />
-                  </div>
+            <form className="space-y-3 px-5 py-4" onSubmit={onSubmit}>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-2 sm:col-span-2">
+                  <Label>Ten khach hang</Label>
+                  <Input value={form.tenKhachHang} onChange={(e) => updateField("tenKhachHang", e.target.value)} />
                 </div>
-
                 <div className="space-y-2">
-                  <Label htmlFor="cust-name">
-                    Họ và tên <span className="text-destructive">*</span>
-                  </Label>
+                  <Label>So dien thoai</Label>
                   <Input
-                    id="cust-name"
-                    value={draft.fullName}
-                    onChange={(event) => updateDraft("fullName", event.target.value)}
-                    placeholder="VD: Nguyễn Văn A"
-                    autoFocus
+                    value={form.soDienThoaiKhachHang}
+                    onChange={(e) => updateField("soDienThoaiKhachHang", e.target.value)}
                   />
                 </div>
-
                 <div className="space-y-2">
-                  <Label htmlFor="cust-email">Email</Label>
-                  <Input
-                    id="cust-email"
-                    type="email"
-                    value={draft.email}
-                    onChange={(event) => updateDraft("email", event.target.value)}
-                    placeholder="VD: customer@example.com"
-                  />
+                  <Label>Dia chi</Label>
+                  <Input value={form.diaChiKhachHang ?? ""} onChange={(e) => updateField("diaChiKhachHang", e.target.value)} />
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="cust-address">Địa chỉ</Label>
-                  <Input
-                    id="cust-address"
-                    value={draft.address}
-                    onChange={(event) => updateDraft("address", event.target.value)}
-                    placeholder="VD: 123 Đường ABC, Quận X, TP. Y"
-                  />
+                <div className="space-y-2 sm:col-span-2">
+                  <Label>Ghi chu</Label>
+                  <Input value={form.ghiChu ?? ""} onChange={(e) => updateField("ghiChu", e.target.value)} />
                 </div>
               </div>
 
-              {errorMessage && (
-                <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                  {errorMessage}
-                </p>
-              )}
+              {formError && <p className="text-sm text-destructive">{formError}</p>}
 
-              <div className="flex justify-end gap-2 border-t pt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="cursor-pointer"
-                  onClick={closeModal}
-                >
-                  Hủy
+              <div className="flex justify-end gap-2 border-t pt-3">
+                <Button type="button" variant="outline" onClick={() => setOpenForm(false)}>
+                  Huy
                 </Button>
-                <Button
-                  type="submit"
-                  className="cursor-pointer bg-gold text-gold-foreground hover:bg-gold/90"
-                >
-                  {formMode === "create" ? "Thêm mới" : "Lưu thay đổi"}
+                <Button type="submit" disabled={submitting}>
+                  {submitting ? "Dang luu..." : "Luu"}
                 </Button>
               </div>
             </form>
@@ -458,21 +274,13 @@ export default function CustomersPage() {
       )}
 
       <ConfirmDialog
-        open={deletingCustomer !== null}
-        title="Xóa khách hàng?"
-        description={
-          deletingCustomer
-            ? `Thông tin của khách hàng "${deletingCustomer.fullName}" sẽ bị xóa. Hành động này không thể hoàn tác.`
-            : ""
-        }
-        confirmLabel="Xóa khách hàng"
+        open={deleting !== null}
+        title="Xoa khach hang"
+        description={deleting ? `Ban chac chan muon xoa ${deleting.tenKhachHang}?` : ""}
+        confirmLabel="Xoa"
         destructive
-        onCancel={() => setDeletingCustomer(null)}
-        onConfirm={() => {
-          if (deletingCustomer) {
-            removeCustomer(deletingCustomer);
-          }
-        }}
+        onCancel={() => setDeleting(null)}
+        onConfirm={doDelete}
       />
     </div>
   );

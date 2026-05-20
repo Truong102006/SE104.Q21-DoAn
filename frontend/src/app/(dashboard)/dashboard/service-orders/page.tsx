@@ -1,517 +1,409 @@
-﻿"use client";
+"use client";
 
-import { useMemo, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { PageHeader, StatusBadge } from "@/components/dashboard/management";
-import { DatePickerInput } from "@/components/ui/date-picker";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { EmptyState, PageHeader, TableToolbar } from "@/components/dashboard/management";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { MoneyInput, parseMoneyInput } from "@/components/ui/money-input";
-import { QuantityStepper } from "@/components/ui/quantity-stepper";
 import { Select } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { SYSTEM_CODE_INPUT_CLASS, SYSTEM_CODE_NOTE_CLASS } from "@/lib/form-styles";
-import { formatVND } from "@/lib/mock-data";
-import { STATUS_DOT_CLASS, STATUS_TONE_CLASS, type StatusTone } from "@/lib/status-styles";
-import { cn } from "@/lib/utils";
-import { Plus, Save, Trash2 } from "lucide-react";
+import { backendApi } from "@/services/backend-api";
+import type {
+  CustomerResponse,
+  ServiceTicketRequest,
+  ServiceTicketResponse,
+  ServiceTypeResponse,
+} from "@/types/backend";
+import { getApiErrorMessage } from "@/lib/api-error";
+import { formatCurrency, todayIsoDate, toPositiveInt, toPositiveNumber } from "@/lib/format";
+import { Plus, Truck, Trash2 } from "lucide-react";
 
-interface CustomerOption {
-  id: number;
-  name: string;
-  phone: string;
-}
-
-interface ServiceTypeOption {
-  id: number;
-  name: string;
-  servicePrice: number;
-}
-
-type ServiceStatus = "PENDING" | "IN_PROGRESS" | "DONE";
-
-interface ServiceLine {
-  id: number;
-  serviceTypeId: number;
-  quantity: string;
-  deliveryDate: string;
-  status: ServiceStatus;
-}
-
-const CUSTOMERS: CustomerOption[] = [
-  { id: 1, name: "Nguyễn Văn Minh", phone: "0908000111" },
-  { id: 2, name: "Trần Thị Lan", phone: "0908000222" },
-  { id: 3, name: "Lê Quang Huy", phone: "0908000333" },
-];
-
-const SERVICE_TYPES: ServiceTypeOption[] = [
-  { id: 1, name: "Đánh bóng trang sức", servicePrice: 120_000 },
-  { id: 2, name: "Khắc tên trên nhẫn", servicePrice: 150_000 },
-  { id: 3, name: "Thu mua vàng cũ", servicePrice: 80_000 },
-];
-
-const STATUS_LABELS: Record<ServiceStatus, string> = {
-  PENDING: "Chờ tiếp nhận",
-  IN_PROGRESS: "Đang xử lý",
-  DONE: "Đã giao",
+type ServiceItemDraft = {
+  maLoaiDichVu: string;
+  soLuongDichVu: string;
+  chiPhiRieng: string;
+  tienTraTruoc: string;
+  ngayGiao: string;
 };
 
-const VOUCHER_STATUS_LABELS: Record<"DONE" | "PENDING", string> = {
-  DONE: "Hoàn thành",
-  PENDING: "Chưa hoàn thành",
+const EMPTY_ITEM: ServiceItemDraft = {
+  maLoaiDichVu: "",
+  soLuongDichVu: "1",
+  chiPhiRieng: "0",
+  tienTraTruoc: "0",
+  ngayGiao: "",
 };
-
-const SERVICE_STATUS_TONE: Record<ServiceStatus, StatusTone> = {
-  PENDING: "warning",
-  IN_PROGRESS: "info",
-  DONE: "success",
-};
-
-function getTodayValue(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function getVoucherCode(sequence: number): string {
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = String(now.getMonth() + 1).padStart(2, "0");
-  const d = String(now.getDate()).padStart(2, "0");
-  const seq = String(sequence).padStart(3, "0");
-  return `PDV-${y}${m}${d}-${seq}`;
-}
-
-function parsePositiveNumber(raw: string): number {
-  const cleaned = raw.replace(/[^\d.]/g, "");
-  const parsed = Number.parseFloat(cleaned);
-  if (Number.isNaN(parsed) || parsed <= 0) {
-    return 0;
-  }
-  return parsed;
-}
-
-function buildDefaultLine(id: number): ServiceLine {
-  return {
-    id,
-    serviceTypeId: SERVICE_TYPES[0].id,
-    quantity: "1",
-    deliveryDate: getTodayValue(),
-    status: "PENDING",
-  };
-}
 
 export default function ServiceOrdersPage() {
-  const [voucherIndex, setVoucherIndex] = useState(1);
-  const [voucherCode, setVoucherCode] = useState(() => getVoucherCode(1));
-  const [createdDate, setCreatedDate] = useState(getTodayValue());
-  const [customerId, setCustomerId] = useState<number>(CUSTOMERS[0].id);
-  const [lines, setLines] = useState<ServiceLine[]>([buildDefaultLine(1)]);
-  const [voucherPrepaid, setVoucherPrepaid] = useState("0");
-  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [customers, setCustomers] = useState<CustomerResponse[]>([]);
+  const [serviceTypes, setServiceTypes] = useState<ServiceTypeResponse[]>([]);
+  const [tickets, setTickets] = useState<ServiceTicketResponse[]>([]);
+  const [prepaymentRate, setPrepaymentRate] = useState(50);
+
+  const [soPhieuDichVu, setSoPhieuDichVu] = useState("");
+  const [ngayLapPhieuDichVu, setNgayLapPhieuDichVu] = useState(todayIsoDate());
+  const [maKhachHang, setMaKhachHang] = useState("");
+  const [items, setItems] = useState<ServiceItemDraft[]>([{ ...EMPTY_ITEM }]);
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const selectedCustomer = useMemo(
-    () => CUSTOMERS.find((customer) => customer.id === customerId) ?? CUSTOMERS[0],
-    [customerId],
+    () => customers.find((item) => item.maKhachHang === maKhachHang) ?? null,
+    [customers, maKhachHang],
   );
 
-  const lineWithMeta = useMemo(() => {
-    return lines.map((line) => {
-      const serviceType =
-        SERVICE_TYPES.find((item) => item.id === line.serviceTypeId) ?? SERVICE_TYPES[0];
-      const quantity = parsePositiveNumber(line.quantity);
-      const chargedPriceValue = serviceType.servicePrice;
-      const amount = quantity * chargedPriceValue;
-
-      return {
-        ...line,
-        serviceType,
-        quantity,
-        chargedPriceValue,
-        amount,
-      };
-    });
-  }, [lines]);
-
-  const totalAmount = useMemo(
-    () => lineWithMeta.reduce((sum, line) => sum + line.amount, 0),
-    [lineWithMeta],
-  );
-  const totalPrepaid = Math.min(parseMoneyInput(voucherPrepaid), totalAmount);
-  const totalRemaining = useMemo(() => Math.max(totalAmount - totalPrepaid, 0), [totalAmount, totalPrepaid]);
-  const isVoucherCompleted = useMemo(
-    () => lineWithMeta.length > 0 && lineWithMeta.every((line) => line.status === "DONE"),
-    [lineWithMeta],
-  );
-  const hasCreatedDateError = !createdDate;
-  const invalidQuantityOrPriceLines = useMemo(
-    () =>
-      lineWithMeta
-        .map((line, index) => (line.quantity <= 0 || line.chargedPriceValue <= 0 ? index + 1 : null))
-        .filter((value): value is number => value !== null),
-    [lineWithMeta],
-  );
-  const invalidDeliveryDateLines = useMemo(
-    () =>
-      lineWithMeta
-        .map((line, index) => (!line.deliveryDate ? index + 1 : null))
-        .filter((value): value is number => value !== null),
-    [lineWithMeta],
-  );
-  const hasPrepaidError = parseMoneyInput(voucherPrepaid) > totalAmount;
-  const hasTotalError = totalAmount <= 0;
-  const canSaveVoucher =
-    !hasCreatedDateError &&
-    invalidQuantityOrPriceLines.length === 0 &&
-    invalidDeliveryDateLines.length === 0 &&
-    !hasPrepaidError &&
-    !hasTotalError;
-
-  function handleAddLine() {
-    setLines((previous) => {
-      const nextId =
-        previous.length === 0 ? 1 : Math.max(...previous.map((line) => line.id)) + 1;
-      return [...previous, buildDefaultLine(nextId)];
-    });
-  }
-
-  function handleRemoveLine(id: number) {
-    setLines((previous) => {
-      if (previous.length === 1) {
-        return previous;
-      }
-      return previous.filter((line) => line.id !== id);
-    });
-  }
-
-  function handleUpdateLine(
-    id: number,
-    field:
-      | "serviceTypeId"
-      | "quantity"
-      | "deliveryDate"
-      | "status",
-    value: string,
-  ) {
-    setLines((previous) =>
-      previous.map((line) => {
-        if (line.id !== id) {
-          return line;
-        }
-
-        if (field === "serviceTypeId") {
-          const serviceTypeId = Number.parseInt(value, 10);
-          const serviceType =
-            SERVICE_TYPES.find((item) => item.id === serviceTypeId) ?? SERVICE_TYPES[0];
-          return {
-            ...line,
-            serviceTypeId: serviceType.id,
-          };
-        }
-
-        if (field === "status") {
-          return {
-            ...line,
-            status: value as ServiceStatus,
-          };
-        }
+  const totals = useMemo(() => {
+    const summary = items.reduce(
+      (acc, item) => {
+        const serviceType = serviceTypes.find((type) => type.maLoaiDichVu === item.maLoaiDichVu);
+        const soLuong = toPositiveInt(item.soLuongDichVu);
+        const chiPhiRieng = toPositiveNumber(item.chiPhiRieng);
+        const donGiaDichVu = Number(serviceType?.donGiaDichVu ?? 0);
+        const donGiaDuocTinh = donGiaDichVu + chiPhiRieng;
+        const thanhTien = soLuong * donGiaDuocTinh;
+        const tienTraTruoc = toPositiveNumber(item.tienTraTruoc);
+        const tienConLai = Math.max(0, thanhTien - tienTraTruoc);
 
         return {
-          ...line,
-          [field]: value,
+          tongTien: acc.tongTien + thanhTien,
+          tongTraTruoc: acc.tongTraTruoc + tienTraTruoc,
+          tongConLai: acc.tongConLai + tienConLai,
         };
-      }),
+      },
+      { tongTien: 0, tongTraTruoc: 0, tongConLai: 0 },
     );
+
+    return summary;
+  }, [items, serviceTypes]);
+
+  async function loadData() {
+    setLoading(true);
+    setError(null);
+    try {
+      const [customerData, serviceTypeData, ticketData, prepayment] = await Promise.all([
+        backendApi.customers.list(),
+        backendApi.serviceTypes.list(),
+        backendApi.serviceTickets.list(),
+        backendApi.settings.getServicePrepaymentRate(),
+      ]);
+
+      setCustomers(customerData);
+      setServiceTypes(serviceTypeData);
+      setTickets(ticketData);
+      setPrepaymentRate(Number(prepayment.value ?? 50));
+
+      if (!maKhachHang && customerData.length > 0) {
+        setMaKhachHang(customerData[0].maKhachHang);
+      }
+    } catch (err) {
+      setError(getApiErrorMessage(err, "Khong tai duoc du lieu phieu dich vu"));
+    } finally {
+      setLoading(false);
+    }
   }
 
-  function handleResetForm() {
-    setCreatedDate(getTodayValue());
-    setCustomerId(CUSTOMERS[0].id);
-    setLines([buildDefaultLine(1)]);
-    setVoucherPrepaid("0");
-    setMessage("Đã reset phiếu dịch vụ.");
+  useEffect(() => {
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function addRow() {
+    setItems((prev) => [...prev, { ...EMPTY_ITEM }]);
   }
 
-  function handleSaveVoucher() {
-    if (invalidQuantityOrPriceLines.length > 0) {
-      setMessage("Vui lòng nhập số lượng và đơn giá được tính hợp lệ.");
+  function removeRow(index: number) {
+    setItems((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function updateItem(index: number, patch: Partial<ServiceItemDraft>) {
+    setItems((prev) => prev.map((item, i) => (i === index ? { ...item, ...patch } : item)));
+    setFormError(null);
+  }
+
+  async function submit() {
+    setFormError(null);
+
+    if (!maKhachHang) {
+      setFormError("Khach hang la bat buoc");
       return;
     }
 
-    if (invalidDeliveryDateLines.length > 0) {
-      setMessage("Vui lòng nhập đầy đủ ngày giao cho các dòng dịch vụ.");
+    if (items.length === 0) {
+      setFormError("Can it nhat 1 dong chi tiet");
       return;
     }
 
-    if (hasPrepaidError) {
-      setMessage("Tiền trả trước không được lớn hơn tổng tiền phiếu dịch vụ.");
-      return;
+    const seen = new Set<string>();
+
+    for (const item of items) {
+      if (!item.maLoaiDichVu) {
+        setFormError("Loai dich vu la bat buoc");
+        return;
+      }
+
+      if (seen.has(item.maLoaiDichVu)) {
+        setFormError("Khong duoc trung loai dich vu trong cung mot phieu");
+        return;
+      }
+      seen.add(item.maLoaiDichVu);
+
+      const serviceType = serviceTypes.find((type) => type.maLoaiDichVu === item.maLoaiDichVu);
+      const soLuong = toPositiveInt(item.soLuongDichVu);
+      if (soLuong <= 0) {
+        setFormError("So luong dich vu phai > 0");
+        return;
+      }
+
+      const donGiaDichVu = Number(serviceType?.donGiaDichVu ?? 0);
+      const chiPhiRieng = toPositiveNumber(item.chiPhiRieng);
+      const donGiaDuocTinh = donGiaDichVu + chiPhiRieng;
+      const thanhTien = soLuong * donGiaDuocTinh;
+      const tienTraTruoc = toPositiveNumber(item.tienTraTruoc);
+      const minPrepayment = (prepaymentRate / 100) * thanhTien;
+
+      if (tienTraTruoc < minPrepayment) {
+        setFormError(`Tien tra truoc cho ${serviceType?.tenLoaiDichVu ?? item.maLoaiDichVu} phai >= ${formatCurrency(minPrepayment)}`);
+        return;
+      }
     }
 
-    if (hasTotalError) {
-      setMessage("Tổng tiền phải lớn hơn 0.");
-      return;
-    }
+    const payload: ServiceTicketRequest = {
+      soPhieuDichVu: soPhieuDichVu.trim() || undefined,
+      ngayLapPhieuDichVu,
+      maKhachHang,
+      items: items.map((item) => ({
+        maLoaiDichVu: item.maLoaiDichVu,
+        soLuongDichVu: toPositiveInt(item.soLuongDichVu),
+        chiPhiRieng: toPositiveNumber(item.chiPhiRieng),
+        tienTraTruoc: toPositiveNumber(item.tienTraTruoc),
+        ngayGiao: item.ngayGiao || undefined,
+      })),
+    };
 
-    const nextVoucherIndex = voucherIndex + 1;
-    setVoucherIndex(nextVoucherIndex);
-    setVoucherCode(getVoucherCode(nextVoucherIndex));
-    setCreatedDate(getTodayValue());
-    setCustomerId(CUSTOMERS[0].id);
-    setLines([buildDefaultLine(1)]);
-    setVoucherPrepaid("0");
-    setMessage("Đã lưu phiếu dịch vụ thành công (dữ liệu demo frontend). Vào Tra cứu > Phiếu dịch vụ để xem BM9.");
+    setSubmitting(true);
+    try {
+      await backendApi.serviceTickets.create(payload);
+      setSoPhieuDichVu("");
+      setItems([{ ...EMPTY_ITEM }]);
+      await loadData();
+    } catch (err) {
+      setFormError(getApiErrorMessage(err, "Tao phieu dich vu that bai"));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function deliverItem(ticket: ServiceTicketResponse, maLoaiDichVu: string) {
+    try {
+      await backendApi.serviceTickets.deliverItem(ticket.soPhieuDichVu, maLoaiDichVu);
+      await loadData();
+    } catch (err) {
+      setError(getApiErrorMessage(err, "Cap nhat giao hang that bai"));
+    }
+  }
+
+  async function deliverAll(ticket: ServiceTicketResponse) {
+    try {
+      await backendApi.serviceTickets.deliverAll(ticket.soPhieuDichVu);
+      await loadData();
+    } catch (err) {
+      setError(getApiErrorMessage(err, "Cap nhat giao toan bo that bai"));
+    }
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       <PageHeader
-        eyebrow="Nghiệp vụ dịch vụ"
-        title="Phiếu dịch vụ"
-        description="Theo dõi dịch vụ, trả trước, ngày giao và trạng thái hoàn thành của từng dòng."
-        badges={
-          <>
-            <Badge variant="outline" className="border-border/70 bg-background/70">BM7</Badge>
-            <StatusBadge tone={canSaveVoucher ? "success" : "warning"}>
-              {canSaveVoucher ? "Sẵn sàng lưu" : "Cần bổ sung"}
-            </StatusBadge>
-          </>
-        }
+        eyebrow="BM7"
+        title="Lap phieu dich vu"
+        description="Quan ly dich vu, tien tra truoc va giao hang"
+        badges={<Badge variant="outline">Ty le tra truoc toi thieu: {prepaymentRate}%</Badge>}
       />
 
-      <Card className="overflow-hidden border-border/70 shadow-sm">
-        <CardHeader className="border-b bg-muted/25 px-2.5 py-2">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <CardTitle className="text-base tracking-tight">Phiếu dịch vụ</CardTitle>
-              <CardDescription className="text-xs">BM7 - Quản lý dịch vụ, thanh toán và ngày giao.</CardDescription>
-            </div>
-            <span className="rounded border border-sky-500/30 bg-sky-500/10 px-2 py-0.5 text-[10px] font-semibold text-sky-700">
-              Dịch vụ
-            </span>
-          </div>
-        </CardHeader>
-
-        <CardContent className="space-y-2 p-2.5">
-          <div className="grid gap-2 md:grid-cols-4">
+      <Card>
+        <CardContent className="space-y-4 p-4">
+          <div className="grid gap-3 md:grid-cols-3">
             <div className="space-y-2">
-              <Label htmlFor="voucher-code">Số phiếu</Label>
-              <Input
-                id="voucher-code"
-                value={voucherCode}
-                readOnly
-                className={SYSTEM_CODE_INPUT_CLASS}
-                aria-describedby="voucher-code-note"
-              />
-              <p id="voucher-code-note" className={SYSTEM_CODE_NOTE_CLASS}>
-                Số phiếu tự phát sinh.
-              </p>
+              <Label>So phieu</Label>
+              <Input value={soPhieuDichVu} onChange={(e) => setSoPhieuDichVu(e.target.value)} placeholder="De trong de tu sinh" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="created-date">Ngày lập</Label>
-              <DatePickerInput
-                id="created-date"
-                value={createdDate}
-                onValueChange={setCreatedDate}
-              />
-              {hasCreatedDateError && (
-                <p className="text-xs text-destructive">Vui lòng chọn ngày lập.</p>
-              )}
+              <Label>Ngay lap</Label>
+              <Input type="date" value={ngayLapPhieuDichVu} onChange={(e) => setNgayLapPhieuDichVu(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="customer">Khách hàng</Label>
+              <Label>Khach hang</Label>
               <Select
-                id="customer"
-                value={customerId}
-                onValueChange={(value) => setCustomerId(Number.parseInt(value, 10))}
-                options={CUSTOMERS.map((customer) => ({
-                  value: customer.id,
-                  label: customer.name,
-                }))}
+                value={maKhachHang || ""}
+                onValueChange={setMaKhachHang}
+                options={customers.map((item) => ({ value: item.maKhachHang, label: `${item.maKhachHang} - ${item.tenKhachHang}` }))}
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="customer-phone">Số điện thoại</Label>
-              <Input id="customer-phone" value={selectedCustomer.phone} readOnly />
             </div>
           </div>
 
-          <div className="grid gap-1.5 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-lg border bg-muted/20 px-2.5 py-1.5">
-              <p className="text-xs text-muted-foreground">Tổng tiền</p>
-              <p className="text-base font-semibold">{formatVND(totalAmount)}</p>
+          {selectedCustomer && (
+            <div className="rounded-lg border p-3 text-sm text-muted-foreground">
+              <p>So dien thoai: {selectedCustomer.soDienThoaiKhachHang || "-"}</p>
+              <p>Dia chi: {selectedCustomer.diaChiKhachHang || "-"}</p>
             </div>
-            <div className="rounded-lg border bg-muted/20 px-2.5 py-1.5">
-              <p className="text-xs text-muted-foreground">Trả trước</p>
-              <MoneyInput
-                value={voucherPrepaid}
-                onValueChange={setVoucherPrepaid}
-                inputClassName="h-8 text-base text-emerald-700"
-              />
-              {hasPrepaidError && (
-                <p className="mt-1 text-[11px] text-destructive">Không được vượt tổng tiền.</p>
-              )}
-            </div>
-            <div className="rounded-lg border bg-muted/20 px-2.5 py-1.5">
-              <p className="text-xs text-muted-foreground">Còn lại</p>
-              <p className="text-base font-semibold text-amber-700">{formatVND(totalRemaining)}</p>
-            </div>
-            <div className="rounded-lg border bg-muted/20 px-2.5 py-1.5">
-              <p className="text-xs text-muted-foreground">Tình trạng phiếu hiện tại</p>
-              <Badge
-                variant="outline"
-                className={cn(
-                  "mt-1 h-6 gap-1 px-2 text-xs",
-                  isVoucherCompleted ? STATUS_TONE_CLASS.success : STATUS_TONE_CLASS.warning,
-                )}
-              >
-                <span
-                  className={cn(
-                    "h-1.5 w-1.5 rounded-full",
-                    isVoucherCompleted ? STATUS_DOT_CLASS.success : STATUS_DOT_CLASS.warning,
-                  )}
-                />
-                {isVoucherCompleted
-                  ? VOUCHER_STATUS_LABELS.DONE
-                  : VOUCHER_STATUS_LABELS.PENDING}
-              </Badge>
-            </div>
-          </div>
+          )}
 
-          <div className="space-y-2 rounded-lg border bg-background p-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-sm font-semibold">Danh sách dịch vụ</h2>
-            </div>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Loai dich vu</TableHead>
+                <TableHead>Don gia dich vu</TableHead>
+                <TableHead>Chi phi rieng</TableHead>
+                <TableHead>Don gia duoc tinh</TableHead>
+                <TableHead>So luong</TableHead>
+                <TableHead>Thanh tien</TableHead>
+                <TableHead>Tra truoc</TableHead>
+                <TableHead>Con lai</TableHead>
+                <TableHead>Ngay giao</TableHead>
+                <TableHead className="text-right">Tac vu</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {items.map((item, index) => {
+                const serviceType = serviceTypes.find((type) => type.maLoaiDichVu === item.maLoaiDichVu);
+                const soLuong = toPositiveInt(item.soLuongDichVu);
+                const donGiaDichVu = Number(serviceType?.donGiaDichVu ?? 0);
+                const chiPhiRieng = toPositiveNumber(item.chiPhiRieng);
+                const donGiaDuocTinh = donGiaDichVu + chiPhiRieng;
+                const thanhTien = soLuong * donGiaDuocTinh;
+                const tienTraTruoc = toPositiveNumber(item.tienTraTruoc);
+                const tienConLai = Math.max(0, thanhTien - tienTraTruoc);
 
-            <Table className="table-fixed [&_th]:px-2 [&_th]:py-3 [&_th]:text-[11px] [&_th]:leading-4 [&_th]:whitespace-normal [&_td]:px-2 [&_td]:py-2.5 [&_td]:align-middle [&_td]:text-[13px]">
-              <TableHeader>
-                <TableRow className="bg-muted/40 hover:bg-muted/40">
-                  <TableHead className="w-[4%] text-center">STT</TableHead>
-                  <TableHead className="w-[24%]">Loại dịch vụ</TableHead>
-                  <TableHead className="w-[14%]">Ngày giao / Tình trạng</TableHead>
-                  <TableHead className="w-[14%] text-right">Đơn giá</TableHead>
-                  <TableHead className="w-[12%] text-center">Số lượng</TableHead>
-                  <TableHead className="w-[16%] text-right">Thành tiền</TableHead>
-                  <TableHead className="w-[4%] text-right"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {lineWithMeta.map((line, index) => (
-                  <TableRow key={line.id} className="bg-card/70">
-                    <TableCell className="text-center font-semibold">{index + 1}</TableCell>
+                return (
+                  <TableRow key={index}>
                     <TableCell>
                       <Select
-                        value={line.serviceTypeId}
-                        onValueChange={(value) => handleUpdateLine(line.id, "serviceTypeId", value)}
-                        className="h-9 text-sm [&>span]:whitespace-nowrap [&>span]:truncate"
-                        contentClassName="max-w-[360px]"
-                        options={SERVICE_TYPES.map((serviceType) => ({
-                          value: serviceType.id,
-                          label: serviceType.name,
+                        value={item.maLoaiDichVu || ""}
+                        onValueChange={(value) => updateItem(index, { maLoaiDichVu: value })}
+                        options={serviceTypes.map((option) => ({
+                          value: option.maLoaiDichVu,
+                          label: `${option.maLoaiDichVu} - ${option.tenLoaiDichVu}`,
                         }))}
                       />
                     </TableCell>
+                    <TableCell>{formatCurrency(donGiaDichVu)}</TableCell>
                     <TableCell>
-                      <div className="space-y-1.5">
-                        <DatePickerInput
-                          value={line.deliveryDate}
-                          onValueChange={(value) => handleUpdateLine(line.id, "deliveryDate", value)}
-                          compact
-                          className="h-8 w-full text-[12px]"
-                        />
-                        <Select
-                          value={line.status}
-                          onValueChange={(value) => handleUpdateLine(line.id, "status", value)}
-                          className={cn(
-                            "h-8 border-current/30 px-2 text-[12px] [&>span]:truncate",
-                            STATUS_TONE_CLASS[SERVICE_STATUS_TONE[line.status]],
-                          )}
-                          options={(Object.keys(STATUS_LABELS) as ServiceStatus[]).map((status) => ({
-                            value: status,
-                            label: STATUS_LABELS[status],
-                            leadingClassName: STATUS_DOT_CLASS[SERVICE_STATUS_TONE[status]],
-                          }))}
-                        />
+                      <Input value={item.chiPhiRieng} onChange={(e) => updateItem(index, { chiPhiRieng: e.target.value })} />
+                    </TableCell>
+                    <TableCell>{formatCurrency(donGiaDuocTinh)}</TableCell>
+                    <TableCell>
+                      <Input value={item.soLuongDichVu} onChange={(e) => updateItem(index, { soLuongDichVu: e.target.value })} />
+                    </TableCell>
+                    <TableCell>{formatCurrency(thanhTien)}</TableCell>
+                    <TableCell>
+                      <Input value={item.tienTraTruoc} onChange={(e) => updateItem(index, { tienTraTruoc: e.target.value })} />
+                    </TableCell>
+                    <TableCell>{formatCurrency(tienConLai)}</TableCell>
+                    <TableCell>
+                      <Input type="date" value={item.ngayGiao} onChange={(e) => updateItem(index, { ngayGiao: e.target.value })} />
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex justify-end">
+                        <Button variant="destructive" size="icon-sm" onClick={() => removeRow(index)} disabled={items.length <= 1}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
                       </div>
                     </TableCell>
-                    <TableCell className="text-right font-semibold whitespace-nowrap">
-                      {formatVND(line.serviceType.servicePrice)}
-                    </TableCell>
-                    <TableCell>
-                      <QuantityStepper
-                        value={String(line.quantity)}
-                        onValueChange={(value) => handleUpdateLine(line.id, "quantity", value)}
-                        min={1}
-                        step={1}
-                        inputClassName="h-8 min-w-[2.4rem] text-sm"
-                      />
-                    </TableCell>
-                    <TableCell className="text-right font-bold whitespace-nowrap">
-                      {formatVND(line.amount)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        size="icon-sm"
-                        variant="destructive"
-                        onClick={() => handleRemoveLine(line.id)}
-                        className="cursor-pointer"
-                        aria-label="Xóa dòng"
-                        disabled={lineWithMeta.length === 1}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                );
+              })}
+            </TableBody>
+          </Table>
 
-            <Button onClick={handleAddLine} variant="outline" size="sm" className="h-8 w-full cursor-pointer border-dashed">
+          <div className="flex items-center justify-between">
+            <Button variant="outline" onClick={addRow}>
               <Plus className="mr-1.5 h-3.5 w-3.5" />
-              Thêm dòng dịch vụ
+              Them dong
             </Button>
-          </div>
-          {message && (
-            <p className="rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm">
-              {message}
-            </p>
-          )}
-
-          {(invalidQuantityOrPriceLines.length > 0 ||
-            invalidDeliveryDateLines.length > 0 ||
-            hasPrepaidError) && (
-            <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
-              {invalidQuantityOrPriceLines.length > 0 && (
-                <p>Dòng lỗi số lượng/đơn giá: {invalidQuantityOrPriceLines.join(", ")}.</p>
-              )}
-              {invalidDeliveryDateLines.length > 0 && (
-                <p>Dòng chưa nhập ngày giao: {invalidDeliveryDateLines.join(", ")}.</p>
-              )}
-              {hasPrepaidError && (
-                <p>Tiền trả trước không được lớn hơn tổng tiền phiếu dịch vụ.</p>
-              )}
+            <div className="flex flex-wrap gap-2">
+              <Badge variant="outline">Tong tien: {formatCurrency(totals.tongTien)}</Badge>
+              <Badge variant="outline">Tra truoc: {formatCurrency(totals.tongTraTruoc)}</Badge>
+              <Badge variant="outline">Con lai: {formatCurrency(totals.tongConLai)}</Badge>
             </div>
-          )}
+          </div>
 
-          <div className="flex flex-wrap justify-end gap-1.5">
-            <Button
-              variant="outline"
-              onClick={handleResetForm}
-              className="cursor-pointer"
-            >
-              Làm mới
-            </Button>
-            <Button onClick={handleSaveVoucher} className="cursor-pointer" disabled={!canSaveVoucher}>
-              <Save className="mr-2 h-4 w-4" />
-              Lưu phiếu dịch vụ
+          {formError && <p className="text-sm text-destructive">{formError}</p>}
+          {error && <p className="text-sm text-destructive">{error}</p>}
+
+          <div className="flex justify-end">
+            <Button onClick={submit} disabled={submitting || loading}>
+              {submitting ? "Dang tao..." : "Tao phieu dich vu"}
             </Button>
           </div>
         </CardContent>
       </Card>
 
+      <Card>
+        <TableToolbar title="Lich su phieu dich vu" description="Danh sach phieu dich vu da tao" />
+        <CardContent className="px-0">
+          {loading ? (
+            <p className="px-4 py-6 text-sm text-muted-foreground">Dang tai...</p>
+          ) : tickets.length === 0 ? (
+            <div className="p-4">
+              <EmptyState title="Chua co phieu dich vu" description="Tao phieu dich vu dau tien" />
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>So phieu</TableHead>
+                  <TableHead>Ngay lap</TableHead>
+                  <TableHead>Khach hang</TableHead>
+                  <TableHead>Tong tien</TableHead>
+                  <TableHead>Tra truoc</TableHead>
+                  <TableHead>Con lai</TableHead>
+                  <TableHead>Tinh trang</TableHead>
+                  <TableHead className="text-right">Tac vu</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {tickets.map((ticket) => (
+                  <TableRow key={ticket.soPhieuDichVu}>
+                    <TableCell>{ticket.soPhieuDichVu}</TableCell>
+                    <TableCell>{ticket.ngayLapPhieuDichVu}</TableCell>
+                    <TableCell>{ticket.khachHang?.tenKhachHang ?? ticket.maKhachHang}</TableCell>
+                    <TableCell>{formatCurrency(ticket.tongTien)}</TableCell>
+                    <TableCell>{formatCurrency(ticket.tongTienTraTruoc)}</TableCell>
+                    <TableCell>{formatCurrency(ticket.tongTienConLai)}</TableCell>
+                    <TableCell>{ticket.tinhTrangDichVu}</TableCell>
+                    <TableCell>
+                      <div className="flex justify-end gap-1">
+                        <Button variant="outline" size="sm" onClick={() => deliverAll(ticket)}>
+                          <Truck className="mr-1 h-3.5 w-3.5" />
+                          Deliver all
+                        </Button>
+                        {ticket.items
+                          .filter((item) => !item.tinhTrang.toLowerCase().includes("da giao"))
+                          .slice(0, 1)
+                          .map((item) => (
+                            <Button
+                              key={item.maLoaiDichVu}
+                              variant="outline"
+                              size="sm"
+                              onClick={() => deliverItem(ticket, item.maLoaiDichVu)}
+                            >
+                              Deliver 1
+                            </Button>
+                          ))}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
-
-
-

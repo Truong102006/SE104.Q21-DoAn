@@ -3,7 +3,7 @@
 import { useState, useEffect, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/auth-store";
-import { loginWithPassword } from "@/services/auth-service";
+import { fetchCurrentUser, loginWithPassword } from "@/services/auth-service";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,10 +16,10 @@ import {
 } from "@/components/ui/card";
 import { Gem, Eye, EyeOff, Loader2 } from "lucide-react";
 
-/* ──────────────────────────────────────────────────────────────
-   Login Page — Luxury Gold Store Authentication
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+   Login Page â€” Luxury Gold Store Authentication
    Premium split-screen layout with brand showcase + login form
-   ────────────────────────────────────────────────────────── */
+   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 export default function LoginPage() {
   const router = useRouter();
@@ -50,10 +50,11 @@ export default function LoginPage() {
 
     try {
       const { token, user } = await loginWithPassword({ username, password });
-      login(token, user);
+      const me = await fetchCurrentUser(token).catch(() => user);
+      login(token, me);
       router.replace("/dashboard");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Đã xảy ra lỗi");
+      setError(err instanceof Error ? err.message : "ÄÃ£ xáº£y ra lá»—i");
     } finally {
       setLoading(false);
     }
@@ -70,7 +71,7 @@ export default function LoginPage() {
       <div className="flex min-h-dvh items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="h-8 w-8 animate-spin text-gold" />
-          <p className="text-sm text-muted-foreground">Đang khởi tạo trang đăng nhập...</p>
+          <p className="text-sm text-muted-foreground">Äang khá»Ÿi táº¡o trang Ä‘Äƒng nháº­p...</p>
         </div>
       </div>
     );
@@ -78,7 +79,7 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-dvh">
-      {/* ─── Left panel — Brand showcase ─────────────────── */}
+      {/* â”€â”€â”€ Left panel â€” Brand showcase â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="hidden lg:flex lg:w-1/2 xl:w-[55%] relative items-center justify-center bg-[oklch(0.14_0.01_60)] overflow-hidden">
         {/* Decorative gold gradient circles */}
         <div className="absolute top-[-20%] right-[-10%] h-[600px] w-[600px] rounded-full bg-[oklch(0.65_0.12_75_/_0.08)] blur-3xl" />
@@ -94,19 +95,19 @@ export default function LoginPage() {
             Gold Store
           </h1>
           <p className="text-lg leading-relaxed text-[oklch(0.7_0.02_75)]">
-            Hệ thống quản lý cửa hàng
+            Há»‡ thá»‘ng quáº£n lÃ½ cá»­a hÃ ng
             <br />
             <span className="text-gold-gradient font-semibold">
-              Vàng · Bạc · Đá Quý
+              VÃ ng Â· Báº¡c Â· ÄÃ¡ QuÃ½
             </span>
           </p>
 
           {/* Stats decoration */}
           <div className="mt-12 grid grid-cols-3 gap-6">
             {[
-              { label: "Sản phẩm", value: "1,200+" },
-              { label: "Đơn hàng", value: "8,500+" },
-              { label: "Khách hàng", value: "3,200+" },
+              { label: "Sáº£n pháº©m", value: "1,200+" },
+              { label: "ÄÆ¡n hÃ ng", value: "8,500+" },
+              { label: "KhÃ¡ch hÃ ng", value: "3,200+" },
             ].map((stat) => (
               <div key={stat.label} className="text-center">
                 <p className="text-2xl font-bold text-[oklch(0.65_0.12_75)]">
@@ -121,7 +122,7 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* ─── Right panel — Login form ────────────────────── */}
+      {/* â”€â”€â”€ Right panel â€” Login form â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="flex flex-1 items-center justify-center px-6 py-12 bg-background">
         <div className="w-full max-w-md space-y-8">
           {/* Mobile logo */}
@@ -135,10 +136,10 @@ export default function LoginPage() {
           <Card className="border-0 shadow-xl shadow-black/5">
             <CardHeader className="space-y-1 pb-4">
               <CardTitle className="text-2xl font-semibold tracking-tight">
-                Đăng nhập
+                ÄÄƒng nháº­p
               </CardTitle>
               <CardDescription>
-                Nhập thông tin tài khoản để truy cập hệ thống
+                Nháº­p thÃ´ng tin tÃ i khoáº£n Ä‘á»ƒ truy cáº­p há»‡ thá»‘ng
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -155,11 +156,11 @@ export default function LoginPage() {
 
                 {/* Username */}
                 <div className="space-y-2">
-                  <Label htmlFor="username">Tên đăng nhập</Label>
+                  <Label htmlFor="username">TÃªn Ä‘Äƒng nháº­p</Label>
                   <Input
                     id="username"
                     type="text"
-                    placeholder="Nhập tên đăng nhập"
+                    placeholder="Nháº­p tÃªn Ä‘Äƒng nháº­p"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     autoComplete="username"
@@ -171,12 +172,12 @@ export default function LoginPage() {
 
                 {/* Password */}
                 <div className="space-y-2">
-                  <Label htmlFor="password">Mật khẩu</Label>
+                  <Label htmlFor="password">Máº­t kháº©u</Label>
                   <div className="relative">
                     <Input
                       id="password"
                       type={showPassword ? "text" : "password"}
-                      placeholder="Nhập mật khẩu"
+                      placeholder="Nháº­p máº­t kháº©u"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       autoComplete="current-password"
@@ -189,7 +190,7 @@ export default function LoginPage() {
                       onClick={() => setShowPassword((p) => !p)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                       aria-label={
-                        showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"
+                        showPassword ? "áº¨n máº­t kháº©u" : "Hiá»‡n máº­t kháº©u"
                       }
                     >
                       {showPassword ? (
@@ -210,10 +211,10 @@ export default function LoginPage() {
                   {loading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Đang đăng nhập...
+                      Äang Ä‘Äƒng nháº­p...
                     </>
                   ) : (
-                    "Đăng nhập"
+                    "ÄÄƒng nháº­p"
                   )}
                 </Button>
               </form>
@@ -221,7 +222,7 @@ export default function LoginPage() {
               {/* Demo shortcuts */}
               <div className="mt-6 border-t pt-6">
                 <p className="mb-3 text-center text-xs text-muted-foreground">
-                  Tài khoản demo
+                  TÃ i khoáº£n demo
                 </p>
                 <div className="flex gap-3">
                   <Button
@@ -238,7 +239,7 @@ export default function LoginPage() {
                     onClick={() => fillDemo("staff")}
                     className="flex-1 cursor-pointer"
                   >
-                    Nhân viên
+                    NhÃ¢n viÃªn
                   </Button>
                 </div>
               </div>

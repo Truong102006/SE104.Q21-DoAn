@@ -1,405 +1,311 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { PageHeader, StatusBadge } from "@/components/dashboard/management";
-import { DatePickerInput } from "@/components/ui/date-picker";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { EmptyState, PageHeader, TableToolbar } from "@/components/dashboard/management";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { MoneyInput, parseMoneyInput } from "@/components/ui/money-input";
-import { QuantityStepper } from "@/components/ui/quantity-stepper";
 import { Select } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { SYSTEM_CODE_INPUT_CLASS, SYSTEM_CODE_NOTE_CLASS } from "@/lib/form-styles";
-import { formatVND, MOCK_PRODUCTS } from "@/lib/mock-data";
-import { UNIT_SELECT_OPTIONS } from "@/lib/unit-data";
-import { useUnitStore } from "@/stores/unit-store";
-import { Plus, Save, Trash2 } from "lucide-react";
+import { backendApi } from "@/services/backend-api";
+import type {
+  CustomerResponse,
+  ProductResponse,
+  SaleRequest,
+  SaleResponse,
+} from "@/types/backend";
+import { getApiErrorMessage } from "@/lib/api-error";
+import { formatCurrency, formatNumber, todayIsoDate, toPositiveInt } from "@/lib/format";
+import { Plus, Trash2 } from "lucide-react";
 
-interface CustomerOption {
-  id: number;
-  name: string;
-}
+type SaleItemDraft = {
+  maSanPham: string;
+  soLuong: string;
+};
 
-interface SaleLine {
-  id: number;
-  productId: number;
-  quantity: string;
-  unit: string;
-  unitPrice: string;
-}
+const EMPTY_ITEM: SaleItemDraft = {
+  maSanPham: "",
+  soLuong: "1",
+};
 
-const CUSTOMERS: CustomerOption[] = [
-  { id: 1, name: "Nguyễn Văn Minh" },
-  { id: 2, name: "Trần Thị Lan" },
-  { id: 3, name: "Lê Quang Huy" },
-];
+export default function SalesPage() {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-function getTodayValue(): string {
-  return new Date().toISOString().slice(0, 10);
-}
+  const [customers, setCustomers] = useState<CustomerResponse[]>([]);
+  const [products, setProducts] = useState<ProductResponse[]>([]);
 
-function getVoucherCode(): string {
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = String(now.getMonth() + 1).padStart(2, "0");
-  const d = String(now.getDate()).padStart(2, "0");
-  return `PBH-${y}${m}${d}-001`;
-}
+  const [salesList, setSalesList] = useState<SaleResponse[]>([]);
 
-function parsePositiveNumber(raw: string): number {
-  const cleaned = raw.replace(/[^\d.]/g, "");
-  const parsed = Number.parseFloat(cleaned);
-  if (Number.isNaN(parsed) || parsed <= 0) {
-    return 0;
-  }
-  return parsed;
-}
-
-function buildDefaultLine(id: number): SaleLine {
-  const product = MOCK_PRODUCTS[0];
-  return {
-    id,
-    productId: product.id,
-    quantity: "1",
-    unit: resolveProductUnit(product.weightUnit),
-    unitPrice: product.sellingPrice.toString(),
-  };
-}
-
-function resolveProductUnit(rawUnit: string): string {
-  const normalized = rawUnit.trim().toLowerCase();
-  const match = UNIT_SELECT_OPTIONS.find((unit) => unit.value.toLowerCase() === normalized);
-  if (match) {
-    return match.value;
-  }
-  if (normalized.includes("ch")) {
-    return "Chỉ";
-  }
-  if (normalized.includes("kg")) {
-    return "Kg";
-  }
-  if (normalized.includes("vi")) {
-    return "Viên";
-  }
-  return "Gram";
-}
-
-export default function OrdersPage() {
-  const { units, hydrate, isHydrated } = useUnitStore();
-  const [voucherCode] = useState(getVoucherCode());
-  const [createdDate, setCreatedDate] = useState(getTodayValue());
-  const [customerId, setCustomerId] = useState<number>(CUSTOMERS[0].id);
-  const [lines, setLines] = useState<SaleLine[]>([buildDefaultLine(1)]);
-  const [message, setMessage] = useState<string>("");
-
-  useEffect(() => {
-    if (!isHydrated) {
-      hydrate();
-    }
-  }, [hydrate, isHydrated]);
-
-  const unitOptions = useMemo(
-    () => units.map((unit) => ({ value: unit.name, label: unit.name })),
-    [units],
-  );
+  const [soPhieuBan, setSoPhieuBan] = useState("");
+  const [ngayLapPhieuBan, setNgayLapPhieuBan] = useState(todayIsoDate());
+  const [maKhachHang, setMaKhachHang] = useState("");
+  const [items, setItems] = useState<SaleItemDraft[]>([{ ...EMPTY_ITEM }]);
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const selectedCustomer = useMemo(
-    () => CUSTOMERS.find((customer) => customer.id === customerId) ?? CUSTOMERS[0],
-    [customerId],
+    () => customers.find((item) => item.maKhachHang === maKhachHang) ?? null,
+    [customers, maKhachHang],
   );
 
-  const lineWithMeta = useMemo(() => {
-    return lines.map((line) => {
-      const product = MOCK_PRODUCTS.find((item) => item.id === line.productId) ?? MOCK_PRODUCTS[0];
-      const quantity = parsePositiveNumber(line.quantity);
-      const unitPrice = parseMoneyInput(line.unitPrice);
-      return {
-        ...line,
-        product,
-        quantity,
-        unitPrice,
-        amount: quantity * unitPrice,
-      };
-    });
-  }, [lines]);
-
-  const totalAmount = useMemo(
-    () => lineWithMeta.reduce((sum, line) => sum + line.amount, 0),
-    [lineWithMeta],
-  );
-  const invalidLineIndexes = useMemo(
+  const estimatedTotal = useMemo(
     () =>
-      lineWithMeta
-        .map((line, index) => (line.quantity <= 0 || line.unitPrice <= 0 ? index + 1 : null))
-        .filter((value): value is number => value !== null),
-    [lineWithMeta],
+      items.reduce((sum, item) => {
+        const product = products.find((p) => p.maSanPham === item.maSanPham);
+        const soLuong = toPositiveInt(item.soLuong);
+        const donGia = Number(product?.donGiaBan ?? 0);
+        return sum + soLuong * donGia;
+      }, 0),
+    [items, products],
   );
-  const hasDateError = !createdDate;
-  const hasCustomerError = !customerId;
-  const hasLineError = invalidLineIndexes.length > 0;
-  const hasTotalError = totalAmount <= 0;
-  const canSaveOrder = !hasDateError && !hasCustomerError && !hasLineError && !hasTotalError;
-  const voucherStatus = canSaveOrder ? "Sẵn sàng lưu" : "Cần bổ sung";
 
-  function handleAddLine() {
-    setLines((previous) => {
-      const nextId =
-        previous.length === 0 ? 1 : Math.max(...previous.map((line) => line.id)) + 1;
-      return [...previous, buildDefaultLine(nextId)];
-    });
-  }
+  async function loadData() {
+    setLoading(true);
+    setError(null);
+    try {
+      const [customerData, productPage, sales] = await Promise.all([
+        backendApi.customers.list(),
+        backendApi.products.list({ page: 0, size: 200 }),
+        backendApi.sales.list(),
+      ]);
 
-  function handleRemoveLine(id: number) {
-    setLines((previous) => {
-      if (previous.length === 1) {
-        return previous;
+      setCustomers(customerData);
+      setProducts(productPage.content);
+      setSalesList(sales);
+
+      if (!maKhachHang && customerData.length > 0) {
+        setMaKhachHang(customerData[0].maKhachHang);
       }
-      return previous.filter((line) => line.id !== id);
-    });
+    } catch (err) {
+      setError(getApiErrorMessage(err, "Khong tai duoc du lieu phieu ban"));
+    } finally {
+      setLoading(false);
+    }
   }
 
-  function handleUpdateLine(
-    id: number,
-    field: "productId" | "quantity" | "unit" | "unitPrice",
-    value: string,
-  ) {
-    setLines((previous) =>
-      previous.map((line) => {
-        if (line.id !== id) {
-          return line;
-        }
+  useEffect(() => {
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-        if (field === "productId") {
-          const productId = Number.parseInt(value, 10);
-          const product = MOCK_PRODUCTS.find((item) => item.id === productId) ?? MOCK_PRODUCTS[0];
-          return {
-            ...line,
-            productId: product.id,
-            unit: resolveProductUnit(product.weightUnit),
-            unitPrice: product.sellingPrice.toString(),
-          };
-        }
-
-        return {
-          ...line,
-          [field]: value,
-        };
-      }),
-    );
+  function addRow() {
+    setItems((prev) => [...prev, { ...EMPTY_ITEM }]);
   }
 
-  function handleResetForm() {
-    setCreatedDate(getTodayValue());
-    setCustomerId(CUSTOMERS[0].id);
-    setLines([buildDefaultLine(1)]);
-    setMessage("Đã reset phiếu bán hàng.");
+  function removeRow(index: number) {
+    setItems((prev) => prev.filter((_, i) => i !== index));
   }
 
-  function handleSaveOrder() {
-    if (hasLineError) {
-      setMessage("Vui lòng nhập số lượng và đơn giá hợp lệ cho tất cả dòng.");
+  function updateItem(index: number, patch: Partial<SaleItemDraft>) {
+    setItems((prev) => prev.map((item, i) => (i === index ? { ...item, ...patch } : item)));
+    setFormError(null);
+  }
+
+  async function submit() {
+    setFormError(null);
+
+    if (!maKhachHang) {
+      setFormError("Khach hang la bat buoc");
       return;
     }
 
-    if (hasTotalError) {
-      setMessage("Tổng tiền phải lớn hơn 0.");
+    if (items.length === 0) {
+      setFormError("Can it nhat 1 dong chi tiet");
       return;
     }
 
-    setMessage("Đã lưu phiếu bán hàng thành công (dữ liệu demo frontend).");
+    const seen = new Set<string>();
+    for (const item of items) {
+      if (!item.maSanPham) {
+        setFormError("San pham la bat buoc");
+        return;
+      }
+
+      if (seen.has(item.maSanPham)) {
+        setFormError("Khong duoc trung san pham trong cung mot phieu");
+        return;
+      }
+      seen.add(item.maSanPham);
+
+      const product = products.find((p) => p.maSanPham === item.maSanPham);
+      const soLuong = toPositiveInt(item.soLuong);
+
+      if (soLuong <= 0) {
+        setFormError("So luong phai > 0");
+        return;
+      }
+
+      if (product && soLuong > Number(product.tonKho ?? 0)) {
+        setFormError(`So luong ban vuot ton kho cua ${product.tenSanPham}`);
+        return;
+      }
+    }
+
+    const payload: SaleRequest = {
+      soPhieuBan: soPhieuBan.trim() || undefined,
+      ngayLapPhieuBan,
+      maKhachHang,
+      items: items.map((item) => ({
+        maSanPham: item.maSanPham,
+        soLuong: toPositiveInt(item.soLuong),
+      })),
+    };
+
+    setSubmitting(true);
+    try {
+      await backendApi.sales.create(payload);
+      setSoPhieuBan("");
+      setItems([{ ...EMPTY_ITEM }]);
+      await loadData();
+    } catch (err) {
+      setFormError(getApiErrorMessage(err, "Tao phieu ban that bai"));
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
     <div className="space-y-3">
       <PageHeader
-        eyebrow="Nghiệp vụ bán hàng"
-        title="Phiếu bán hàng"
-        description="Tạo phiếu bán, kiểm tra số lượng/đơn giá và khóa tổng tiền trước khi lưu."
-        badges={
-          <>
-            <Badge variant="outline" className="border-border/70 bg-background/70">BM6</Badge>
-            <StatusBadge tone={canSaveOrder ? "success" : "warning"}>{voucherStatus}</StatusBadge>
-          </>
-        }
+        eyebrow="BM6"
+        title="Lap phieu ban hang"
+        description="Ban hang theo ton kho hien tai va don gia ban cua san pham"
       />
 
-      <Card className="overflow-hidden border-border/70 shadow-sm">
-        <CardHeader className="border-b bg-muted/25 px-3 py-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <CardTitle className="text-base tracking-tight">Phiếu bán hàng</CardTitle>
-              <CardDescription className="text-xs">BM6 - Quản lý khách hàng và sản phẩm bán.</CardDescription>
-            </div>
-            <span className="rounded border border-emerald-600/30 bg-emerald-600/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
-              Bán hàng
-            </span>
-          </div>
-        </CardHeader>
-
-        <CardContent className="space-y-3 p-3">
-          <div className="grid gap-3 md:grid-cols-4">
+      <Card>
+        <CardContent className="space-y-4 p-4">
+          <div className="grid gap-3 md:grid-cols-3">
             <div className="space-y-2">
-              <Label htmlFor="voucher-code">Số phiếu</Label>
-              <Input
-                id="voucher-code"
-                value={voucherCode}
-                readOnly
-                className={SYSTEM_CODE_INPUT_CLASS}
-                aria-describedby="voucher-code-note"
-              />
-              <p id="voucher-code-note" className={SYSTEM_CODE_NOTE_CLASS}>
-                Số phiếu tự phát sinh.
-              </p>
+              <Label>So phieu</Label>
+              <Input value={soPhieuBan} onChange={(e) => setSoPhieuBan(e.target.value)} placeholder="De trong de tu sinh" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="created-date">Ngày lập</Label>
-              <DatePickerInput
-                id="created-date"
-                value={createdDate}
-                onValueChange={setCreatedDate}
-              />
-              {hasDateError && (
-                <p className="text-xs text-destructive">Vui lòng chọn ngày lập.</p>
-              )}
+              <Label>Ngay lap</Label>
+              <Input type="date" value={ngayLapPhieuBan} onChange={(e) => setNgayLapPhieuBan(e.target.value)} />
             </div>
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="customer">Khách hàng</Label>
+            <div className="space-y-2">
+              <Label>Khach hang</Label>
               <Select
-                id="customer"
-                value={customerId}
-                onValueChange={(value) => setCustomerId(Number.parseInt(value, 10))}
-                options={CUSTOMERS.map((customer) => ({
-                  value: customer.id,
-                  label: customer.name,
-                }))}
+                value={maKhachHang || ""}
+                onValueChange={setMaKhachHang}
+                options={customers.map((item) => ({ value: item.maKhachHang, label: `${item.maKhachHang} - ${item.tenKhachHang}` }))}
               />
-              {hasCustomerError && (
-                <p className="text-xs text-destructive">Vui lòng chọn khách hàng.</p>
-              )}
-              <p className="text-xs text-muted-foreground">
-                Đã chọn: <span className="font-medium text-foreground">{selectedCustomer.name}</span>
-              </p>
             </div>
           </div>
 
-          <div className="space-y-2 rounded-lg border bg-background p-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-sm font-semibold">Chi tiết sản phẩm bán</h2>
-              <Button onClick={handleAddLine} variant="outline" size="sm" className="h-7 cursor-pointer">
-                <Plus className="mr-1.5 h-3.5 w-3.5" />
-                Thêm dòng
-              </Button>
+          {selectedCustomer && (
+            <div className="rounded-lg border p-3 text-sm text-muted-foreground">
+              <p>So dien thoai: {selectedCustomer.soDienThoaiKhachHang || "-"}</p>
+              <p>Dia chi: {selectedCustomer.diaChiKhachHang || "-"}</p>
             </div>
+          )}
 
-            <div className="rounded-lg border">
-              <Table className="table-fixed [&_th]:whitespace-normal [&_th]:leading-4 [&_td]:align-middle">
-                <TableHeader>
-                  <TableRow className="bg-muted/40 hover:bg-muted/40">
-                    <TableHead className="w-14 text-center">STT</TableHead>
-                    <TableHead className="w-[27%]">Sản phẩm</TableHead>
-                    <TableHead className="w-[14%]">Loại sản phẩm</TableHead>
-                    <TableHead className="w-[11%]">Số lượng</TableHead>
-                    <TableHead className="w-[11%]">Đơn vị tính</TableHead>
-                    <TableHead className="w-[15%]">Đơn giá</TableHead>
-                    <TableHead className="w-[16%]">Thành tiền</TableHead>
-                    <TableHead className="w-12"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {lineWithMeta.map((line, index) => (
-                    <TableRow key={line.id}>
-                      <TableCell className="text-center font-medium">{index + 1}</TableCell>
-                      <TableCell>
-                        <Select
-                          value={line.productId}
-                          onValueChange={(value) =>
-                            handleUpdateLine(line.id, "productId", value)
-                          }
-                          options={MOCK_PRODUCTS.map((product) => ({
-                            value: product.id,
-                            label: product.name,
-                          }))}
-                        />
-                      </TableCell>
-                      <TableCell className="truncate text-sm">{line.product.categoryName}</TableCell>
-                      <TableCell>
-                        <QuantityStepper
-                          value={String(line.quantity)}
-                          onValueChange={(value) => handleUpdateLine(line.id, "quantity", value)}
-                          min={1}
-                          step={1}
-                          inputMode="decimal"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Select
-                          value={line.unit}
-                          onValueChange={(value) => handleUpdateLine(line.id, "unit", value)}
-                          options={unitOptions}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <MoneyInput
-                          value={String(line.unitPrice)}
-                          onValueChange={(value) => handleUpdateLine(line.id, "unitPrice", value)}
-                          inputClassName="h-8 text-[13px]"
-                        />
-                      </TableCell>
-                      <TableCell className="truncate text-sm font-semibold">
-                        {formatVND(line.amount)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          size="icon-sm"
-                          variant="destructive"
-                          onClick={() => handleRemoveLine(line.id)}
-                          className="cursor-pointer"
-                          aria-label="Xóa dòng"
-                          disabled={lineWithMeta.length === 1}
-                        >
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>San pham</TableHead>
+                <TableHead>Loai san pham</TableHead>
+                <TableHead>Ton kho</TableHead>
+                <TableHead>So luong</TableHead>
+                <TableHead>Don gia ban</TableHead>
+                <TableHead>Thanh tien</TableHead>
+                <TableHead className="text-right">Tac vu</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {items.map((item, index) => {
+                const product = products.find((p) => p.maSanPham === item.maSanPham);
+                const soLuong = toPositiveInt(item.soLuong);
+                const donGia = Number(product?.donGiaBan ?? 0);
+                const thanhTien = soLuong * donGia;
+
+                return (
+                  <TableRow key={index}>
+                    <TableCell>
+                      <Select
+                        value={item.maSanPham || ""}
+                        onValueChange={(value) => updateItem(index, { maSanPham: value })}
+                        options={products.map((productOption) => ({
+                          value: productOption.maSanPham,
+                          label: `${productOption.maSanPham} - ${productOption.tenSanPham}`,
+                        }))}
+                      />
+                    </TableCell>
+                    <TableCell>{product?.loaiSanPham?.tenLoaiSanPham ?? "-"}</TableCell>
+                    <TableCell>{formatNumber(product?.tonKho ?? 0)}</TableCell>
+                    <TableCell>
+                      <Input value={item.soLuong} onChange={(e) => updateItem(index, { soLuong: e.target.value })} />
+                    </TableCell>
+                    <TableCell>{formatCurrency(donGia)}</TableCell>
+                    <TableCell>{formatCurrency(thanhTien)}</TableCell>
+                    <TableCell>
+                      <div className="flex justify-end">
+                        <Button variant="destructive" size="icon-sm" onClick={() => removeRow(index)} disabled={items.length <= 1}>
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+
+          <div className="flex items-center justify-between">
+            <Button variant="outline" onClick={addRow}>
+              <Plus className="mr-1.5 h-3.5 w-3.5" />
+              Them dong
+            </Button>
+            <Badge variant="outline">Tong tien du kien: {formatCurrency(estimatedTotal)}</Badge>
+          </div>
+
+          {formError && <p className="text-sm text-destructive">{formError}</p>}
+          {error && <p className="text-sm text-destructive">{error}</p>}
+
+          <div className="flex justify-end">
+            <Button onClick={submit} disabled={submitting || loading}>
+              {submitting ? "Dang tao..." : "Tao phieu ban"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <TableToolbar title="Lich su phieu ban" description="Danh sach phieu ban da tao" />
+        <CardContent className="px-0">
+          {loading ? (
+            <p className="px-4 py-6 text-sm text-muted-foreground">Dang tai...</p>
+          ) : salesList.length === 0 ? (
+            <div className="p-4">
+              <EmptyState title="Chua co phieu ban" description="Tao phieu ban dau tien" />
             </div>
-          </div>
-
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-muted/25 px-3 py-2">
-            <span className="text-sm font-semibold">Tổng tiền</span>
-            <span className="text-lg font-bold text-gold">{formatVND(totalAmount)}</span>
-          </div>
-
-          {hasLineError && (
-            <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
-              Dòng không hợp lệ: {invalidLineIndexes.join(", ")}. Số lượng và đơn giá phải lớn hơn 0.
-            </p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>So phieu</TableHead>
+                  <TableHead>Ngay lap</TableHead>
+                  <TableHead>Khach hang</TableHead>
+                  <TableHead>So dong</TableHead>
+                  <TableHead>Tong tien</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {salesList.map((item) => (
+                  <TableRow key={item.soPhieuBan}>
+                    <TableCell>{item.soPhieuBan}</TableCell>
+                    <TableCell>{item.ngayLapPhieuBan}</TableCell>
+                    <TableCell>{item.khachHang?.tenKhachHang ?? item.maKhachHang}</TableCell>
+                    <TableCell>{formatNumber(item.items.length)}</TableCell>
+                    <TableCell>{formatCurrency(item.tongTien)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           )}
-
-          {message && (
-            <p className="rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm">
-              {message}
-            </p>
-          )}
-
-          <div className="flex flex-wrap justify-end gap-2">
-            <Button
-              variant="outline"
-              onClick={handleResetForm}
-              className="cursor-pointer"
-            >
-              Làm mới
-            </Button>
-            <Button onClick={handleSaveOrder} className="cursor-pointer" disabled={!canSaveOrder}>
-              <Save className="mr-2 h-4 w-4" />
-              Lưu phiếu bán hàng
-            </Button>
-          </div>
         </CardContent>
       </Card>
     </div>
