@@ -1,3 +1,41 @@
+﻿## 0. Cập Nhật 2026-05-20 (Seed Data + Test Nghiệp Vụ Chính)
+
+- Đã bổ sung migration seed dữ liệu lõi cho hệ thống:
+  - Nhóm người dùng: ADMIN, STAFF.
+  - User mẫu: admin/admin123 (ADMIN), staff/staff123 (STAFF), lưu mật khẩu dạng BCrypt hash.
+  - Đơn vị tính: gram (1), chỉ (3.75), lượng (37.5).
+  - Loại sản phẩm: Vàng 24K (2%), Vàng 18K (5%), Đá quý (10%).
+  - Loại dịch vụ: Cân thử vàng (50000), Gia công nữ trang (200000).
+  - Tham số: SERVICE_PREPAYMENT_RATE = 50.
+  - Seed mẫu: nhà cung cấp, khách hàng, sản phẩm.
+- Đã bổ sung/hoàn thiện test nghiệp vụ chính theo yêu cầu prompt:
+  - Auth:
+    - login admin thành công.
+    - login sai password thất bại.
+    - staff không được truy cập endpoint báo cáo admin (/api/reports/inventory).
+  - Nhà cung cấp: thêm test không cho số điện thoại sai format.
+  - Đơn vị tính: không cho trùng tên đơn vị tính.
+  - Loại dịch vụ: không cho trùng tên loại dịch vụ.
+  - Sản phẩm: thêm test tìm kiếm tương đối theo keyword/mã loại sản phẩm.
+- Đã chạy toàn bộ test backend và xử lý lỗi phát sinh trong test:
+  - mvn -f backend/pom.xml test => BUILD SUCCESS.
+  - Tổng: 32 tests, 0 failures, 0 errors.
+- Ghi chú fix trong quá trình test:
+  - Test phân quyền controller ban đầu dùng kiểu WebMvcTest/MockBean cũ gây lỗi tương thích Spring Boot 4.
+  - Đã chuyển sang method-security test (@WithMockUser) để verify đúng rule ADMIN-only một cách ổn định.
+
+### Danh sách file đã cập nhật (2026-05-20 - Seed Data + Test)
+
+- backend/src/main/resources/db/migration/V2__seed_core_data.sql (mới)
+- backend/src/test/java/com/se104/goldstore/unit/service/AuthServiceImplTest.java (mới)
+- backend/src/test/java/com/se104/goldstore/unit/service/DonViTinhServiceImplTest.java (mới)
+- backend/src/test/java/com/se104/goldstore/unit/service/LoaiDichVuServiceImplTest.java (mới)
+- backend/src/test/java/com/se104/goldstore/unit/controller/BaoCaoTonKhoReportControllerSecurityTest.java (mới)
+- backend/src/test/java/com/se104/goldstore/unit/service/NhaCungCapServiceImplTest.java
+- backend/src/test/java/com/se104/goldstore/unit/service/SanPhamServiceImplTest.java
+- backend/pom.xml
+- progress.md
+
 ## 0. Cập Nhật 2026-05-20 (Frontend Next.js/React TypeScript - Nghiệp Vụ BM1-BM12 + QĐ13)
 
 - Đã triển khai frontend theo API backend thật (không dùng mock cho luồng chính):
