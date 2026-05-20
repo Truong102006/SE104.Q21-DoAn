@@ -23,11 +23,9 @@ public class SanPhamRequest {
     @DecimalMin(value = "0", inclusive = true, message = "Don gia mua phai >= 0")
     private BigDecimal donGiaMua;
 
-    @NotNull(message = "Don gia ban khong duoc de trong")
     @DecimalMin(value = "0", inclusive = true, message = "Don gia ban phai >= 0")
     private BigDecimal donGiaBan;
 
-    @NotNull(message = "Ton kho khong duoc de trong")
     @Min(value = 0, message = "Ton kho phai >= 0")
     private Integer tonKho;
 
