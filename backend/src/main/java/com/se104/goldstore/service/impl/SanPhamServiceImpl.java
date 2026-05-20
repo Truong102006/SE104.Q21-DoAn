@@ -75,7 +75,7 @@ public class SanPhamServiceImpl implements SanPhamService {
         );
 
         Page<SanPham> entities = sanPhamRepository.search(
-            normalizedKeyword.isEmpty() ? null : normalizedKeyword,
+            normalizedKeyword,
             normalizedProductTypeId,
             pageRequest
         );
