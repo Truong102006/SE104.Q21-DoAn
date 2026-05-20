@@ -1,4 +1,45 @@
-﻿## 0. Cập Nhật 2026-05-20 (Phiếu Dịch Vụ BM7 + QĐ7 + QĐ9)
+﻿## 0. Cập Nhật 2026-05-20 (Tra Cứu BM8 + QĐ8, BM9 + QĐ9)
+
+- Đã implement module tra cứu mới theo đúng BM8/BM9 qua route:
+  - `GET /api/search/products?keyword=&page=&size=`
+  - `GET /api/search/service-tickets?keyword=&status=&fromDate=&toDate=&page=&size=`
+- Phần 1 - Tra cứu sản phẩm (BM8/QĐ8):
+  - Hỗ trợ tìm kiếm tương đối theo `maSanPham`, `tenSanPham`, `tenLoaiSanPham`.
+  - Nếu `keyword` rỗng thì trả danh sách phân trang.
+  - Response đúng dạng tra cứu:
+    - `maSanPham`, `tenSanPham`, `tenLoaiSanPham`, `donGiaBan`, `tonKho`, `tenDonViTinh`.
+- Phần 2 - Tra cứu phiếu dịch vụ (BM9/QĐ9):
+  - Hỗ trợ filter theo:
+    - `soPhieuDichVu`, `tenKhachHang`, `soDienThoaiKhachHang` (qua `keyword`)
+    - `status` (`Hoan thanh` / `Chua hoan thanh`, chấp nhận cả input có dấu)
+    - Khoảng ngày lập `fromDate` - `toDate`.
+  - Có validate khoảng ngày: `fromDate` phải `<= toDate`.
+  - Có phân trang và sort theo ngày lập mới nhất (`ngayLapPhieuDichVu DESC`, phụ `soPhieuDichVu DESC`).
+  - Trạng thái phiếu trong response được tính lại từ chi tiết:
+    - Tất cả item `Da giao` => `Hoan thanh`.
+    - Ngược lại => `Chua hoan thanh`.
+- Đã bổ sung test unit theo yêu cầu:
+  - Test tìm kiếm tương đối sản phẩm.
+  - Test trạng thái phiếu dịch vụ trong kết quả tra cứu.
+- Kết quả xác minh:
+  - `mvn -f backend/pom.xml test` => `BUILD SUCCESS` (19 tests pass).
+  - Test API runtime:
+    - `GET /api/search/products` => success.
+    - `GET /api/search/service-tickets` => success.
+
+### Danh sách file đã cập nhật (2026-05-20 - Tra Cứu BM8/BM9)
+
+- `backend/src/main/java/com/se104/goldstore/common/ApiPaths.java` `(+1 -0)`
+- `backend/src/main/java/com/se104/goldstore/controller/TraCuuController.java` `(+50 -0)` (mới)
+- `backend/src/main/java/com/se104/goldstore/dto/response/TraCuuSanPhamResponse.java` `(+46 -0)` (mới)
+- `backend/src/main/java/com/se104/goldstore/dto/response/TraCuuPhieuDichVuResponse.java` `(+54 -0)` (mới)
+- `backend/src/main/java/com/se104/goldstore/repository/PhieuDichVuRepository.java` `(+26 -0)`
+- `backend/src/main/java/com/se104/goldstore/service/TraCuuService.java` `(+16 -0)` (mới)
+- `backend/src/main/java/com/se104/goldstore/service/impl/TraCuuServiceImpl.java` `(+128 -0)` (mới)
+- `backend/src/test/java/com/se104/goldstore/unit/service/TraCuuServiceImplTest.java` `(+91 -0)` (mới)
+- `progress.md`
+
+## 0. Cập Nhật 2026-05-20 (Phiếu Dịch Vụ BM7 + QĐ7 + QĐ9)
 
 - Đã implement module phiếu dịch vụ theo BM7, QĐ7 và QĐ9 với route mới:
   - `POST /api/service-tickets` (tương thích song song legacy `/api/v1/phieu-dich-vu`).
