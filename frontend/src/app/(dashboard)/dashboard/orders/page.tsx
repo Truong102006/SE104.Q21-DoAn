@@ -7,9 +7,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState, PageHeader, TableToolbar } from "@/components/dashboard/management";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ContactPanel, DetailGrid, DetailModal, LineError, StickySummaryBar, VoucherSection } from "@/components/dashboard/voucher-ui";
+import { Combobox } from "@/components/ui/combobox";
+import { useToastStore } from "@/stores/toast-store";
 import { backendApi } from "@/services/backend-api";
 import type {
   CustomerResponse,
@@ -114,7 +115,33 @@ export default function SalesPage() {
   }
 
   function removeRow(index: number) {
+    const itemToDelete = items[index];
+    if (!itemToDelete) return;
+
+    const product = products.find((p) => p.maSanPham === itemToDelete.maSanPham);
+    const productName = product ? product.tenSanPham : itemToDelete.maSanPham || "chưa chọn";
+
     setItems((prev) => prev.filter((_, i) => i !== index));
+
+    useToastStore.getState().success(`Đã xóa dòng sản phẩm: ${productName}`, {
+      label: "Hoàn tác",
+      onClick: () => {
+        setItems((prev) => {
+          const updated = [...prev];
+          updated.splice(index, 0, itemToDelete);
+          return updated;
+        });
+      },
+    });
+  }
+
+  // Define helper function to restore row
+  function restoreRow(index: number, item: SaleItemDraft) {
+    setItems((prev) => {
+      const updated = [...prev];
+      updated.splice(index, 0, item);
+      return updated;
+    });
   }
 
   function updateItem(index: number, patch: Partial<SaleItemDraft>) {
@@ -209,7 +236,7 @@ export default function SalesPage() {
       />
 
       {/* KHỐI FORM LẬP PHIẾU BÁN HÀNG - Ở TRÊN */}
-      <Card className="shadow-sm border-border/80">
+      <Card className="glass-card hover-elevate shadow-sm">
         <CardContent className="space-y-6 p-6">
           <VoucherSection title="Thông tin chung" description="Chọn khách hàng và ngày lập phiếu" icon={ClipboardList}>
             <div className="grid gap-4 lg:grid-cols-[220px_minmax(260px,1fr)_minmax(320px,1.2fr)] lg:items-end">
@@ -219,11 +246,12 @@ export default function SalesPage() {
               </div>
               <div className="space-y-2">
                 <Label className="text-sm font-semibold text-muted-foreground">{t("common.customer")}</Label>
-                <Select
+                <Combobox
                   value={maKhachHang || ""}
                   onValueChange={setMaKhachHang}
                   options={customers.map((item) => ({ value: item.maKhachHang, label: `${item.maKhachHang} - ${item.tenKhachHang}` }))}
-                  className="h-9 text-sm"
+                  className="h-9"
+                  placeholder="Chọn khách hàng..."
                 />
               </div>
               <ContactPanel
@@ -237,7 +265,7 @@ export default function SalesPage() {
           </VoucherSection>
 
           <VoucherSection title="Chi tiết bán hàng" description="Chọn sản phẩm và số lượng bán theo tồn kho hiện tại" icon={ReceiptText}>
-          <div className="rounded-md border border-border/80 overflow-hidden">
+          <div className="rounded-md border border-border/80 overflow-visible [&_[data-slot=table-container]]:overflow-visible">
             <Table>
               <TableHeader className="bg-muted/30">
                 <TableRow className="hover:bg-transparent">
@@ -260,23 +288,24 @@ export default function SalesPage() {
 
                   return (
                     <Fragment key={item.keyId}>
-                    <TableRow className="hover:bg-accent/15 border-b border-border/60">
+                    <TableRow className="table-row-hover border-b border-border/60">
                       <TableCell className="py-3.5 px-4 text-center font-bold text-sm text-muted-foreground">{index + 1}</TableCell>
                       <TableCell className="py-3.5 px-4">
-                        <Select
+                        <Combobox
                           value={item.maSanPham || ""}
                           onValueChange={(value) => updateItem(index, { maSanPham: value })}
                           options={products.map((productOption) => ({
                             value: productOption.maSanPham,
                             label: `${productOption.maSanPham} - ${productOption.tenSanPham}`,
                           }))}
-                          className="h-9 text-sm"
+                          className="h-9"
+                          placeholder="Chọn sản phẩm..."
                         />
                       </TableCell>
                       <TableCell className="py-3.5 px-4 text-sm font-medium text-muted-foreground">{product?.loaiSanPham?.tenLoaiSanPham ?? "-"}</TableCell>
                       <TableCell className="py-3.5 px-4 text-sm font-medium text-muted-foreground">{formatNumber(product?.tonKho ?? 0)}</TableCell>
                       <TableCell className="py-3.5 px-4">
-                        <div className="flex items-center w-28 h-9 border rounded-lg bg-background overflow-hidden focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/25">
+                        <div className="flex items-center w-28 h-9 border rounded-lg bg-background overflow-hidden focus-within:border-gold focus-within:ring-2 focus-within:ring-gold/25 focus-within:shadow-[0_0_8px_rgba(212,163,89,0.12)]">
                           <button
                             type="button"
                             className="h-full w-8 border-r border-border text-muted-foreground hover:text-foreground hover:bg-muted/50 flex items-center justify-center font-bold text-sm select-none cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
@@ -360,7 +389,7 @@ export default function SalesPage() {
       </Card>
 
       {/* KHỐI LỊCH SỬ PHIẾU BÁN HÀNG - Ở DƯỚI */}
-      <Card className="shadow-sm border-border/80">
+      <Card className="glass-card hover-elevate shadow-sm">
         <TableToolbar
           title={t("salesOrders.historyTitle")}
           description={t("salesOrders.historyDesc")}
@@ -387,7 +416,7 @@ export default function SalesPage() {
                 </TableHeader>
                 <TableBody>
                   {filteredSalesList.map((item, idx) => (
-                    <TableRow key={item.soPhieuBan} className="hover:bg-accent/15 border-b border-border/60">
+                    <TableRow key={item.soPhieuBan} className="table-row-hover border-b border-border/60">
                       <TableCell className="py-3.5 px-4 text-center font-bold text-sm text-muted-foreground">{idx + 1}</TableCell>
                       <TableCell className="py-3.5 px-4 text-sm font-semibold">{item.soPhieuBan}</TableCell>
                       <TableCell className="py-3.5 px-4 text-sm text-muted-foreground">{item.ngayLapPhieuBan}</TableCell>

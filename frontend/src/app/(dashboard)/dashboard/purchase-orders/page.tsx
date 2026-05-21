@@ -7,9 +7,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState, PageHeader, TableToolbar } from "@/components/dashboard/management";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ContactPanel, DetailGrid, DetailModal, LineError, StickySummaryBar, VoucherSection } from "@/components/dashboard/voucher-ui";
+import { Combobox } from "@/components/ui/combobox";
+import { useToastStore } from "@/stores/toast-store";
 import { backendApi } from "@/services/backend-api";
 import type {
   ProductResponse,
@@ -121,7 +122,24 @@ export default function PurchaseOrdersPage() {
   }
 
   function removeRow(index: number) {
+    const itemToDelete = items[index];
+    if (!itemToDelete) return;
+
+    const product = products.find((p) => p.maSanPham === itemToDelete.maSanPham);
+    const productName = product ? product.tenSanPham : itemToDelete.maSanPham || "chưa chọn";
+
     setItems((prev) => prev.filter((_, i) => i !== index));
+
+    useToastStore.getState().success(`Đã xóa dòng sản phẩm: ${productName}`, {
+      label: "Hoàn tác",
+      onClick: () => {
+        setItems((prev) => {
+          const updated = [...prev];
+          updated.splice(index, 0, itemToDelete);
+          return updated;
+        });
+      },
+    });
   }
 
   function updateItem(index: number, patch: Partial<PurchaseItemDraft>) {
@@ -230,7 +248,7 @@ export default function PurchaseOrdersPage() {
       />
 
       {/* KHỐI FORM LẬP PHIẾU MUA HÀNG - Ở TRÊN */}
-      <Card className="shadow-sm border-border/80">
+      <Card className="glass-card hover-elevate shadow-sm">
         <CardContent className="space-y-6 p-6">
           <VoucherSection title="Thông tin chung" description="Chọn nhà cung cấp và ngày lập phiếu" icon={ClipboardList}>
             <div className="grid gap-4 lg:grid-cols-[220px_minmax(260px,1fr)_minmax(320px,1.2fr)] lg:items-end">
@@ -240,11 +258,12 @@ export default function PurchaseOrdersPage() {
               </div>
               <div className="space-y-2">
                 <Label className="text-sm font-semibold text-muted-foreground">{t("common.supplier")}</Label>
-                <Select
+                <Combobox
                   value={maNhaCungCap || ""}
                   onValueChange={setMaNhaCungCap}
                   options={suppliers.map((item) => ({ value: item.maNhaCungCap, label: `${item.maNhaCungCap} - ${item.tenNhaCungCap}` }))}
-                  className="h-9 text-sm"
+                  className="h-9"
+                  placeholder="Chọn nhà cung cấp..."
                 />
               </div>
               <ContactPanel
@@ -258,7 +277,7 @@ export default function PurchaseOrdersPage() {
           </VoucherSection>
 
           <VoucherSection title="Chi tiết sản phẩm" description="Chọn sản phẩm, đơn vị và số lượng nhập kho" icon={ReceiptText}>
-          <div className="rounded-md border border-border/80 overflow-hidden">
+          <div className="rounded-md border border-border/80 overflow-visible [&_[data-slot=table-container]]:overflow-visible">
             <Table>
               <TableHeader className="bg-muted/30">
                 <TableRow className="hover:bg-transparent">
@@ -281,14 +300,18 @@ export default function PurchaseOrdersPage() {
 
                   return (
                     <Fragment key={item.keyId}>
-                    <TableRow className="hover:bg-accent/15 border-b border-border/60">
+                    <TableRow className="table-row-hover border-b border-border/60">
                       <TableCell className="py-3.5 px-4 text-center font-bold text-sm text-muted-foreground">{index + 1}</TableCell>
                       <TableCell className="py-3.5 px-4">
-                        <Select
+                        <Combobox
                           value={item.maSanPham || ""}
                           onValueChange={(value) => onProductChange(index, value)}
-                          options={products.map((productOption) => ({ value: productOption.maSanPham, label: `${productOption.maSanPham} - ${productOption.tenSanPham}` }))}
-                          className="h-9 text-sm"
+                          options={products.map((productOption) => ({
+                            value: productOption.maSanPham,
+                            label: `${productOption.maSanPham} - ${productOption.tenSanPham}`,
+                          }))}
+                          className="h-9"
+                          placeholder="Chọn sản phẩm..."
                         />
                       </TableCell>
                       <TableCell className="py-3.5 px-4 text-sm font-medium text-muted-foreground">
@@ -298,7 +321,7 @@ export default function PurchaseOrdersPage() {
                         {units.find((u) => u.maDonViTinh === item.maDonViTinh)?.tenDonViTinh ?? "-"}
                       </TableCell>
                       <TableCell className="py-3.5 px-4">
-                        <div className="flex items-center w-28 h-9 border rounded-lg bg-background overflow-hidden focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/25">
+                        <div className="flex items-center w-28 h-9 border rounded-lg bg-background overflow-hidden focus-within:border-gold focus-within:ring-2 focus-within:ring-gold/25 focus-within:shadow-[0_0_8px_rgba(212,163,89,0.12)]">
                           <button
                             type="button"
                             className="h-full w-8 border-r border-border text-muted-foreground hover:text-foreground hover:bg-muted/50 flex items-center justify-center font-bold text-sm select-none cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
@@ -396,7 +419,7 @@ export default function PurchaseOrdersPage() {
       </Card>
 
       {latestCreated && (
-        <Card className="border border-border/80 shadow-sm bg-muted/10">
+        <Card className="glass-card border border-border/80 shadow-sm bg-muted/10">
           <CardContent className="space-y-3 p-6">
             <p className="font-semibold text-sm">{t("purchaseOrders.justCreated")}: <span className="font-bold text-indigo-600 dark:text-indigo-400">{latestCreated.soPhieuMua}</span></p>
             <p className="text-sm text-muted-foreground">{t("common.total")}: <span className="font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(latestCreated.tongTien)}</span></p>
@@ -420,7 +443,7 @@ export default function PurchaseOrdersPage() {
       )}
 
       {/* KHỐI LỊCH SỬ PHIẾU MUA HÀNG - Ở DƯỚI */}
-      <Card className="shadow-sm border-border/80">
+      <Card className="glass-card hover-elevate shadow-sm">
         <TableToolbar
           title={t("purchaseOrders.historyTitle")}
           description={t("purchaseOrders.historyDesc")}
@@ -447,7 +470,7 @@ export default function PurchaseOrdersPage() {
                 </TableHeader>
                 <TableBody>
                   {filteredPurchaseList.map((item, idx) => (
-                    <TableRow key={item.soPhieuMua} className="hover:bg-accent/15 border-b border-border/60">
+                    <TableRow key={item.soPhieuMua} className="table-row-hover border-b border-border/60">
                       <TableCell className="py-3.5 px-4 text-center font-bold text-sm text-muted-foreground">{idx + 1}</TableCell>
                       <TableCell className="py-3.5 px-4 text-sm font-semibold">{item.soPhieuMua}</TableCell>
                       <TableCell className="py-3.5 px-4 text-sm text-muted-foreground">{item.ngayLapPhieuMua}</TableCell>

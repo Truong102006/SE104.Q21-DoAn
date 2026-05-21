@@ -10,6 +10,8 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ContactPanel, DetailGrid, DetailModal, LineError, StickySummaryBar, VoucherSection } from "@/components/dashboard/voucher-ui";
+import { Combobox } from "@/components/ui/combobox";
+import { useToastStore } from "@/stores/toast-store";
 import { backendApi } from "@/services/backend-api";
 import type {
   CustomerResponse,
@@ -121,6 +123,7 @@ export default function ServiceOrdersPage() {
     }
   }
 
+
   useEffect(() => {
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -131,7 +134,24 @@ export default function ServiceOrdersPage() {
   }
 
   function removeRow(index: number) {
+    const itemToDelete = items[index];
+    if (!itemToDelete) return;
+
+    const serviceType = serviceTypes.find((t) => t.maLoaiDichVu === itemToDelete.maLoaiDichVu);
+    const serviceName = serviceType ? serviceType.tenLoaiDichVu : itemToDelete.maLoaiDichVu || "chưa chọn";
+
     setItems((prev) => prev.filter((_, i) => i !== index));
+
+    useToastStore.getState().success(`Đã xóa dòng dịch vụ: ${serviceName}`, {
+      label: "Hoàn tác",
+      onClick: () => {
+        setItems((prev) => {
+          const updated = [...prev];
+          updated.splice(index, 0, itemToDelete);
+          return updated;
+        });
+      },
+    });
   }
 
   function updateItem(index: number, patch: Partial<ServiceItemDraft>) {
@@ -304,11 +324,12 @@ export default function ServiceOrdersPage() {
               </div>
               <div className="space-y-2">
                 <Label className="text-sm font-semibold text-muted-foreground">{t("common.customer")}</Label>
-                <Select
+                <Combobox
                   value={maKhachHang || ""}
                   onValueChange={setMaKhachHang}
                   options={customers.map((item) => ({ value: item.maKhachHang, label: `${item.maKhachHang} - ${item.tenKhachHang}` }))}
-                  className="h-9 text-sm"
+                  className="h-9"
+                  placeholder="Chọn khách hàng..."
                 />
               </div>
               <ContactPanel
@@ -322,7 +343,7 @@ export default function ServiceOrdersPage() {
           </VoucherSection>
 
           <VoucherSection title="Chi tiết dịch vụ" description="Nhập từng dòng dịch vụ, số lượng và ngày giao dự kiến" icon={ReceiptText}>
-          <div className="rounded-md border border-border/80 overflow-hidden">
+          <div className="rounded-md border border-border/80 overflow-visible [&_[data-slot=table-container]]:overflow-visible">
             <Table>
               <TableHeader className="bg-muted/30">
                 <TableRow className="hover:bg-transparent">
@@ -350,14 +371,15 @@ export default function ServiceOrdersPage() {
                     <TableRow className="hover:bg-accent/15 border-b border-border/60">
                       <TableCell className="py-3.5 px-4 text-center font-bold text-sm text-muted-foreground">{index + 1}</TableCell>
                       <TableCell className="py-3.5 px-4">
-                        <Select
+                        <Combobox
                           value={item.maLoaiDichVu || ""}
                           onValueChange={(value) => onServiceTypeChange(index, value)}
                           options={serviceTypes.map((option) => ({
                             value: option.maLoaiDichVu,
                             label: `${option.maLoaiDichVu} - ${option.tenLoaiDichVu}`,
                           }))}
-                          className="h-9 text-sm"
+                          className="h-9"
+                          placeholder="Chọn loại dịch vụ..."
                         />
                       </TableCell>
                       <TableCell className="py-3.5 px-4 text-sm font-medium text-muted-foreground">{formatCurrency(donGiaDichVu)}</TableCell>

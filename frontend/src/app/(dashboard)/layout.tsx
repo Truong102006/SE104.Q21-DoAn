@@ -7,6 +7,7 @@ import { fetchCurrentUser } from "@/services/auth-service";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import { Loader2 } from "lucide-react";
+import { ToastContainer } from "@/components/ui/toast-container";
 
 export default function DashboardLayout({
   children,
@@ -74,6 +75,7 @@ export default function DashboardLayout({
           <div className="w-full">{children}</div>
         </main>
       </div>
+      <ToastContainer />
     </div>
   );
 }

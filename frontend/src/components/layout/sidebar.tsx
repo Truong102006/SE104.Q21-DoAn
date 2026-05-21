@@ -101,7 +101,6 @@ export function Sidebar({ mobile = false }: SidebarProps) {
   const [isMounted, setIsMounted] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Record<number, boolean>>({});
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
-  const [isHovered, setIsHovered] = useState(false);
 
   useEffect(() => setIsMounted(true), []);
 
@@ -216,95 +215,118 @@ export function Sidebar({ mobile = false }: SidebarProps) {
   }
 
   return (
-    <aside
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      className={cn(
-        "fixed inset-y-0 left-0 z-40 flex flex-col border-r border-sidebar-border bg-sidebar py-4 transition-all duration-300 ease-in-out shadow-lg",
-        isHovered ? "w-60 px-4" : "w-[76px] px-3 items-center"
-      )}
-    >
+    <aside className="fixed inset-y-0 left-0 z-40 flex flex-col border-r border-sidebar-border bg-sidebar py-4 shadow-lg w-[76px] px-3 items-center">
       {/* Branding / Logo */}
-      <div className={cn("mb-6 flex h-12 items-center gap-3 px-1 transition-all duration-300", isHovered ? "w-full justify-start" : "w-12 justify-center")}>
-        <Link href="/dashboard" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-sidebar-border bg-sidebar-accent/40 text-gold shadow-sm transition-colors hover:bg-sidebar-accent">
+      <div className="mb-6 flex h-12 w-12 shrink-0 items-center justify-center">
+        <Link href="/dashboard" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-sidebar-border bg-sidebar-accent/40 text-gold shadow-sm transition-colors hover:bg-sidebar-accent" title="Gold Store">
           <Store className="h-6 w-6" />
         </Link>
-        <div className={cn("transition-all duration-200 whitespace-nowrap overflow-hidden", isHovered ? "opacity-100 w-auto translate-x-0" : "opacity-0 w-0 -translate-x-2")}>
-          <p className="text-sm font-bold text-sidebar-foreground">Gold Store</p>
-          <p className="text-[10px] text-sidebar-foreground/55">Quản lý cửa hàng</p>
-        </div>
       </div>
 
       {/* Navigation list */}
-      <nav className="flex w-full flex-1 flex-col gap-3 py-1 overflow-y-auto app-scrollbar">
-        {filteredSections.map((section, sectionIdx) => {
+      <nav className="flex w-full flex-1 flex-col gap-3 py-1 items-center">
+        {filteredSections.map((section, idx) => {
           const SectionIcon = section.icon;
           const active = isSectionActive(section);
+          const hasSingleItem = section.items.length === 1;
+          const singleItemHref = hasSingleItem ? section.items[0].href : null;
 
-          if (!isHovered) {
-            // Collapsed state: Only show the 5 main section-level icons
-            return (
-              <div
-                key={section.key}
-                className={cn(
-                  "h-11 w-11 justify-center mx-auto flex items-center rounded-xl transition-all duration-200 border border-transparent",
-                  active
-                    ? "bg-sidebar-accent text-sidebar-foreground border-sidebar-border/60 shadow-sm"
-                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
-                )}
-                title={t(section.key)}
-              >
-                <SectionIcon className={cn("h-5 w-5 shrink-0 transition-colors", active ? "text-gold" : "")} />
-              </div>
-            );
-          }
+          const categoryIcon = (
+            <div
+              className={cn(
+                "h-11 w-11 justify-center flex items-center rounded-xl transition-all duration-200 border border-transparent cursor-pointer",
+                active
+                  ? "bg-sidebar-accent text-sidebar-foreground border-sidebar-border/60 shadow-sm"
+                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+              )}
+            >
+              <SectionIcon className={cn("h-5 w-5 shrink-0 transition-colors", active ? "text-gold" : "")} />
+            </div>
+          );
 
-          // Expanded state: Show the section title and all sub-items
           return (
-            <div key={section.key} className="w-full flex flex-col gap-1">
-              <p className="px-3 text-[10px] font-bold uppercase tracking-wider text-sidebar-foreground/45 mt-2 mb-1 transition-opacity duration-300 whitespace-nowrap overflow-hidden">
-                {t(section.key)}
-              </p>
+            <div
+              key={section.key}
+              className="relative mx-auto my-0.5"
+              onMouseEnter={() => !hasSingleItem && setHoveredIdx(idx)}
+              onMouseLeave={() => !hasSingleItem && setHoveredIdx(null)}
+            >
+              {/* Category Icon */}
+              {hasSingleItem && singleItemHref ? (
+                <Link href={singleItemHref}>
+                  {categoryIcon}
+                </Link>
+              ) : (
+                categoryIcon
+              )}
 
-              {section.items.map((item) => {
-                const activeItem = isItemActive(item);
-                const ItemIcon = item.icon;
+              {/* Floating Sub-menu (Tooltip style) */}
+              {!hasSingleItem && (
+                <div
+                  className={cn(
+                    "absolute left-[54px] top-0 z-50 w-56 rounded-xl border border-sidebar-border bg-sidebar p-2 shadow-2xl transition-all duration-200 ease-out flex flex-col gap-1 before:absolute before:-left-3 before:top-0 before:h-full before:w-3 before:content-['']",
+                    hoveredIdx === idx
+                      ? "visible opacity-100 translate-x-0 pointer-events-auto"
+                      : "invisible opacity-0 translate-x-2 pointer-events-none"
+                  )}
+                >
+                  {/* Arrow */}
+                  <div className="absolute top-[18px] -left-1 h-2 w-2 rotate-45 border-b border-l border-sidebar-border bg-sidebar" />
 
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={cn(
-                      "flex items-center gap-3 rounded-xl transition-all duration-200 px-3 py-2.5 h-10 w-full justify-start border border-transparent",
-                      activeItem
-                        ? "bg-sidebar-accent text-sidebar-foreground border-sidebar-border/60 shadow-sm"
-                        : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
-                    )}
-                  >
-                    <ItemIcon className={cn("h-5 w-5 shrink-0 transition-colors", activeItem ? "text-gold" : "")} />
-                    <span className="text-sm font-medium whitespace-nowrap overflow-hidden transition-opacity duration-300">
-                      {t(item.key)}
-                    </span>
-                  </Link>
-                );
-              })}
+                  {/* Section Header inside Tooltip */}
+                  <div className="px-3 py-1.5 border-b border-sidebar-border/50 mb-1 relative z-10">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-sidebar-foreground/45">
+                      {t(section.key)}
+                    </p>
+                  </div>
+
+                  {/* Sub-items list */}
+                  <div className="flex flex-col gap-0.5 relative z-10">
+                    {section.items.map((item) => {
+                      const activeItem = isItemActive(item);
+                      const ItemIcon = item.icon;
+
+                      return (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          onClick={() => setHoveredIdx(null)}
+                          className={cn(
+                            "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150 border border-transparent",
+                            activeItem
+                              ? "bg-sidebar-accent text-sidebar-foreground border-sidebar-border/50 shadow-sm"
+                              : "text-sidebar-foreground/70 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground"
+                          )}
+                        >
+                          <ItemIcon className={cn("h-4 w-4 shrink-0 transition-colors", activeItem ? "text-gold" : "")} />
+                          <span className="truncate">{t(item.key)}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           );
         })}
       </nav>
 
       {/* Footer / Info */}
-      <div className={cn("mt-auto flex items-center justify-center transition-all duration-300 border-t border-sidebar-border/50 pt-4", isHovered ? "w-full px-1" : "w-11 mx-auto")}>
-        <div className="flex h-10 w-full items-center gap-3">
+      <div className="mt-auto flex items-center justify-center border-t border-sidebar-border/50 pt-4 w-11 mx-auto">
+        <div className="flex h-10 w-full items-center justify-center relative group cursor-pointer">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-sidebar-border bg-sidebar-accent/30 text-[10px] font-bold tracking-widest text-sidebar-foreground/45">
             GS
           </div>
-          {isHovered && (
-            <div className="whitespace-nowrap overflow-hidden transition-all duration-200">
+
+          {/* Floating Footer info */}
+          <div className="absolute left-[54px] top-1/2 -translate-y-1/2 invisible opacity-0 translate-x-2 group-hover:visible group-hover:opacity-100 group-hover:translate-x-0 z-50 w-32 rounded-lg border border-sidebar-border bg-sidebar p-2 shadow-2xl transition-all duration-200 ease-out whitespace-nowrap">
+            {/* Arrow */}
+            <div className="absolute top-1/2 -translate-y-1/2 -left-1 h-2 w-2 rotate-45 border-b border-l border-sidebar-border bg-sidebar" />
+            <div className="relative z-10">
               <p className="text-xs font-semibold text-sidebar-foreground">Gold Store</p>
               <p className="text-[9px] text-sidebar-foreground/40">v1.2.0</p>
             </div>
-          )}
+          </div>
         </div>
       </div>
     </aside>
