@@ -58,7 +58,7 @@ function MoneyInput({
         disabled={disabled}
         readOnly={readOnly}
         autoFocus={autoFocus}
-        className={cn("w-full pr-8 text-right font-medium tabular-nums", inputClassName)}
+        className={cn("w-full pr-9 text-right font-medium tabular-nums", inputClassName)}
       />
       <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
         đ

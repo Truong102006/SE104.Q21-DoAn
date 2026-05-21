@@ -41,3 +41,14 @@ export function toPositiveInt(value: string): number {
 export function isValidPhone10Digits(value: string): boolean {
   return /^\d{10}$/.test(value.trim());
 }
+
+export function formatVNCurrencyInput(value: string | number | undefined | null): string {
+  if (value === undefined || value === null) return "";
+  const clean = String(value).replace(/\D/g, "");
+  if (!clean) return "";
+  return Number(clean).toLocaleString("vi-VN");
+}
+
+export function parseVNCurrencyInput(value: string): string {
+  return value.replace(/\D/g, "");
+}

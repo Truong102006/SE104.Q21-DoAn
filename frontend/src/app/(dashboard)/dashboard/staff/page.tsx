@@ -187,14 +187,16 @@ export default function StaffPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-12">{t("common.stt")}</TableHead>
                   <TableHead>{t("staff.username")}</TableHead>
                   <TableHead>{t("staff.groupCode")}</TableHead>
                   <TableHead className="text-right">{t("common.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((item) => (
+                {filtered.map((item, index) => (
                   <TableRow key={item.tenDangNhap}>
+                    <TableCell className="font-semibold text-muted-foreground">{index + 1}</TableCell>
                     <TableCell>{item.tenDangNhap}</TableCell>
                     <TableCell>{item.maNhom}</TableCell>
                     <TableCell>

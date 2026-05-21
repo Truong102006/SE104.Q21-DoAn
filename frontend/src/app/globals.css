@@ -169,6 +169,17 @@
     color: oklch(0.23 0.03 258);
   }
 
+  /* Hide system default spin-buttons (up/down arrows) on input type="number" */
+  input::-webkit-outer-spin-button,
+  input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
 }
 
 @layer utilities {
@@ -219,5 +230,84 @@
   .desktop-static *::after {
     animation: none !important;
     transition: none !important;
+  }
+
+  /* Custom scrollbars with Gold accents */
+  .app-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: oklch(0.71 0.12 74 / 45%) transparent !important;
+  }
+
+  .app-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .app-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .app-scrollbar::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: oklch(0.71 0.12 74 / 35%) !important;
+  }
+
+  .app-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: oklch(0.71 0.12 74 / 65%) !important;
+  }
+
+  /* Premium Selection highlight */
+  ::selection {
+    background: oklch(0.71 0.12 74 / 20%) !important;
+    color: inherit !important;
+  }
+
+  /* Glassmorphic luxury card */
+  .glass-card {
+    background: oklch(1 0 0 / 78%) !important;
+    backdrop-filter: blur(12px) !important;
+    border: 1px solid oklch(1 0 0 / 12%) !important;
+    box-shadow: 0 8px 32px 0 oklch(0.27 0.03 258 / 5%) !important;
+  }
+  .dark .glass-card {
+    background: oklch(0.22 0.02 258 / 78%) !important;
+    backdrop-filter: blur(12px) !important;
+    border: 1px solid oklch(1 0 0 / 8%) !important;
+    box-shadow: 0 8px 32px 0 oklch(0 0 0 / 25%) !important;
+  }
+
+  /* Hover Elevate micro-interaction */
+  .hover-elevate {
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  }
+  .hover-elevate:hover {
+    transform: translateY(-2px) scale(1.005) !important;
+    box-shadow: 0 12px 20px -8px oklch(0.71 0.12 74 / 18%), 0 4px 12px oklch(0 0 0 / 4%) !important;
+  }
+
+  /* Table row smooth hover highlight */
+  .table-row-hover {
+    transition: all 0.15s ease-in-out;
+  }
+  .table-row-hover:hover {
+    background-color: oklch(0.71 0.12 74 / 6%) !important;
+  }
+}
+
+@layer base {
+  /* Style all browser scrollbars for high fidelity */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: oklch(0.71 0.12 74 / 22%);
+    border-radius: 999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: oklch(0.71 0.12 74 / 45%);
   }
 }

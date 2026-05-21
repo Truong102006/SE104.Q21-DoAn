@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
@@ -257,6 +257,7 @@ export default function ProductsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-12">{t("common.stt")}</TableHead>
                   <TableHead>{t("products.productCode")}</TableHead>
                   <TableHead>{t("products.name")}</TableHead>
                   <TableHead>{t("products.productType")}</TableHead>
@@ -267,8 +268,9 @@ export default function ProductsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {items.map((item) => (
+                {items.map((item, index) => (
                   <TableRow key={item.maSanPham}>
+                    <TableCell className="font-semibold text-muted-foreground">{page * PAGE_SIZE + index + 1}</TableCell>
                     <TableCell>{item.maSanPham}</TableCell>
                     <TableCell>{item.tenSanPham}</TableCell>
                     <TableCell>{item.loaiSanPham?.tenLoaiSanPham ?? item.maLoaiSanPham}</TableCell>
