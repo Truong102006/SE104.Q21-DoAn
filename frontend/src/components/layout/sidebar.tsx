@@ -237,47 +237,60 @@ export function Sidebar({ mobile = false }: SidebarProps) {
 
       {/* Navigation list */}
       <nav className="flex w-full flex-1 flex-col gap-3 py-1 overflow-y-auto app-scrollbar">
-        {filteredSections.map((section, sectionIdx) => (
-          <div key={section.key} className="w-full flex flex-col gap-1">
-            {/* Section Header */}
-            {isHovered ? (
+        {filteredSections.map((section, sectionIdx) => {
+          const SectionIcon = section.icon;
+          const active = isSectionActive(section);
+
+          if (!isHovered) {
+            // Collapsed state: Only show the 5 main section-level icons
+            return (
+              <div
+                key={section.key}
+                className={cn(
+                  "h-11 w-11 justify-center mx-auto flex items-center rounded-xl transition-all duration-200 border border-transparent",
+                  active
+                    ? "bg-sidebar-accent text-sidebar-foreground border-sidebar-border/60 shadow-sm"
+                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                )}
+                title={t(section.key)}
+              >
+                <SectionIcon className={cn("h-5 w-5 shrink-0 transition-colors", active ? "text-gold" : "")} />
+              </div>
+            );
+          }
+
+          // Expanded state: Show the section title and all sub-items
+          return (
+            <div key={section.key} className="w-full flex flex-col gap-1">
               <p className="px-3 text-[10px] font-bold uppercase tracking-wider text-sidebar-foreground/45 mt-2 mb-1 transition-opacity duration-300 whitespace-nowrap overflow-hidden">
                 {t(section.key)}
               </p>
-            ) : (
-              sectionIdx > 0 && (
-                <div className="mx-auto my-1 h-[1px] w-8 bg-sidebar-border/60 transition-all" />
-              )
-            )}
 
-            {section.items.map((item) => {
-              const activeItem = isItemActive(item);
-              const ItemIcon = item.icon;
+              {section.items.map((item) => {
+                const activeItem = isItemActive(item);
+                const ItemIcon = item.icon;
 
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    "flex items-center gap-3 rounded-xl transition-all duration-200",
-                    isHovered ? "px-3 py-2.5 h-10 w-full justify-start" : "h-11 w-11 justify-center mx-auto",
-                    activeItem 
-                      ? "bg-sidebar-accent text-sidebar-foreground border border-sidebar-border/60 shadow-sm" 
-                      : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground border border-transparent"
-                  )}
-                  title={!isHovered ? t(item.key) : undefined}
-                >
-                  <ItemIcon className={cn("h-5 w-5 shrink-0 transition-colors", activeItem ? "text-gold" : "")} />
-                  {isHovered && (
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={cn(
+                      "flex items-center gap-3 rounded-xl transition-all duration-200 px-3 py-2.5 h-10 w-full justify-start border border-transparent",
+                      activeItem
+                        ? "bg-sidebar-accent text-sidebar-foreground border-sidebar-border/60 shadow-sm"
+                        : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                    )}
+                  >
+                    <ItemIcon className={cn("h-5 w-5 shrink-0 transition-colors", activeItem ? "text-gold" : "")} />
                     <span className="text-sm font-medium whitespace-nowrap overflow-hidden transition-opacity duration-300">
                       {t(item.key)}
                     </span>
-                  )}
-                </Link>
-              );
-            })}
-          </div>
-        ))}
+                  </Link>
+                );
+              })}
+            </div>
+          );
+        })}
       </nav>
 
       {/* Footer / Info */}
