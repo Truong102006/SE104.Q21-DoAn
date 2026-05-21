@@ -11,19 +11,19 @@ import { Sidebar } from "./sidebar";
 
 const PAGE_TITLES: Record<string, string> = {
   "/dashboard": "Dashboard",
-  "/dashboard/suppliers": "Nha cung cap",
-  "/dashboard/customers": "Khach hang",
-  "/dashboard/units": "Don vi tinh",
-  "/dashboard/product-types": "Loai san pham",
-  "/dashboard/service-types": "Loai dich vu",
-  "/dashboard/products": "San pham",
-  "/dashboard/purchase-orders": "Lap phieu mua",
-  "/dashboard/orders": "Lap phieu ban",
-  "/dashboard/service-orders": "Lap phieu dich vu",
-  "/dashboard/service-voucher-lookup": "Tra cuu phieu dich vu",
-  "/dashboard/reports": "Bao cao",
-  "/dashboard/settings": "Thay doi quy dinh",
-  "/dashboard/staff": "Quan ly tai khoan",
+  "/dashboard/suppliers": "Nh\u00e0 cung c\u1ea5p",
+  "/dashboard/customers": "Kh\u00e1ch h\u00e0ng",
+  "/dashboard/units": "\u0110\u01a1n v\u1ecb t\u00ednh",
+  "/dashboard/product-types": "Lo\u1ea1i s\u1ea3n ph\u1ea9m",
+  "/dashboard/service-types": "Lo\u1ea1i d\u1ecbch v\u1ee5",
+  "/dashboard/products": "S\u1ea3n ph\u1ea9m",
+  "/dashboard/purchase-orders": "L\u1eadp phi\u1ebfu mua",
+  "/dashboard/orders": "L\u1eadp phi\u1ebfu b\u00e1n",
+  "/dashboard/service-orders": "L\u1eadp phi\u1ebfu d\u1ecbch v\u1ee5",
+  "/dashboard/service-voucher-lookup": "Tra c\u1ee9u phi\u1ebfu d\u1ecbch v\u1ee5",
+  "/dashboard/reports": "B\u00e1o c\u00e1o",
+  "/dashboard/settings": "Thay \u0111\u1ed5i quy \u0111\u1ecbnh",
+  "/dashboard/staff": "Qu\u1ea3n l\u00fd t\u00e0i kho\u1ea3n",
 };
 
 function getPageTitle(pathname: string): string {

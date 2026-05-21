@@ -1,0 +1,1046 @@
+﻿[
+    {
+        "Name":  "Health check",
+        "Method":  "GET",
+        "Path":  "/api/v1/health",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "Auth login admin",
+        "Method":  "POST",
+        "Path":  "/api/auth/login",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "Auth login staff",
+        "Method":  "POST",
+        "Path":  "/api/auth/login",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "Auth me admin",
+        "Method":  "GET",
+        "Path":  "/api/auth/me",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "Auth logout admin",
+        "Method":  "POST",
+        "Path":  "/api/auth/logout",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "Auth me unauthorized",
+        "Method":  "GET",
+        "Path":  "/api/auth/me",
+        "Status":  401,
+        "Expected":  "401",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "Staff access admin endpoint",
+        "Method":  "GET",
+        "Path":  "/api/v1/tham-so",
+        "Status":  403,
+        "Expected":  "403",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "ChucNang list",
+        "Method":  "GET",
+        "Path":  "/api/v1/chuc-nang",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "ChucNang create",
+        "Method":  "POST",
+        "Path":  "/api/v1/chuc-nang",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "ChucNang get by id",
+        "Method":  "GET",
+        "Path":  "/api/v1/chuc-nang/CN001",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "ChucNang update",
+        "Method":  "PUT",
+        "Path":  "/api/v1/chuc-nang/CN001",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "NhomNguoiDung list",
+        "Method":  "GET",
+        "Path":  "/api/v1/nhom-nguoi-dung",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "NhomNguoiDung create",
+        "Method":  "POST",
+        "Path":  "/api/v1/nhom-nguoi-dung",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "NhomNguoiDung get by id",
+        "Method":  "GET",
+        "Path":  "/api/v1/nhom-nguoi-dung/NND001",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "NhomNguoiDung update",
+        "Method":  "PUT",
+        "Path":  "/api/v1/nhom-nguoi-dung/NND001",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "PhanQuyen list",
+        "Method":  "GET",
+        "Path":  "/api/v1/phan-quyen",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "PhanQuyen create",
+        "Method":  "POST",
+        "Path":  "/api/v1/phan-quyen",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "PhanQuyen get by id",
+        "Method":  "GET",
+        "Path":  "/api/v1/phan-quyen/NND001/CN001",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "NguoiDung list",
+        "Method":  "GET",
+        "Path":  "/api/v1/nguoi-dung",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "NguoiDung create",
+        "Method":  "POST",
+        "Path":  "/api/v1/nguoi-dung",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "NguoiDung get by id",
+        "Method":  "GET",
+        "Path":  "/api/v1/nguoi-dung/user_test_1779289278",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "NguoiDung update",
+        "Method":  "PUT",
+        "Path":  "/api/v1/nguoi-dung/user_test_1779289278",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "ThamSo list",
+        "Method":  "GET",
+        "Path":  "/api/v1/tham-so",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "ThamSo create",
+        "Method":  "POST",
+        "Path":  "/api/v1/tham-so",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "ThamSo get by id",
+        "Method":  "GET",
+        "Path":  "/api/v1/tham-so/TS001",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "ThamSo update",
+        "Method":  "PUT",
+        "Path":  "/api/v1/tham-so/TS001",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "BaoCaoTonKho list",
+        "Method":  "GET",
+        "Path":  "/api/v1/bao-cao-ton-kho",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "BaoCaoTonKho create",
+        "Method":  "POST",
+        "Path":  "/api/v1/bao-cao-ton-kho",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "BaoCaoTonKho get by id",
+        "Method":  "GET",
+        "Path":  "/api/v1/bao-cao-ton-kho/BCTK001",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "BaoCaoTonKho update",
+        "Method":  "PUT",
+        "Path":  "/api/v1/bao-cao-ton-kho/BCTK001",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "BaoCaoDoanhThuSP list",
+        "Method":  "GET",
+        "Path":  "/api/v1/bao-cao-doanh-thu-san-pham",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "BaoCaoDoanhThuSP create",
+        "Method":  "POST",
+        "Path":  "/api/v1/bao-cao-doanh-thu-san-pham",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "BaoCaoDoanhThuSP get by id",
+        "Method":  "GET",
+        "Path":  "/api/v1/bao-cao-doanh-thu-san-pham/BCSP001",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "BaoCaoDoanhThuSP update",
+        "Method":  "PUT",
+        "Path":  "/api/v1/bao-cao-doanh-thu-san-pham/BCSP001",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "BaoCaoDoanhThuDV list",
+        "Method":  "GET",
+        "Path":  "/api/v1/bao-cao-doanh-thu-dich-vu",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "BaoCaoDoanhThuDV create",
+        "Method":  "POST",
+        "Path":  "/api/v1/bao-cao-doanh-thu-dich-vu",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "BaoCaoDoanhThuDV get by id",
+        "Method":  "GET",
+        "Path":  "/api/v1/bao-cao-doanh-thu-dich-vu/BCDV001",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "BaoCaoDoanhThuDV update",
+        "Method":  "PUT",
+        "Path":  "/api/v1/bao-cao-doanh-thu-dich-vu/BCDV001",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "Units list new",
+        "Method":  "GET",
+        "Path":  "/api/units",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "Units list legacy",
+        "Method":  "GET",
+        "Path":  "/api/v1/don-vi-tinh",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "Units create main",
+        "Method":  "POST",
+        "Path":  "/api/units",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "Units get by id",
+        "Method":  "GET",
+        "Path":  "/api/units/DVT001",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "Units get by id legacy",
+        "Method":  "GET",
+        "Path":  "/api/v1/don-vi-tinh/DVT001",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "Units update",
+        "Method":  "PUT",
+        "Path":  "/api/units/DVT001",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "Units create delete",
+        "Method":  "POST",
+        "Path":  "/api/units",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "Units delete",
+        "Method":  "DELETE",
+        "Path":  "/api/units/DVT002",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "ProductTypes list new",
+        "Method":  "GET",
+        "Path":  "/api/product-types",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "ProductTypes list legacy",
+        "Method":  "GET",
+        "Path":  "/api/v1/loai-san-pham",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "ProductTypes create main",
+        "Method":  "POST",
+        "Path":  "/api/product-types",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "ProductTypes get by id",
+        "Method":  "GET",
+        "Path":  "/api/product-types/LSP001",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "ProductTypes update",
+        "Method":  "PUT",
+        "Path":  "/api/product-types/LSP001",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "ProductTypes create delete",
+        "Method":  "POST",
+        "Path":  "/api/product-types",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "ProductTypes delete",
+        "Method":  "DELETE",
+        "Path":  "/api/product-types/LSP002",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "ServiceTypes list new",
+        "Method":  "GET",
+        "Path":  "/api/service-types",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "ServiceTypes list legacy",
+        "Method":  "GET",
+        "Path":  "/api/v1/loai-dich-vu",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "ServiceTypes create main",
+        "Method":  "POST",
+        "Path":  "/api/service-types",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "ServiceTypes create main 2",
+        "Method":  "POST",
+        "Path":  "/api/service-types",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "ServiceTypes get by id",
+        "Method":  "GET",
+        "Path":  "/api/service-types/DV001",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "ServiceTypes update",
+        "Method":  "PUT",
+        "Path":  "/api/service-types/DV001",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "ServiceTypes create delete",
+        "Method":  "POST",
+        "Path":  "/api/service-types",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "ServiceTypes delete",
+        "Method":  "DELETE",
+        "Path":  "/api/service-types/DV003",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "Suppliers list new",
+        "Method":  "GET",
+        "Path":  "/api/suppliers",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "Suppliers list legacy",
+        "Method":  "GET",
+        "Path":  "/api/v1/nha-cung-cap",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "Suppliers create main",
+        "Method":  "POST",
+        "Path":  "/api/suppliers",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "Suppliers get by id",
+        "Method":  "GET",
+        "Path":  "/api/suppliers/NCC001",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "Suppliers get by id legacy",
+        "Method":  "GET",
+        "Path":  "/api/v1/nha-cung-cap/NCC001",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "Suppliers update",
+        "Method":  "PUT",
+        "Path":  "/api/suppliers/NCC001",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "Suppliers create delete",
+        "Method":  "POST",
+        "Path":  "/api/suppliers",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "Suppliers delete",
+        "Method":  "DELETE",
+        "Path":  "/api/suppliers/NCC002",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "Customers list new",
+        "Method":  "GET",
+        "Path":  "/api/customers",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "Customers list legacy",
+        "Method":  "GET",
+        "Path":  "/api/v1/khach-hang",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "Customers create main",
+        "Method":  "POST",
+        "Path":  "/api/customers",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "Customers get by id",
+        "Method":  "GET",
+        "Path":  "/api/customers/KH001",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "Customers get by id legacy",
+        "Method":  "GET",
+        "Path":  "/api/v1/khach-hang/KH001",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "Customers update",
+        "Method":  "PUT",
+        "Path":  "/api/customers/KH001",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "Customers create delete",
+        "Method":  "POST",
+        "Path":  "/api/customers",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "Customers delete",
+        "Method":  "DELETE",
+        "Path":  "/api/customers/KH002",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "Products list new",
+        "Method":  "GET",
+        "Path":  "/api/products",
+        "Status":  500,
+        "Expected":  "200",
+        "Pass":  false,
+        "Note":  ""
+    },
+    {
+        "Name":  "Products list legacy",
+        "Method":  "GET",
+        "Path":  "/api/v1/san-pham",
+        "Status":  500,
+        "Expected":  "200",
+        "Pass":  false,
+        "Note":  ""
+    },
+    {
+        "Name":  "Products create main",
+        "Method":  "POST",
+        "Path":  "/api/products",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "Products get by id",
+        "Method":  "GET",
+        "Path":  "/api/products/SP001",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "Products search",
+        "Method":  "GET",
+        "Path":  "/api/products/search?keyword=SP%20TEST",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "Products get by id legacy",
+        "Method":  "GET",
+        "Path":  "/api/v1/san-pham/SP001",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "Products update",
+        "Method":  "PUT",
+        "Path":  "/api/products/SP001",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "Products create delete",
+        "Method":  "POST",
+        "Path":  "/api/products",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "Products delete",
+        "Method":  "DELETE",
+        "Path":  "/api/products/SP002",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "Staff products list",
+        "Method":  "GET",
+        "Path":  "/api/products",
+        "Status":  500,
+        "Expected":  "200",
+        "Pass":  false,
+        "Note":  ""
+    },
+    {
+        "Name":  "Purchases list",
+        "Method":  "GET",
+        "Path":  "/api/purchases",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "Purchases create",
+        "Method":  "POST",
+        "Path":  "/api/purchases",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "Purchases get by id",
+        "Method":  "GET",
+        "Path":  "/api/purchases/PM001",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "Purchases print-data",
+        "Method":  "GET",
+        "Path":  "/api/purchases/PM001/print-data",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "Purchases get by id legacy",
+        "Method":  "GET",
+        "Path":  "/api/v1/phieu-mua-hang/PM001",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "Sales list",
+        "Method":  "GET",
+        "Path":  "/api/sales",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "Sales create",
+        "Method":  "POST",
+        "Path":  "/api/sales",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "Sales get by id",
+        "Method":  "GET",
+        "Path":  "/api/sales/PB001",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "Sales get by id legacy",
+        "Method":  "GET",
+        "Path":  "/api/v1/phieu-ban-hang/PB001",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "ServiceTickets list",
+        "Method":  "GET",
+        "Path":  "/api/service-tickets",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "ServiceTickets create",
+        "Method":  "POST",
+        "Path":  "/api/service-tickets",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "ServiceTickets get by id",
+        "Method":  "GET",
+        "Path":  "/api/service-tickets/DV001",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "ServiceTickets get by id legacy",
+        "Method":  "GET",
+        "Path":  "/api/v1/phieu-dich-vu/DV001",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "ServiceTickets deliver item",
+        "Method":  "PATCH",
+        "Path":  "/api/service-tickets/DV001/items/DV001/deliver",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "ServiceTickets deliver all",
+        "Method":  "PATCH",
+        "Path":  "/api/service-tickets/DV001/deliver-all",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "BaoCaoTonKho delete",
+        "Method":  "DELETE",
+        "Path":  "/api/v1/bao-cao-ton-kho/BCTK001",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "BaoCaoDoanhThuSP delete",
+        "Method":  "DELETE",
+        "Path":  "/api/v1/bao-cao-doanh-thu-san-pham/BCSP001",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "BaoCaoDoanhThuDV delete",
+        "Method":  "DELETE",
+        "Path":  "/api/v1/bao-cao-doanh-thu-dich-vu/BCDV001",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "ThamSo delete",
+        "Method":  "DELETE",
+        "Path":  "/api/v1/tham-so/TS001",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "NguoiDung delete",
+        "Method":  "DELETE",
+        "Path":  "/api/v1/nguoi-dung/user_test_1779289278",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "PhanQuyen delete",
+        "Method":  "DELETE",
+        "Path":  "/api/v1/phan-quyen/NND001/CN001",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "NhomNguoiDung delete",
+        "Method":  "DELETE",
+        "Path":  "/api/v1/nhom-nguoi-dung/NND001",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "ChucNang delete",
+        "Method":  "DELETE",
+        "Path":  "/api/v1/chuc-nang/CN001",
+        "Status":  200,
+        "Expected":  "200",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "ServiceTypes delete in use",
+        "Method":  "DELETE",
+        "Path":  "/api/service-types/DV001",
+        "Status":  400,
+        "Expected":  "400",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "Suppliers delete in use",
+        "Method":  "DELETE",
+        "Path":  "/api/suppliers/NCC001",
+        "Status":  400,
+        "Expected":  "400",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "Customers delete in use",
+        "Method":  "DELETE",
+        "Path":  "/api/customers/KH001",
+        "Status":  400,
+        "Expected":  "400",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "Units delete in use",
+        "Method":  "DELETE",
+        "Path":  "/api/units/DVT001",
+        "Status":  400,
+        "Expected":  "400",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "ProductTypes delete in use",
+        "Method":  "DELETE",
+        "Path":  "/api/product-types/LSP001",
+        "Status":  400,
+        "Expected":  "400",
+        "Pass":  true,
+        "Note":  ""
+    },
+    {
+        "Name":  "Products delete in use",
+        "Method":  "DELETE",
+        "Path":  "/api/products/SP001",
+        "Status":  400,
+        "Expected":  "400",
+        "Pass":  true,
+        "Note":  ""
+    }
+]

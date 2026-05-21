@@ -64,7 +64,7 @@ export default function ProductsPage() {
       setProductTypes(types);
       setUnits(unitList);
     } catch (err) {
-      setError(getApiErrorMessage(err, "Khong tai duoc danh muc loai san pham/don vi tinh"));
+      setError(getApiErrorMessage(err, "Không tải được danh mục loại sản phẩm/đơn vị tính"));
     }
   }
 
@@ -82,7 +82,7 @@ export default function ProductsPage() {
       setTotalPages(Math.max(1, data.totalPages || 1));
       setPage(data.number ?? nextPage);
     } catch (err) {
-      setError(getApiErrorMessage(err, "Khong tai duoc san pham"));
+      setError(getApiErrorMessage(err, "Không tải được sản phẩm"));
     } finally {
       setLoading(false);
     }
@@ -132,17 +132,17 @@ export default function ProductsPage() {
     event.preventDefault();
 
     if (!form.tenSanPham?.trim()) {
-      setFormError("Ten san pham la bat buoc");
+      setFormError("Tên sản phẩm là bắt buộc");
       return;
     }
 
     if (!form.maLoaiSanPham) {
-      setFormError("Loai san pham la bat buoc");
+      setFormError("Loại sản phẩm là bắt buộc");
       return;
     }
 
     if (!form.maDonViTinh) {
-      setFormError("Don vi tinh la bat buoc");
+      setFormError("Đơn vị tính là bắt buộc");
       return;
     }
 
@@ -168,7 +168,7 @@ export default function ProductsPage() {
       setOpenForm(false);
       await loadData();
     } catch (err) {
-      setFormError(getApiErrorMessage(err, "Luu san pham that bai"));
+      setFormError(getApiErrorMessage(err, "Lưu sản phẩm thất bại"));
     } finally {
       setSubmitting(false);
     }
@@ -184,7 +184,7 @@ export default function ProductsPage() {
       setDeleting(null);
       await loadData();
     } catch (err) {
-      setError(getApiErrorMessage(err, "Xoa san pham that bai"));
+      setError(getApiErrorMessage(err, "Xóa sản phẩm thất bại"));
       setDeleting(null);
     }
   }
@@ -193,26 +193,26 @@ export default function ProductsPage() {
     <div className="space-y-3">
       <PageHeader
         eyebrow="BM8"
-        title="San pham"
-        description="Tra cuu va quan ly san pham"
+        title="Sản phẩm"
+        description="Tra cứu v? quản lý sản phẩm"
         badges={<Badge variant="outline">Trang {page + 1}/{totalPages}</Badge>}
         actions={
           <Button size="sm" onClick={openCreate}>
             <Plus className="mr-1.5 h-3.5 w-3.5" />
-            Them
+            Thêm
           </Button>
         }
       />
 
       <Card>
         <TableToolbar
-          title="Danh sach"
-          description="Tim theo ma, ten, loai san pham"
+          title="Danh sách"
+          description="Tìm theo mã, tên, loại sản phẩm"
           search={
             <div className="grid gap-2 sm:grid-cols-3">
               <div className="relative sm:col-span-2">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="Nhap tu khoa..." className="pl-9" />
+                <Input value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="Nhap từ khóa..." className="pl-9" />
               </div>
               <Select
                 value={selectedType || "all"}
@@ -246,21 +246,21 @@ export default function ProductsPage() {
         <CardContent className="px-0">
           {error && <p className="px-4 pb-2 text-sm text-destructive">{error}</p>}
           {loading ? (
-            <p className="px-4 py-6 text-sm text-muted-foreground">Dang tai...</p>
+            <p className="px-4 py-6 text-sm text-muted-foreground">Đang tải...</p>
           ) : items.length === 0 ? (
             <div className="p-4">
-              <EmptyState title="Khong co du lieu" description="Thu doi bo loc hoac them moi" />
+              <EmptyState title="Không có dữ liệu" description="Thử đổi bộ lọc hoac thêm mới" />
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Ma SP</TableHead>
-                  <TableHead>Ten san pham</TableHead>
-                  <TableHead>Loai san pham</TableHead>
+                  <TableHead>Tên sản phẩm</TableHead>
+                  <TableHead>Loại sản phẩm</TableHead>
                   <TableHead>Don gia ban</TableHead>
                   <TableHead>Ton kho</TableHead>
-                  <TableHead>Don vi tinh</TableHead>
+                  <TableHead>Đơn vị tính</TableHead>
                   <TableHead className="text-right">Tac vu</TableHead>
                 </TableRow>
               </TableHeader>
@@ -297,7 +297,7 @@ export default function ProductsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={() => setOpenForm(false)}>
           <div className="w-full max-w-xl rounded-xl border bg-background shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between border-b px-5 py-4">
-              <h2 className="text-lg font-semibold">{editing ? "Cap nhat" : "Them"} san pham</h2>
+              <h2 className="text-lg font-semibold">{editing ? "Cập nhật" : "Thêm"} sản phẩm</h2>
               <Button variant="ghost" size="icon-sm" onClick={() => setOpenForm(false)}>
                 <X className="h-4 w-4" />
               </Button>
@@ -305,12 +305,12 @@ export default function ProductsPage() {
             <form className="space-y-3 px-5 py-4" onSubmit={onSubmit}>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-2 sm:col-span-2">
-                  <Label>Ten san pham</Label>
+                  <Label>Tên sản phẩm</Label>
                   <Input value={form.tenSanPham} onChange={(e) => updateField("tenSanPham", e.target.value)} />
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Loai san pham</Label>
+                  <Label>Loại sản phẩm</Label>
                   <Select
                     value={form.maLoaiSanPham || ""}
                     onValueChange={(value) => updateField("maLoaiSanPham", value)}
@@ -319,7 +319,7 @@ export default function ProductsPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Don vi tinh</Label>
+                  <Label>Đơn vị tính</Label>
                   <Select
                     value={form.maDonViTinh || ""}
                     onValueChange={(value) => updateField("maDonViTinh", value)}
@@ -345,7 +345,7 @@ export default function ProductsPage() {
                   Huy
                 </Button>
                 <Button type="submit" disabled={submitting}>
-                  {submitting ? "Dang luu..." : "Luu"}
+                  {submitting ? "Dang luu..." : "Lưu"}
                 </Button>
               </div>
             </form>
@@ -355,9 +355,9 @@ export default function ProductsPage() {
 
       <ConfirmDialog
         open={deleting !== null}
-        title="Xoa san pham"
-        description={deleting ? `Ban chac chan muon xoa ${deleting.tenSanPham}?` : ""}
-        confirmLabel="Xoa"
+        title="Xóa sản phẩm"
+        description={deleting ? `Bạn chắc chắn muốn xóa ${deleting.tenSanPham}?` : ""}
+        confirmLabel="Xóa"
         destructive
         onCancel={() => setDeleting(null)}
         onConfirm={doDelete}

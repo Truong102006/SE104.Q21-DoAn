@@ -44,7 +44,7 @@ export default function ProductTypesPage() {
       const data = await backendApi.productTypes.list(query?.trim() || undefined);
       setItems(data);
     } catch (err) {
-      setError(getApiErrorMessage(err, "Khong tai duoc loai san pham"));
+      setError(getApiErrorMessage(err, "Không tải được loại sản phẩm"));
     } finally {
       setLoading(false);
     }
@@ -91,13 +91,13 @@ export default function ProductTypesPage() {
     event.preventDefault();
 
     if (!form.tenLoaiSanPham?.trim()) {
-      setFormError("Ten loai san pham la bat buoc");
+      setFormError("Tên loại sản phẩm là bắt buộc");
       return;
     }
 
     const tiLe = toPositiveNumber(tiLeText);
     if (tiLe < 0) {
-      setFormError("Ti le loi nhuan phai >= 0");
+      setFormError("Ti le lợi nhuận phải >= 0");
       return;
     }
 
@@ -119,7 +119,7 @@ export default function ProductTypesPage() {
       setOpenForm(false);
       await loadData();
     } catch (err) {
-      setFormError(getApiErrorMessage(err, "Luu loai san pham that bai"));
+      setFormError(getApiErrorMessage(err, "Lưu loại sản phẩm thất bại"));
     } finally {
       setSubmitting(false);
     }
@@ -135,7 +135,7 @@ export default function ProductTypesPage() {
       setDeleting(null);
       await loadData();
     } catch (err) {
-      setError(getApiErrorMessage(err, "Xoa loai san pham that bai"));
+      setError(getApiErrorMessage(err, "Xóa loại sản phẩm thất bại"));
       setDeleting(null);
     }
   }
@@ -143,36 +143,36 @@ export default function ProductTypesPage() {
   return (
     <div className="space-y-3">
       <PageHeader
-        eyebrow="QÐ6/QÐ13"
-        title="Loai san pham"
-        description="Quan ly ti le loi nhuan theo loai"
+        eyebrow={"Q\u01106/Q\u011013"}
+        title="Loại sản phẩm"
+        description="Quản lý tỉ lệ lợi nhuận theo loai"
         badges={<Badge variant="outline">{items.length} ban ghi</Badge>}
         actions={
           <Button size="sm" onClick={openCreate}>
             <Plus className="mr-1.5 h-3.5 w-3.5" />
-            Them
+            Thêm
           </Button>
         }
       />
 
       <Card>
         <TableToolbar
-          title="Danh sach"
+          title="Danh sách"
           description="Tim theo ma, ten loai"
           search={
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="Nhap tu khoa..." className="pl-9" />
+              <Input value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="Nhap từ khóa..." className="pl-9" />
             </div>
           }
         />
         <CardContent className="px-0">
           {error && <p className="px-4 pb-2 text-sm text-destructive">{error}</p>}
           {loading ? (
-            <p className="px-4 py-6 text-sm text-muted-foreground">Dang tai...</p>
+            <p className="px-4 py-6 text-sm text-muted-foreground">Đang tải...</p>
           ) : filtered.length === 0 ? (
             <div className="p-4">
-              <EmptyState title="Khong co du lieu" description="Thu doi tu khoa hoac them moi" />
+              <EmptyState title="Không có dữ liệu" description="Thử đổi từ khóa hoac thêm mới" />
             </div>
           ) : (
             <Table>
@@ -181,7 +181,7 @@ export default function ProductTypesPage() {
                   <TableHead>STT</TableHead>
                   <TableHead>Ma</TableHead>
                   <TableHead>Ten loai</TableHead>
-                  <TableHead>Ti le loi nhuan (%)</TableHead>
+                  <TableHead>Ti le lợi nhuận (%)</TableHead>
                   <TableHead className="text-right">Tac vu</TableHead>
                 </TableRow>
               </TableHeader>
@@ -216,7 +216,7 @@ export default function ProductTypesPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={() => setOpenForm(false)}>
           <div className="w-full max-w-xl rounded-xl border bg-background shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between border-b px-5 py-4">
-              <h2 className="text-lg font-semibold">{editing ? "Cap nhat" : "Them"} loai san pham</h2>
+              <h2 className="text-lg font-semibold">{editing ? "Cập nhật" : "Thêm"} loại sản phẩm</h2>
               <Button variant="ghost" size="icon-sm" onClick={() => setOpenForm(false)}>
                 <X className="h-4 w-4" />
               </Button>
@@ -224,11 +224,11 @@ export default function ProductTypesPage() {
             <form className="space-y-3 px-5 py-4" onSubmit={onSubmit}>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-2 sm:col-span-2">
-                  <Label>Ten loai san pham</Label>
+                  <Label>Tên loại sản phẩm</Label>
                   <Input value={form.tenLoaiSanPham} onChange={(e) => updateField("tenLoaiSanPham", e.target.value)} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Ti le loi nhuan (%)</Label>
+                  <Label>Ti le lợi nhuận (%)</Label>
                   <Input value={tiLeText} onChange={(e) => setTiLeText(e.target.value)} />
                 </div>
               </div>
@@ -240,7 +240,7 @@ export default function ProductTypesPage() {
                   Huy
                 </Button>
                 <Button type="submit" disabled={submitting}>
-                  {submitting ? "Dang luu..." : "Luu"}
+                  {submitting ? "Dang luu..." : "Lưu"}
                 </Button>
               </div>
             </form>
@@ -250,9 +250,9 @@ export default function ProductTypesPage() {
 
       <ConfirmDialog
         open={deleting !== null}
-        title="Xoa loai san pham"
-        description={deleting ? `Ban chac chan muon xoa ${deleting.tenLoaiSanPham}?` : ""}
-        confirmLabel="Xoa"
+        title="Xóa loại sản phẩm"
+        description={deleting ? `Bạn chắc chắn muốn xóa ${deleting.tenLoaiSanPham}?` : ""}
+        confirmLabel="Xóa"
         destructive
         onCancel={() => setDeleting(null)}
         onConfirm={doDelete}

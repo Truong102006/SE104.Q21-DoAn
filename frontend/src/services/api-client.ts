@@ -115,7 +115,7 @@ export async function apiRequest<T>(
   const parsedBody = await parseBody<T>(response);
 
   if (!response.ok || !parsedBody?.success) {
-    const fallbackMessage = response.ok ? "Yeu cau that bai" : `HTTP ${response.status}`;
+    const fallbackMessage = response.ok ? "Y\u00eau c\u1ea7u th\u1ea5t b\u1ea1i" : `HTTP ${response.status}`;
     const message = parsedBody?.message?.trim() || fallbackMessage;
     const errors = parsedBody?.errors ?? [];
     throw new ApiClientError(message, response.status, errors);

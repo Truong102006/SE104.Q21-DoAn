@@ -80,7 +80,7 @@ export default function SalesPage() {
         setMaKhachHang(customerData[0].maKhachHang);
       }
     } catch (err) {
-      setError(getApiErrorMessage(err, "Khong tai duoc du lieu phieu ban"));
+      setError(getApiErrorMessage(err, "Không tải được dữ liệu phiếu bán"));
     } finally {
       setLoading(false);
     }
@@ -108,24 +108,24 @@ export default function SalesPage() {
     setFormError(null);
 
     if (!maKhachHang) {
-      setFormError("Khach hang la bat buoc");
+      setFormError("Khách hàng là bắt buộc");
       return;
     }
 
     if (items.length === 0) {
-      setFormError("Can it nhat 1 dong chi tiet");
+      setFormError("Cần ít nhất 1 dòng chi tiết");
       return;
     }
 
     const seen = new Set<string>();
     for (const item of items) {
       if (!item.maSanPham) {
-        setFormError("San pham la bat buoc");
+        setFormError("Sản phẩm là bắt buộc");
         return;
       }
 
       if (seen.has(item.maSanPham)) {
-        setFormError("Khong duoc trung san pham trong cung mot phieu");
+        setFormError("Không được trùng sản phẩm trong cùng một phiếu");
         return;
       }
       seen.add(item.maSanPham);
@@ -134,12 +134,12 @@ export default function SalesPage() {
       const soLuong = toPositiveInt(item.soLuong);
 
       if (soLuong <= 0) {
-        setFormError("So luong phai > 0");
+        setFormError("Số lượng phải > 0");
         return;
       }
 
       if (product && soLuong > Number(product.tonKho ?? 0)) {
-        setFormError(`So luong ban vuot ton kho cua ${product.tenSanPham}`);
+        setFormError(`Số lượng ban vượt tồn kho cua ${product.tenSanPham}`);
         return;
       }
     }
@@ -161,7 +161,7 @@ export default function SalesPage() {
       setItems([{ ...EMPTY_ITEM }]);
       await loadData();
     } catch (err) {
-      setFormError(getApiErrorMessage(err, "Tao phieu ban that bai"));
+      setFormError(getApiErrorMessage(err, "Tạo phiếu bán thất bại"));
     } finally {
       setSubmitting(false);
     }
@@ -171,15 +171,15 @@ export default function SalesPage() {
     <div className="space-y-3">
       <PageHeader
         eyebrow="BM6"
-        title="Lap phieu ban hang"
-        description="Ban hang theo ton kho hien tai va don gia ban cua san pham"
+        title="Lập phiếu ban hang"
+        description="Bán hàng theo tồn kho hiện tại và đơn giá bán của sản phẩm"
       />
 
       <Card>
         <CardContent className="space-y-4 p-4">
           <div className="grid gap-3 md:grid-cols-3">
             <div className="space-y-2">
-              <Label>So phieu</Label>
+              <Label>Số phiếu</Label>
               <Input value={soPhieuBan} onChange={(e) => setSoPhieuBan(e.target.value)} placeholder="De trong de tu sinh" />
             </div>
             <div className="space-y-2">
@@ -187,7 +187,7 @@ export default function SalesPage() {
               <Input type="date" value={ngayLapPhieuBan} onChange={(e) => setNgayLapPhieuBan(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label>Khach hang</Label>
+              <Label>Khách hàng</Label>
               <Select
                 value={maKhachHang || ""}
                 onValueChange={setMaKhachHang}
@@ -198,18 +198,18 @@ export default function SalesPage() {
 
           {selectedCustomer && (
             <div className="rounded-lg border p-3 text-sm text-muted-foreground">
-              <p>So dien thoai: {selectedCustomer.soDienThoaiKhachHang || "-"}</p>
-              <p>Dia chi: {selectedCustomer.diaChiKhachHang || "-"}</p>
+              <p>Số điện thoại: {selectedCustomer.soDienThoaiKhachHang || "-"}</p>
+              <p>Địa chỉ: {selectedCustomer.diaChiKhachHang || "-"}</p>
             </div>
           )}
 
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>San pham</TableHead>
-                <TableHead>Loai san pham</TableHead>
+                <TableHead>Sản phẩm</TableHead>
+                <TableHead>Loại sản phẩm</TableHead>
                 <TableHead>Ton kho</TableHead>
-                <TableHead>So luong</TableHead>
+                <TableHead>Số lượng</TableHead>
                 <TableHead>Don gia ban</TableHead>
                 <TableHead>Thanh tien</TableHead>
                 <TableHead className="text-right">Tac vu</TableHead>
@@ -257,9 +257,9 @@ export default function SalesPage() {
           <div className="flex items-center justify-between">
             <Button variant="outline" onClick={addRow}>
               <Plus className="mr-1.5 h-3.5 w-3.5" />
-              Them dong
+              Thêm dong
             </Button>
-            <Badge variant="outline">Tong tien du kien: {formatCurrency(estimatedTotal)}</Badge>
+            <Badge variant="outline">Tổng tiền dự kiến: {formatCurrency(estimatedTotal)}</Badge>
           </div>
 
           {formError && <p className="text-sm text-destructive">{formError}</p>}
@@ -267,30 +267,30 @@ export default function SalesPage() {
 
           <div className="flex justify-end">
             <Button onClick={submit} disabled={submitting || loading}>
-              {submitting ? "Dang tao..." : "Tao phieu ban"}
+              {submitting ? "Đang tạo..." : "Tạo phiếu ban"}
             </Button>
           </div>
         </CardContent>
       </Card>
 
       <Card>
-        <TableToolbar title="Lich su phieu ban" description="Danh sach phieu ban da tao" />
+        <TableToolbar title="Lịch sử phiếu bán" description="Danh sách phiếu bán đã tạo" />
         <CardContent className="px-0">
           {loading ? (
-            <p className="px-4 py-6 text-sm text-muted-foreground">Dang tai...</p>
+            <p className="px-4 py-6 text-sm text-muted-foreground">Đang tải...</p>
           ) : salesList.length === 0 ? (
             <div className="p-4">
-              <EmptyState title="Chua co phieu ban" description="Tao phieu ban dau tien" />
+              <EmptyState title="Chưa có phiếu bán" description="Tạo phiếu bán đầu tiên" />
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>So phieu</TableHead>
+                  <TableHead>Số phiếu</TableHead>
                   <TableHead>Ngay lap</TableHead>
-                  <TableHead>Khach hang</TableHead>
-                  <TableHead>So dong</TableHead>
-                  <TableHead>Tong tien</TableHead>
+                  <TableHead>Khách hàng</TableHead>
+                  <TableHead>Số dòng</TableHead>
+                  <TableHead>Tổng tiền</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

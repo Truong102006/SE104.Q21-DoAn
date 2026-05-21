@@ -101,7 +101,7 @@ export default function ServiceOrdersPage() {
         setMaKhachHang(customerData[0].maKhachHang);
       }
     } catch (err) {
-      setError(getApiErrorMessage(err, "Khong tai duoc du lieu phieu dich vu"));
+      setError(getApiErrorMessage(err, "Không tải được dữ liệu phiếu dịch vụ"));
     } finally {
       setLoading(false);
     }
@@ -129,12 +129,12 @@ export default function ServiceOrdersPage() {
     setFormError(null);
 
     if (!maKhachHang) {
-      setFormError("Khach hang la bat buoc");
+      setFormError("Khách hàng là bắt buộc");
       return;
     }
 
     if (items.length === 0) {
-      setFormError("Can it nhat 1 dong chi tiet");
+      setFormError("Cần ít nhất 1 dòng chi tiết");
       return;
     }
 
@@ -142,12 +142,12 @@ export default function ServiceOrdersPage() {
 
     for (const item of items) {
       if (!item.maLoaiDichVu) {
-        setFormError("Loai dich vu la bat buoc");
+        setFormError("Loại dịch vụ là bắt buộc");
         return;
       }
 
       if (seen.has(item.maLoaiDichVu)) {
-        setFormError("Khong duoc trung loai dich vu trong cung mot phieu");
+        setFormError("Không được trùng loại dịch vụ trong cùng một phiếu");
         return;
       }
       seen.add(item.maLoaiDichVu);
@@ -155,7 +155,7 @@ export default function ServiceOrdersPage() {
       const serviceType = serviceTypes.find((type) => type.maLoaiDichVu === item.maLoaiDichVu);
       const soLuong = toPositiveInt(item.soLuongDichVu);
       if (soLuong <= 0) {
-        setFormError("So luong dich vu phai > 0");
+        setFormError("Số lượng dịch vụ phải > 0");
         return;
       }
 
@@ -167,7 +167,7 @@ export default function ServiceOrdersPage() {
       const minPrepayment = (prepaymentRate / 100) * thanhTien;
 
       if (tienTraTruoc < minPrepayment) {
-        setFormError(`Tien tra truoc cho ${serviceType?.tenLoaiDichVu ?? item.maLoaiDichVu} phai >= ${formatCurrency(minPrepayment)}`);
+        setFormError(`Tien trả trước cho ${serviceType?.tenLoaiDichVu ?? item.maLoaiDichVu} phải >= ${formatCurrency(minPrepayment)}`);
         return;
       }
     }
@@ -192,7 +192,7 @@ export default function ServiceOrdersPage() {
       setItems([{ ...EMPTY_ITEM }]);
       await loadData();
     } catch (err) {
-      setFormError(getApiErrorMessage(err, "Tao phieu dich vu that bai"));
+      setFormError(getApiErrorMessage(err, "Tạo phiếu dịch vụ thất bại"));
     } finally {
       setSubmitting(false);
     }
@@ -203,7 +203,7 @@ export default function ServiceOrdersPage() {
       await backendApi.serviceTickets.deliverItem(ticket.soPhieuDichVu, maLoaiDichVu);
       await loadData();
     } catch (err) {
-      setError(getApiErrorMessage(err, "Cap nhat giao hang that bai"));
+      setError(getApiErrorMessage(err, "Cập nhật giao hàng thất bại"));
     }
   }
 
@@ -212,7 +212,7 @@ export default function ServiceOrdersPage() {
       await backendApi.serviceTickets.deliverAll(ticket.soPhieuDichVu);
       await loadData();
     } catch (err) {
-      setError(getApiErrorMessage(err, "Cap nhat giao toan bo that bai"));
+      setError(getApiErrorMessage(err, "Cập nhật giao toàn bộ thất bại"));
     }
   }
 
@@ -220,16 +220,16 @@ export default function ServiceOrdersPage() {
     <div className="space-y-3">
       <PageHeader
         eyebrow="BM7"
-        title="Lap phieu dich vu"
-        description="Quan ly dich vu, tien tra truoc va giao hang"
-        badges={<Badge variant="outline">Ty le tra truoc toi thieu: {prepaymentRate}%</Badge>}
+        title="Lập phiếu dịch vụ"
+        description="Quản lý dịch vụ, tien trả trước v? giao hàng"
+        badges={<Badge variant="outline">Ty le trả trước toi thieu: {prepaymentRate}%</Badge>}
       />
 
       <Card>
         <CardContent className="space-y-4 p-4">
           <div className="grid gap-3 md:grid-cols-3">
             <div className="space-y-2">
-              <Label>So phieu</Label>
+              <Label>Số phiếu</Label>
               <Input value={soPhieuDichVu} onChange={(e) => setSoPhieuDichVu(e.target.value)} placeholder="De trong de tu sinh" />
             </div>
             <div className="space-y-2">
@@ -237,7 +237,7 @@ export default function ServiceOrdersPage() {
               <Input type="date" value={ngayLapPhieuDichVu} onChange={(e) => setNgayLapPhieuDichVu(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label>Khach hang</Label>
+              <Label>Khách hàng</Label>
               <Select
                 value={maKhachHang || ""}
                 onValueChange={setMaKhachHang}
@@ -248,19 +248,19 @@ export default function ServiceOrdersPage() {
 
           {selectedCustomer && (
             <div className="rounded-lg border p-3 text-sm text-muted-foreground">
-              <p>So dien thoai: {selectedCustomer.soDienThoaiKhachHang || "-"}</p>
-              <p>Dia chi: {selectedCustomer.diaChiKhachHang || "-"}</p>
+              <p>Số điện thoại: {selectedCustomer.soDienThoaiKhachHang || "-"}</p>
+              <p>Địa chỉ: {selectedCustomer.diaChiKhachHang || "-"}</p>
             </div>
           )}
 
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Loai dich vu</TableHead>
-                <TableHead>Don gia dich vu</TableHead>
+                <TableHead>Loại dịch vụ</TableHead>
+                <TableHead>Đơn giá dịch vụ</TableHead>
                 <TableHead>Chi phi rieng</TableHead>
                 <TableHead>Don gia duoc tinh</TableHead>
-                <TableHead>So luong</TableHead>
+                <TableHead>Số lượng</TableHead>
                 <TableHead>Thanh tien</TableHead>
                 <TableHead>Tra truoc</TableHead>
                 <TableHead>Con lai</TableHead>
@@ -323,10 +323,10 @@ export default function ServiceOrdersPage() {
           <div className="flex items-center justify-between">
             <Button variant="outline" onClick={addRow}>
               <Plus className="mr-1.5 h-3.5 w-3.5" />
-              Them dong
+              Thêm dong
             </Button>
             <div className="flex flex-wrap gap-2">
-              <Badge variant="outline">Tong tien: {formatCurrency(totals.tongTien)}</Badge>
+              <Badge variant="outline">Tổng tiền: {formatCurrency(totals.tongTien)}</Badge>
               <Badge variant="outline">Tra truoc: {formatCurrency(totals.tongTraTruoc)}</Badge>
               <Badge variant="outline">Con lai: {formatCurrency(totals.tongConLai)}</Badge>
             </div>
@@ -337,29 +337,29 @@ export default function ServiceOrdersPage() {
 
           <div className="flex justify-end">
             <Button onClick={submit} disabled={submitting || loading}>
-              {submitting ? "Dang tao..." : "Tao phieu dich vu"}
+              {submitting ? "Đang tạo..." : "Tạo phiếu dịch vụ"}
             </Button>
           </div>
         </CardContent>
       </Card>
 
       <Card>
-        <TableToolbar title="Lich su phieu dich vu" description="Danh sach phieu dich vu da tao" />
+        <TableToolbar title="Lịch sử phiếu dịch vụ" description="Danh sách phiếu dịch vụ đã tạo" />
         <CardContent className="px-0">
           {loading ? (
-            <p className="px-4 py-6 text-sm text-muted-foreground">Dang tai...</p>
+            <p className="px-4 py-6 text-sm text-muted-foreground">Đang tải...</p>
           ) : tickets.length === 0 ? (
             <div className="p-4">
-              <EmptyState title="Chua co phieu dich vu" description="Tao phieu dich vu dau tien" />
+              <EmptyState title="Chưa có phiếu dịch vụ" description="Tạo phiếu dịch vụ đầu tiên" />
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>So phieu</TableHead>
+                  <TableHead>Số phiếu</TableHead>
                   <TableHead>Ngay lap</TableHead>
-                  <TableHead>Khach hang</TableHead>
-                  <TableHead>Tong tien</TableHead>
+                  <TableHead>Khách hàng</TableHead>
+                  <TableHead>Tổng tiền</TableHead>
                   <TableHead>Tra truoc</TableHead>
                   <TableHead>Con lai</TableHead>
                   <TableHead>Tinh trang</TableHead>

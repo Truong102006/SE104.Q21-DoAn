@@ -87,7 +87,7 @@ export default function PurchaseOrdersPage() {
         setMaNhaCungCap(supplierData[0].maNhaCungCap);
       }
     } catch (err) {
-      setError(getApiErrorMessage(err, "Khong tai duoc du lieu phieu mua"));
+      setError(getApiErrorMessage(err, "Không tải được dữ liệu phiếu mua"));
     } finally {
       setLoading(false);
     }
@@ -124,39 +124,39 @@ export default function PurchaseOrdersPage() {
     setFormError(null);
 
     if (!maNhaCungCap) {
-      setFormError("Nha cung cap la bat buoc");
+      setFormError("Nhà cung cấp là bắt buộc");
       return;
     }
 
     if (items.length === 0) {
-      setFormError("Can it nhat 1 dong chi tiet");
+      setFormError("Cần ít nhất 1 dòng chi tiết");
       return;
     }
 
     const seen = new Set<string>();
     for (const item of items) {
       if (!item.maSanPham) {
-        setFormError("San pham la bat buoc");
+        setFormError("Sản phẩm là bắt buộc");
         return;
       }
       if (seen.has(item.maSanPham)) {
-        setFormError("Khong duoc trung san pham trong cung mot phieu");
+        setFormError("Không được trùng sản phẩm trong cùng một phiếu");
         return;
       }
       seen.add(item.maSanPham);
 
       if (toPositiveInt(item.soLuongMua) <= 0) {
-        setFormError("So luong mua phai > 0");
+        setFormError("Số lượng mua phải > 0");
         return;
       }
 
       if (toPositiveNumber(item.donGia) < 0) {
-        setFormError("Don gia phai >= 0");
+        setFormError("Don gia phải >= 0");
         return;
       }
 
       if (!item.maDonViTinh) {
-        setFormError("Don vi tinh la bat buoc");
+        setFormError("Đơn vị tính là bắt buộc");
         return;
       }
     }
@@ -181,7 +181,7 @@ export default function PurchaseOrdersPage() {
       setItems([{ ...EMPTY_ITEM }]);
       await loadData();
     } catch (err) {
-      setFormError(getApiErrorMessage(err, "Tao phieu mua that bai"));
+      setFormError(getApiErrorMessage(err, "Tạo phiếu mua thất bại"));
     } finally {
       setSubmitting(false);
     }
@@ -191,15 +191,15 @@ export default function PurchaseOrdersPage() {
     <div className="space-y-3">
       <PageHeader
         eyebrow="BM5"
-        title="Lap phieu mua hang"
-        description="Tao phieu mua, tinh thanh tien/tong tien realtime, cap nhat ton kho qua backend"
+        title="Lập phiếu mua hang"
+        description="Tạo phiếu mua, tinh thanh tien/tong tien realtime, cap nhat ton kho qua backend"
       />
 
       <Card>
         <CardContent className="space-y-4 p-4">
           <div className="grid gap-3 md:grid-cols-3">
             <div className="space-y-2">
-              <Label>So phieu</Label>
+              <Label>Số phiếu</Label>
               <Input value={soPhieuMua} onChange={(e) => setSoPhieuMua(e.target.value)} placeholder="De trong de tu sinh" />
             </div>
             <div className="space-y-2">
@@ -207,7 +207,7 @@ export default function PurchaseOrdersPage() {
               <Input type="date" value={ngayLapPhieuMua} onChange={(e) => setNgayLapPhieuMua(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label>Nha cung cap</Label>
+              <Label>Nhà cung cấp</Label>
               <Select
                 value={maNhaCungCap || ""}
                 onValueChange={setMaNhaCungCap}
@@ -218,17 +218,17 @@ export default function PurchaseOrdersPage() {
 
           {selectedSupplier && (
             <div className="rounded-lg border p-3 text-sm text-muted-foreground">
-              <p>So dien thoai: {selectedSupplier.soDienThoai || "-"}</p>
-              <p>Dia chi: {selectedSupplier.diaChi || "-"}</p>
+              <p>Số điện thoại: {selectedSupplier.soDienThoai || "-"}</p>
+              <p>Địa chỉ: {selectedSupplier.diaChi || "-"}</p>
             </div>
           )}
 
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>San pham</TableHead>
-                <TableHead>Don vi tinh</TableHead>
-                <TableHead>So luong</TableHead>
+                <TableHead>Sản phẩm</TableHead>
+                <TableHead>Đơn vị tính</TableHead>
+                <TableHead>Số lượng</TableHead>
                 <TableHead>Don gia</TableHead>
                 <TableHead>Thanh tien</TableHead>
                 <TableHead className="text-right">Tac vu</TableHead>
@@ -279,9 +279,9 @@ export default function PurchaseOrdersPage() {
           <div className="flex items-center justify-between">
             <Button variant="outline" onClick={addRow}>
               <Plus className="mr-1.5 h-3.5 w-3.5" />
-              Them dong
+              Thêm dong
             </Button>
-            <Badge variant="outline">Tong tien: {formatCurrency(totalAmount)}</Badge>
+            <Badge variant="outline">Tổng tiền: {formatCurrency(totalAmount)}</Badge>
           </div>
 
           {formError && <p className="text-sm text-destructive">{formError}</p>}
@@ -289,7 +289,7 @@ export default function PurchaseOrdersPage() {
 
           <div className="flex justify-end">
             <Button onClick={submit} disabled={submitting || loading}>
-              {submitting ? "Dang tao..." : "Tao phieu mua"}
+              {submitting ? "Đang tạo..." : "Tạo phiếu mua"}
             </Button>
           </div>
         </CardContent>
@@ -299,7 +299,7 @@ export default function PurchaseOrdersPage() {
         <Card>
           <CardContent className="space-y-2 p-4">
             <p className="font-semibold">Phieu vua tao: {latestCreated.soPhieuMua}</p>
-            <p className="text-sm text-muted-foreground">Tong tien: {formatCurrency(latestCreated.tongTien)}</p>
+            <p className="text-sm text-muted-foreground">Tổng tiền: {formatCurrency(latestCreated.tongTien)}</p>
             <Button
               variant="outline"
               size="sm"
@@ -308,34 +308,34 @@ export default function PurchaseOrdersPage() {
                   const printData = await backendApi.purchases.printData(latestCreated.soPhieuMua);
                   setLatestCreated(printData);
                 } catch (err) {
-                  setError(getApiErrorMessage(err, "Khong lay duoc du lieu in phieu"));
+                  setError(getApiErrorMessage(err, "Không lấy được dữ liệu in phieu"));
                 }
               }}
             >
-              Xem du lieu in phieu
+              Xem dữ liệu in phieu
             </Button>
           </CardContent>
         </Card>
       )}
 
       <Card>
-        <TableToolbar title="Lich su phieu mua" description="Danh sach phieu mua da tao" />
+        <TableToolbar title="Lịch sử phiếu mua" description="Danh sách phiếu mua đã tạo" />
         <CardContent className="px-0">
           {loading ? (
-            <p className="px-4 py-6 text-sm text-muted-foreground">Dang tai...</p>
+            <p className="px-4 py-6 text-sm text-muted-foreground">Đang tải...</p>
           ) : purchaseList.length === 0 ? (
             <div className="p-4">
-              <EmptyState title="Chua co phieu mua" description="Tao phieu mua dau tien" />
+              <EmptyState title="Chưa có phiếu mua" description="Tạo phiếu mua đầu tiên" />
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>So phieu</TableHead>
+                  <TableHead>Số phiếu</TableHead>
                   <TableHead>Ngay lap</TableHead>
-                  <TableHead>Nha cung cap</TableHead>
-                  <TableHead>So dong</TableHead>
-                  <TableHead>Tong tien</TableHead>
+                  <TableHead>Nhà cung cấp</TableHead>
+                  <TableHead>Số dòng</TableHead>
+                  <TableHead>Tổng tiền</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

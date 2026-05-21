@@ -67,7 +67,7 @@ export default function ReportsPage() {
         setServiceRevenue(data);
       }
     } catch (err) {
-      setError(getApiErrorMessage(err, "Xu ly bao cao that bai"));
+      setError(getApiErrorMessage(err, "Xử lý báo cáo thất bại"));
     } finally {
       setLoading(false);
     }
@@ -77,8 +77,8 @@ export default function ReportsPage() {
     <div className="space-y-4">
       <PageHeader
         eyebrow="BM10-BM12"
-        title="Bao cao"
-        description="Bao cao ton kho, doanh thu san pham, doanh thu dich vu"
+        title="Báo cáo"
+        description="Báo cáo ton kho, doanh thu sản phẩm, doanh thu dịch vụ"
         badges={<Badge variant="outline">Admin</Badge>}
       />
 
@@ -93,7 +93,7 @@ export default function ReportsPage() {
             <Input value={year} onChange={(e) => setYear(e.target.value)} />
           </div>
           <div className="md:col-span-2 flex items-end text-sm text-muted-foreground">
-            Chon thang/nam roi bam Generate hoac Lay du lieu cho tung bao cao ben duoi.
+            Chon thang/nam roi bam Generate hoac Lay dữ liệu cho tung bao cao ben duoi.
           </div>
         </CardContent>
       </Card>
@@ -106,11 +106,11 @@ export default function ReportsPage() {
 
       <Card>
         <TableToolbar
-          title="BM10 - Bao cao ton kho"
+          title="BM10 - Báo cáo ton kho"
           actions={
             <div className="flex gap-2">
               <Button size="sm" variant="outline" disabled={loading} onClick={() => runReport("inventory", "get")}>
-                Lay du lieu
+                Lay dữ liệu
               </Button>
               <Button size="sm" disabled={loading} onClick={() => runReport("inventory", "generate")}>
                 Generate
@@ -121,19 +121,19 @@ export default function ReportsPage() {
         <CardContent className="px-0">
           {!inventory ? (
             <div className="p-4">
-              <EmptyState title="Chua co du lieu BM10" description="Bam Generate hoac Lay du lieu" />
+              <EmptyState title="Chưa có dữ liệu BM10" description="Bam Generate hoac Lay dữ liệu" />
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>STT</TableHead>
-                  <TableHead>San pham</TableHead>
+                  <TableHead>Sản phẩm</TableHead>
                   <TableHead>Ton dau</TableHead>
                   <TableHead>Mua vao</TableHead>
                   <TableHead>Ban ra</TableHead>
                   <TableHead>Ton cuoi</TableHead>
-                  <TableHead>Don vi tinh</TableHead>
+                  <TableHead>Đơn vị tính</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -156,11 +156,11 @@ export default function ReportsPage() {
 
       <Card>
         <TableToolbar
-          title="BM11 - Doanh thu san pham"
+          title="BM11 - Doanh thu sản phẩm"
           actions={
             <div className="flex gap-2">
               <Button size="sm" variant="outline" disabled={loading} onClick={() => runReport("product-revenue", "get")}>
-                Lay du lieu
+                Lay dữ liệu
               </Button>
               <Button size="sm" disabled={loading} onClick={() => runReport("product-revenue", "generate")}>
                 Generate
@@ -171,17 +171,17 @@ export default function ReportsPage() {
         <CardContent className="px-0">
           {!productRevenue ? (
             <div className="p-4">
-              <EmptyState title="Chua co du lieu BM11" description="Bam Generate hoac Lay du lieu" />
+              <EmptyState title="Chưa có dữ liệu BM11" description="Bam Generate hoac Lay dữ liệu" />
             </div>
           ) : (
             <>
-              <p className="px-4 py-2 text-sm font-medium">Tong doanh thu: {formatCurrency(productRevenue.tongDoanhThuSanPham)}</p>
+              <p className="px-4 py-2 text-sm font-medium">Tổng doanh thu: {formatCurrency(productRevenue.tongDoanhThuSanPham)}</p>
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>STT</TableHead>
-                    <TableHead>San pham</TableHead>
-                    <TableHead>So luong ban</TableHead>
+                    <TableHead>Sản phẩm</TableHead>
+                    <TableHead>Số lượng ban</TableHead>
                     <TableHead>Doanh thu</TableHead>
                     <TableHead>Ti le</TableHead>
                   </TableRow>
@@ -205,11 +205,11 @@ export default function ReportsPage() {
 
       <Card>
         <TableToolbar
-          title="BM12 - Doanh thu dich vu"
+          title="BM12 - Doanh thu dịch vụ"
           actions={
             <div className="flex gap-2">
               <Button size="sm" variant="outline" disabled={loading} onClick={() => runReport("service-revenue", "get")}>
-                Lay du lieu
+                Lay dữ liệu
               </Button>
               <Button size="sm" disabled={loading} onClick={() => runReport("service-revenue", "generate")}>
                 Generate
@@ -220,16 +220,16 @@ export default function ReportsPage() {
         <CardContent className="px-0">
           {!serviceRevenue ? (
             <div className="p-4">
-              <EmptyState title="Chua co du lieu BM12" description="Bam Generate hoac Lay du lieu" />
+              <EmptyState title="Chưa có dữ liệu BM12" description="Bam Generate hoac Lay dữ liệu" />
             </div>
           ) : (
             <>
-              <p className="px-4 py-2 text-sm font-medium">Tong doanh thu: {formatCurrency(serviceRevenue.tongDoanhThuDichVu)}</p>
+              <p className="px-4 py-2 text-sm font-medium">Tổng doanh thu: {formatCurrency(serviceRevenue.tongDoanhThuDichVu)}</p>
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>STT</TableHead>
-                    <TableHead>Dich vu</TableHead>
+                    <TableHead>Dịch vụ</TableHead>
                     <TableHead>Doanh thu</TableHead>
                     <TableHead>Ti le</TableHead>
                   </TableRow>
