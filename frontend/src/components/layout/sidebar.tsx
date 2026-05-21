@@ -156,8 +156,8 @@ export function Sidebar({ mobile = false }: SidebarProps) {
               <Store className="h-5 w-5" />
             </span>
             <div>
-              <p className="text-sm font-semibold text-sidebar-foreground">Gold Store</p>
-              <p className="text-xs text-sidebar-foreground/55">Quản lý cửa hàng</p>
+              <p className="text-sm font-semibold text-sidebar-foreground">Tiệm Vàng GS</p>
+              <p className="text-xs text-sidebar-foreground/55">Hệ thống quản lý</p>
             </div>
           </div>
         </div>
@@ -218,7 +218,7 @@ export function Sidebar({ mobile = false }: SidebarProps) {
     <aside className="fixed inset-y-0 left-0 z-40 flex flex-col border-r border-sidebar-border bg-sidebar py-4 shadow-lg w-[76px] px-3 items-center">
       {/* Branding / Logo */}
       <div className="mb-6 flex h-12 w-12 shrink-0 items-center justify-center">
-        <Link href="/dashboard" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-sidebar-border bg-sidebar-accent/40 text-gold shadow-sm transition-colors hover:bg-sidebar-accent" title="Gold Store">
+        <Link href="/dashboard" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-sidebar-border bg-sidebar-accent/40 text-gold shadow-sm transition-colors hover:bg-sidebar-accent" title="Tiệm Vàng GS">
           <Store className="h-6 w-6" />
         </Link>
       </div>
@@ -323,7 +323,7 @@ export function Sidebar({ mobile = false }: SidebarProps) {
             {/* Arrow */}
             <div className="absolute top-1/2 -translate-y-1/2 -left-1 h-2 w-2 rotate-45 border-b border-l border-sidebar-border bg-sidebar" />
             <div className="relative z-10">
-              <p className="text-xs font-semibold text-sidebar-foreground">Gold Store</p>
+              <p className="text-xs font-semibold text-sidebar-foreground">Tiệm Vàng GS</p>
               <p className="text-[9px] text-sidebar-foreground/40">v1.2.0</p>
             </div>
           </div>

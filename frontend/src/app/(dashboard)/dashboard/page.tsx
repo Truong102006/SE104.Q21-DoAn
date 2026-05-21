@@ -8,22 +8,22 @@ import { EmptyState, MetricCard, PageHeader } from "@/components/dashboard/manag
 import { backendApi } from "@/services/backend-api";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { formatCurrency, formatNumber } from "@/lib/format";
-import { 
-  BarChart3, 
-  Boxes, 
-  FileClock, 
-  Package, 
-  TrendingUp, 
-  TrendingDown, 
-  ArrowUpRight, 
-  Activity, 
-  Sparkles, 
-  Zap, 
-  Clock, 
-  PlusCircle, 
-  Eye, 
-  FileText, 
-  Settings 
+import {
+  BarChart3,
+  Boxes,
+  FileClock,
+  Package,
+  TrendingUp,
+  TrendingDown,
+  ArrowUpRight,
+  Activity,
+  Sparkles,
+  Zap,
+  Clock,
+  PlusCircle,
+  Eye,
+  FileText,
+  Settings
 } from "lucide-react";
 import type { SaleResponse, ServiceTicketResponse } from "@/types/backend";
 import { useTranslation } from "@/i18n/i18n-context";
@@ -163,47 +163,61 @@ export default function DashboardPage() {
     };
   }, [t]);
 
-  // Generate last 7 days chart data based on real + fallback data
+  // Generate current week chart data (Monday to Sunday)
   const chartData = useMemo<ChartPoint[]>(() => {
     const list: ChartPoint[] = [];
-    const days = [
-      t("dashboard.monday") || "T2",
-      t("dashboard.tuesday") || "T3",
-      t("dashboard.wednesday") || "T4",
-      t("dashboard.thursday") || "T5",
-      t("dashboard.friday") || "T6",
-      t("dashboard.saturday") || "T7",
-      t("dashboard.sunday") || "CN",
-    ];
+    const dayKeys = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
 
-    // Standard baseline weights (in Millions VND) to ensure beautiful chart populated states
-    const baseSales = [45000000, 52000000, 48000000, 61000000, 78000000, 95000000, 88000000];
-    const baseServices = [12000000, 15000000, 18000000, 14000000, 22000000, 31000000, 25000000];
+    const now = new Date();
+    const dayOfWeek = now.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+    // Adjust to make Monday the first day (0)
+    const diffToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
 
-    days.forEach((day, index) => {
-      // Find actual values in lists if available (simulating date distributions)
-      const salesVal = baseSales[index] + (salesList.length * 1000000);
-      const servicesVal = baseServices[index] + (servicesList.length * 500000);
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - diffToMonday);
+    monday.setHours(0, 0, 0, 0);
+
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      const dateStr = `${year}-${month}-${day}`;
+
+      const dayLabel = t(`dashboard.${dayKeys[i]}`);
+      const isFuture = d > now && d.toDateString() !== now.toDateString();
+
+      const dailySales = isFuture ? 0 : salesList
+        .filter((s) => s.ngayLapPhieuBan && s.ngayLapPhieuBan.startsWith(dateStr))
+        .reduce((sum, s) => sum + Number(s.tongTien || 0), 0);
+
+      const dailyServices = isFuture ? 0 : servicesList
+        .filter((s) => s.ngayLapPhieuDichVu && s.ngayLapPhieuDichVu.startsWith(dateStr))
+        .reduce((sum, s) => sum + Number(s.tongTien || 0), 0);
 
       list.push({
-        label: day,
-        sales: salesVal,
-        services: servicesVal,
-        combined: salesVal + servicesVal,
+        label: dayLabel,
+        sales: dailySales,
+        services: dailyServices,
+        combined: dailySales + dailyServices,
       });
-    });
+    }
 
     return list;
   }, [salesList, servicesList, t]);
 
   // Custom SVG Chart Coordinates calculations
   const chartPathData = useMemo(() => {
-    if (chartData.length === 0) return { linePath: "", areaPath: "", points: [] };
+    if (chartData.length === 0) return { linePath: "", areaPath: "", points: [], yAxisLabels: [] };
 
     const width = 500;
-    const height = 180;
-    const paddingX = 30;
-    const paddingY = 20;
+    const height = 220;
+    const paddingLeft = 45;
+    const paddingRight = 0; // Đẩy sát lề phải hoàn toàn
+    const paddingBottom = 45;
+    const paddingTop = 20;
 
     const values = chartData.map((d) => {
       if (chartMode === "sales") return d.sales;
@@ -211,19 +225,29 @@ export default function DashboardPage() {
       return d.combined;
     });
 
-    const maxValue = Math.max(...values) * 1.15;
-    const minValue = Math.min(...values) * 0.85;
+    const maxValue = Math.max(...values, 1000000) * 1.3;
+    const minValue = 0;
     const valueRange = maxValue - minValue || 1;
 
+    // Generate Y axis labels
+    const yAxisLabels = [0, 0.25, 0.5, 0.75, 1].map(ratio => {
+        const val = maxValue * (1 - ratio);
+        const y = paddingTop + ratio * (height - paddingBottom - paddingTop);
+        let label = "";
+        if (val >= 1000000) label = (val / 1000000).toFixed(1) + "M";
+        else if (val >= 1000) label = (val / 1000).toFixed(0) + "k";
+        else label = val.toFixed(0);
+        return { y, label, val };
+    });
+
     const points = values.map((val, idx) => {
-      const x = paddingX + (idx / (chartData.length - 1)) * (width - 2 * paddingX);
-      const y = height - paddingY - ((val - minValue) / valueRange) * (height - 2 * paddingY);
-      return { x, y, value: val };
+      const x = paddingLeft + (idx / (chartData.length - 1)) * (width - paddingLeft - paddingRight);
+      const y = (height - paddingBottom) - ((val - minValue) / valueRange) * (height - paddingBottom - paddingTop);
+      return { x, y, value: val, label: chartData[idx].label };
     });
 
     let linePath = `M ${points[0].x} ${points[0].y}`;
     for (let i = 1; i < points.length; i++) {
-      // Use cubic bezier connection for beautiful curves
       const cpX1 = points[i - 1].x + (points[i].x - points[i - 1].x) / 2;
       const cpY1 = points[i - 1].y;
       const cpX2 = points[i - 1].x + (points[i].x - points[i - 1].x) / 2;
@@ -231,19 +255,41 @@ export default function DashboardPage() {
       linePath += ` C ${cpX1} ${cpY1}, ${cpX2} ${cpY2}, ${points[i].x} ${points[i].y}`;
     }
 
-    const areaPath = `${linePath} L ${points[points.length - 1].x} ${height - paddingY} L ${points[0].x} ${height - paddingY} Z`;
+    const areaPath = `${linePath} L ${points[points.length - 1].x} ${height - paddingBottom} L ${points[0].x} ${height - paddingBottom} Z`;
 
-    return { linePath, areaPath, points };
+    return {
+        linePath,
+        areaPath,
+        points,
+        baseY: height - paddingBottom,
+        yAxisLabels,
+        startX: paddingLeft,
+        endX: width - paddingRight
+    };
   }, [chartData, chartMode]);
 
   // Handle Chart Interaction Hover
   const handleMouseMove = (e: React.MouseEvent<SVGSVGElement, MouseEvent>) => {
-    if (!svgRef.current) return;
+    if (!svgRef.current || chartPathData.points.length === 0) return;
     const rect = svgRef.current.getBoundingClientRect();
     const mouseX = e.clientX - rect.left;
-    const bandWidth = rect.width / chartData.length;
-    const index = Math.min(chartData.length - 1, Math.max(0, Math.floor(mouseX / bandWidth)));
-    setHoveredChartPoint(index);
+
+    // Convert mouseX to SVG coordinate space (0-500)
+    const svgX = (mouseX / rect.width) * 500;
+
+    // Find the closest point index based on X distance
+    let closestIndex = 0;
+    let minDistance = Math.abs(svgX - chartPathData.points[0].x);
+
+    for (let i = 1; i < chartPathData.points.length; i++) {
+      const distance = Math.abs(svgX - chartPathData.points[i].x);
+      if (distance < minDistance) {
+        minDistance = distance;
+        closestIndex = i;
+      }
+    }
+
+    setHoveredChartPoint(closestIndex);
   };
 
   // Recent activity list
@@ -262,10 +308,11 @@ export default function DashboardPage() {
       list.push({
         type: "sale",
         id: s.soPhieuBan,
-        title: `Lập hóa đơn bán lẻ #${s.soPhieuBan}`,
-        desc: `Khách hàng: ${s.khachHang?.tenKhachHang || "Khách vãng lai"} • Tổng tiền: ${formatCurrency(s.tongTien)}`,
-        time: `${idx * 15 + 8} phút trước`,
+        title: `${t("common.retailInvoice")} #${s.soPhieuBan}`,
+        desc: `${t("common.customer")}: ${s.khachHang?.tenKhachHang || t("common.guest")} • ${t("common.total")}: ${formatCurrency(s.tongTien)}`,
+        time: t("common.minutesAgo").replace("{n}", String(idx * 15 + 8)),
         tagColor: "bg-amber-500/10 text-amber-600 border-amber-500/20",
+        label: t("common.sale"),
       });
     });
 
@@ -274,10 +321,11 @@ export default function DashboardPage() {
       list.push({
         type: "service",
         id: s.soPhieuDichVu,
-        title: `Nhận gia công #${s.soPhieuDichVu}`,
-        desc: `Khách hàng: ${s.khachHang?.tenKhachHang || "Khách vãng lai"} • Trạng thái: ${s.tinhTrangDichVu}`,
-        time: `${idx * 25 + 22} phút trước`,
+        title: `${t("common.serviceOrder")} #${s.soPhieuDichVu}`,
+        desc: `${t("common.customer")}: ${s.khachHang?.tenKhachHang || t("common.guest")} • ${t("common.status")}: ${s.tinhTrangDichVu}`,
+        time: t("common.minutesAgo").replace("{n}", String(idx * 25 + 22)),
         tagColor: "bg-primary/10 text-primary border-primary/20",
+        label: t("common.service"),
       });
     });
 
@@ -287,18 +335,20 @@ export default function DashboardPage() {
         {
           type: "system" as const,
           id: "SYS-01",
-          title: "Đồng bộ giá vàng tự động",
-          desc: "Đã đồng bộ giá thế giới qua cổng Kitco lúc 08:30 sáng.",
-          time: "2 giờ trước",
+          title: t("common.autoGoldSync"),
+          desc: t("common.autoGoldSyncDesc"),
+          time: t("common.hoursAgo").replace("{n}", "2"),
           tagColor: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
+          label: t("common.system"),
         },
         {
           type: "system" as const,
           id: "SYS-02",
-          title: "Kiểm tra kho hệ thống",
-          desc: "Hệ thống tự động kiểm kho chi nhánh, ghi nhận 100% tệp dữ liệu khớp.",
-          time: "Hôm qua",
+          title: t("common.inventoryCheck"),
+          desc: t("common.inventoryCheckDesc"),
+          time: t("common.yesterday"),
           tagColor: "bg-blue-500/10 text-blue-600 border-blue-500/20",
+          label: t("common.system"),
         },
       ];
       systemLogs.forEach((log) => list.push(log));
@@ -314,28 +364,28 @@ export default function DashboardPage() {
         value: formatNumber(productCount),
         icon: Package,
         tone: "neutral" as const,
-        growth: "+1.2% so với tháng trước",
+        growth: t("dashboard.growthProduct"),
       },
       {
         label: t("dashboard.totalStock"),
         value: formatNumber(totalStock),
         icon: Boxes,
         tone: "warning" as const,
-        growth: "+3 chiếc vừa nhập kho",
+        growth: t("dashboard.growthStock"),
       },
       {
         label: t("dashboard.monthRevenue"),
         value: formatCurrency(currentMonthRevenue),
         icon: BarChart3,
         tone: "success" as const,
-        growth: "+14.8% chỉ tiêu tháng",
+        growth: t("dashboard.growthRevenue"),
       },
       {
         label: t("dashboard.pendingService"),
         value: formatNumber(pendingServiceTickets),
         icon: FileClock,
         tone: "danger" as const,
-        growth: "Cần chế tác gấp",
+        growth: t("dashboard.growthUrgent"),
       },
     ],
     [currentMonthRevenue, pendingServiceTickets, productCount, totalStock, t]
@@ -345,13 +395,13 @@ export default function DashboardPage() {
     <div className="space-y-5">
       {/* Page Header */}
       <PageHeader
-        eyebrow={t("nav.dashboard") || "Gold Store Operational Hub"}
-        title={t("dashboard.title") || "Bảng Điều Khiển Trung Tâm"}
-        description={t("dashboard.description") || "Theo dõi tình hình kinh doanh, doanh số và cập nhật biến động giá vàng thời gian thực."}
+        eyebrow={t("nav.dashboard")}
+        title={t("dashboard.title")}
+        description={t("dashboard.description")}
         badges={
           <div className="flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
-            REALTIME FEED
+            {t("dashboard.realtime").toUpperCase()}
           </div>
         }
       />
@@ -406,9 +456,9 @@ export default function DashboardPage() {
             <div>
               <CardTitle className="text-base font-bold flex items-center gap-2">
                 <BarChart3 className="h-4 w-4 text-amber-500" />
-                Phân Tích Doanh Thu Tuần này
+                {t("dashboard.revenueAnalysis")}
               </CardTitle>
-              <p className="text-xs text-muted-foreground">Theo dõi chênh lệch doanh số bán và phí dịch vụ.</p>
+              <p className="text-xs text-muted-foreground">{t("dashboard.revenueDesc")}</p>
             </div>
             {/* Tab switch controller */}
             <div className="flex items-center gap-1 rounded-lg border bg-muted/45 p-0.5">
@@ -418,7 +468,7 @@ export default function DashboardPage() {
                 className="text-[10px] h-6 px-2.5"
                 onClick={() => setChartMode("sales")}
               >
-                Bán Hàng
+                {t("common.sale")}
               </Button>
               <Button
                 variant={chartMode === "services" ? "default" : "ghost"}
@@ -426,7 +476,7 @@ export default function DashboardPage() {
                 className="text-[10px] h-6 px-2.5"
                 onClick={() => setChartMode("services")}
               >
-                Dịch Vụ
+                {t("common.service")}
               </Button>
               <Button
                 variant={chartMode === "combined" ? "default" : "ghost"}
@@ -434,13 +484,13 @@ export default function DashboardPage() {
                 className="text-[10px] h-6 px-2.5"
                 onClick={() => setChartMode("combined")}
               >
-                Tổng Cộng
+                {t("common.total")}
               </Button>
             </div>
           </CardHeader>
           <CardContent className="pt-5 pb-4 px-4">
             {loading ? (
-              <div className="flex h-48 items-center justify-center">
+              <div className="flex h-64 items-center justify-center">
                 <span className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
               </div>
             ) : (
@@ -448,8 +498,8 @@ export default function DashboardPage() {
                 {/* SVG Sparkline Render */}
                 <svg
                   ref={svgRef}
-                  viewBox="0 0 500 180"
-                  className="w-full h-48 overflow-visible cursor-crosshair"
+                  viewBox="0 0 500 220"
+                  className="w-full h-64 overflow-visible cursor-crosshair"
                   onMouseMove={handleMouseMove}
                   onMouseLeave={() => setHoveredChartPoint(null)}
                 >
@@ -464,20 +514,28 @@ export default function DashboardPage() {
                     </linearGradient>
                   </defs>
 
-                  {/* Horizontal gridlines */}
-                  {[0, 0.25, 0.5, 0.75, 1].map((ratio, index) => {
-                    const y = 20 + ratio * 140;
+                  {/* Horizontal gridlines and Y-axis labels */}
+                  {chartPathData.yAxisLabels.map((item, index) => {
                     return (
-                      <line
-                        key={index}
-                        x1="30"
-                        y1={y}
-                        x2="470"
-                        y2={y}
-                        stroke="currentColor"
-                        strokeOpacity="0.05"
-                        strokeDasharray="4 4"
-                      />
+                      <g key={index}>
+                        <text
+                          x={chartPathData.startX - 8}
+                          y={item.y + 3}
+                          textAnchor="end"
+                          className="text-[9px] fill-muted-foreground/70 font-medium"
+                        >
+                          {item.label}
+                        </text>
+                        <line
+                          x1={chartPathData.startX}
+                          y1={item.y}
+                          x2={chartPathData.endX}
+                          y2={item.y}
+                          stroke="currentColor"
+                          strokeOpacity="0.05"
+                          strokeDasharray="4 4"
+                        />
+                      </g>
                     );
                   })}
 
@@ -519,13 +577,23 @@ export default function DashboardPage() {
                           strokeWidth={isHovered ? 2 : 1.5}
                           className="transition-all duration-150"
                         />
+                        {/* Vertical day label - perfectly aligned under the dot */}
+                        <text
+                          x={pt.x}
+                          y={212}
+                          textAnchor={idx === 0 ? "start" : idx === chartPathData.points.length - 1 ? "end" : "middle"}
+                          className="text-[10px] font-bold fill-muted-foreground"
+                        >
+                          {pt.label}
+                        </text>
+
                         {/* Hover vertical line */}
                         {isHovered && (
                           <line
                             x1={pt.x}
                             y1="20"
                             x2={pt.x}
-                            y2="160"
+                            y2={chartPathData.baseY}
                             stroke="oklch(0.71 0.12 74)"
                             strokeOpacity="0.3"
                             strokeWidth="1"
@@ -536,13 +604,6 @@ export default function DashboardPage() {
                     );
                   })}
                 </svg>
-
-                {/* X-axis labels */}
-                <div className="flex justify-between px-7 mt-2 text-[10px] font-semibold text-muted-foreground">
-                  {chartData.map((d) => (
-                    <span key={d.label}>{d.label}</span>
-                  ))}
-                </div>
 
                 {/* Tooltip Overlay */}
                 <AnimatePresence>
@@ -555,7 +616,7 @@ export default function DashboardPage() {
                     >
                       <div className="text-left">
                         <span className="block text-[9px] font-bold text-muted-foreground uppercase">
-                          Ngày {chartData[hoveredChartPoint].label}
+                          {t("common.date")} {chartData[hoveredChartPoint].label}
                         </span>
                         <span className="text-xs font-bold text-foreground">
                           {formatCurrency(
@@ -568,7 +629,7 @@ export default function DashboardPage() {
                         </span>
                       </div>
                       <Badge variant="outline" className="text-[9px] capitalize text-amber-600 bg-amber-500/10 border-amber-500/20">
-                        {chartMode}
+                        {chartMode === "sales" ? t("common.sale") : chartMode === "services" ? t("common.service") : t("common.total")}
                       </Badge>
                     </motion.div>
                   )}
@@ -585,13 +646,13 @@ export default function DashboardPage() {
               <CardTitle className="text-base font-bold flex items-center justify-between">
                 <span className="flex items-center gap-2">
                   <Sparkles className="h-4 w-4 text-amber-500" />
-                  Bảng Giá Vàng Live
+                  {t("dashboard.goldPriceLive")}
                 </span>
                 <Badge variant="outline" className="animate-pulse bg-emerald-500/15 text-emerald-600 border-emerald-500/20 text-[9px] py-0.5 px-2">
-                  LIVE FEED
+                  {t("dashboard.live").toUpperCase()}
                 </Badge>
               </CardTitle>
-              <p className="text-xs text-muted-foreground">Tự động dao động theo cung cầu thị trường.</p>
+              <p className="text-xs text-muted-foreground">{t("dashboard.goldPriceDesc")}</p>
             </CardHeader>
             <CardContent className="p-0">
               <div className="divide-y divide-border/60">
@@ -611,17 +672,17 @@ export default function DashboardPage() {
                       <div className="min-w-0">
                         <span className="block text-xs font-bold text-foreground">{gold.type}</span>
                         <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                          <Clock className="h-2.5 w-2.5" /> 
-                          Cập nhật vừa xong
+                          <Clock className="h-2.5 w-2.5" />
+                          {t("common.updatedJustNow")}
                         </span>
                       </div>
                       <div className="flex gap-4 text-right">
                         <div>
-                          <span className="block text-[9px] uppercase font-semibold text-muted-foreground">Mua vào</span>
+                          <span className="block text-[9px] uppercase font-semibold text-muted-foreground">{t("common.buy")}</span>
                           <span className="text-xs font-bold">{formatNumber(gold.buy / 1000)}k</span>
                         </div>
                         <div>
-                          <span className="block text-[9px] uppercase font-semibold text-muted-foreground">Bán ra</span>
+                          <span className="block text-[9px] uppercase font-semibold text-muted-foreground">{t("common.sell")}</span>
                           <span className={`text-xs font-bold transition-all duration-300 ${
                             isFlashing
                               ? flashDirection === "up"
@@ -648,7 +709,7 @@ export default function DashboardPage() {
           <div className="p-3 border-t bg-muted/10 text-center">
             <Link href="/dashboard/gold-prices">
               <Button variant="outline" size="sm" className="w-full text-xs font-semibold hover:bg-muted">
-                Quản Lý Bảng Giá Vàng
+                {t("dashboard.manageGoldPrices")}
                 <ArrowUpRight className="ml-1.5 h-3.5 w-3.5" />
               </Button>
             </Link>
@@ -663,9 +724,9 @@ export default function DashboardPage() {
           <CardHeader className="pb-3 border-b bg-muted/10">
             <CardTitle className="text-base font-bold flex items-center gap-2">
               <Activity className="h-4 w-4 text-amber-500" />
-              Nhật Ký Hoạt Động & Vận Hành
+              {t("dashboard.activityLog")}
             </CardTitle>
-            <p className="text-xs text-muted-foreground">Các chứng từ giao dịch phát sinh gần đây của nhân viên.</p>
+            <p className="text-xs text-muted-foreground">{t("dashboard.activityDesc")}</p>
           </CardHeader>
           <CardContent className="pt-4 pb-2">
             {loading ? (
@@ -703,7 +764,7 @@ export default function DashboardPage() {
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         <span className={`rounded px-1.5 py-0.5 text-[9px] font-bold uppercase border ${act.tagColor}`}>
-                          {act.type}
+                          {act.label}
                         </span>
                         <span className="text-[10px] text-muted-foreground flex items-center gap-1 font-medium">
                           <Clock className="h-3 w-3" />
@@ -723,9 +784,9 @@ export default function DashboardPage() {
           <CardHeader className="pb-3 border-b bg-muted/10">
             <CardTitle className="text-base font-bold flex items-center gap-2">
               <Zap className="h-4 w-4 text-amber-500" />
-              Thao Tác Nhanh
+              {t("dashboard.quickActions")}
             </CardTitle>
-            <p className="text-xs text-muted-foreground">Phím tắt thực hiện nhanh nghiệp vụ tiệm vàng.</p>
+            <p className="text-xs text-muted-foreground">{t("dashboard.quickActionsDesc")}</p>
           </CardHeader>
           <CardContent className="p-4 flex-1 flex flex-col justify-center">
             <div className="grid grid-cols-2 gap-2 w-full">
@@ -734,7 +795,7 @@ export default function DashboardPage() {
                   <div className="mx-auto rounded-full bg-amber-500/10 p-2 w-max group-hover:bg-amber-500/20">
                     <PlusCircle className="h-4 w-4 text-amber-600" />
                   </div>
-                  <span className="block text-xs font-bold text-foreground">Lập Phiếu Bán</span>
+                  <span className="block text-xs font-bold text-foreground">{t("nav.salesOrders")}</span>
                 </div>
               </Link>
 
@@ -743,7 +804,7 @@ export default function DashboardPage() {
                   <div className="mx-auto rounded-full bg-primary/10 p-2 w-max group-hover:bg-primary/20">
                     <FileClock className="h-4 w-4 text-primary" />
                   </div>
-                  <span className="block text-xs font-bold text-foreground">Lập Phiếu Dịch Vụ</span>
+                  <span className="block text-xs font-bold text-foreground">{t("nav.serviceOrders")}</span>
                 </div>
               </Link>
 
@@ -752,7 +813,7 @@ export default function DashboardPage() {
                   <div className="mx-auto rounded-full bg-emerald-500/10 p-2 w-max group-hover:bg-emerald-500/20">
                     <Eye className="h-4 w-4 text-emerald-600" />
                   </div>
-                  <span className="block text-xs font-bold text-foreground">Tra Cứu Dịch Vụ</span>
+                  <span className="block text-xs font-bold text-foreground">{t("common.serviceSearch")}</span>
                 </div>
               </Link>
 
@@ -761,7 +822,7 @@ export default function DashboardPage() {
                   <div className="mx-auto rounded-full bg-blue-500/10 p-2 w-max group-hover:bg-blue-500/20">
                     <FileText className="h-4 w-4 text-blue-600" />
                   </div>
-                  <span className="block text-xs font-bold text-foreground">Báo Biểu Tuần/Tháng</span>
+                  <span className="block text-xs font-bold text-foreground">{t("common.reportsMonthly")}</span>
                 </div>
               </Link>
             </div>
@@ -770,7 +831,7 @@ export default function DashboardPage() {
             <Link href="/dashboard/settings">
               <Button variant="ghost" size="sm" className="w-full text-xs text-muted-foreground hover:text-foreground">
                 <Settings className="mr-1.5 h-3.5 w-3.5" />
-                Cấu Hình Tham Số Hệ Thống
+                {t("dashboard.configSystem")}
               </Button>
             </Link>
           </div>
