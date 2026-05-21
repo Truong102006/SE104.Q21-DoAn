@@ -129,6 +129,7 @@ export default function ServiceVoucherLookupPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-12">{t("common.stt")}</TableHead>
                   <TableHead>{t("common.voucherNumber")}</TableHead>
                   <TableHead>{t("common.dateCreated")}</TableHead>
                   <TableHead>{t("common.customer")}</TableHead>
@@ -140,8 +141,9 @@ export default function ServiceVoucherLookupPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {items.map((item) => (
+                {items.map((item, index) => (
                   <TableRow key={item.soPhieuDichVu}>
+                    <TableCell className="font-semibold text-muted-foreground">{page * PAGE_SIZE + index + 1}</TableCell>
                     <TableCell>{item.soPhieuDichVu}</TableCell>
                     <TableCell>{item.ngayLapPhieuDichVu}</TableCell>
                     <TableCell>{item.tenKhachHang}</TableCell>
@@ -174,6 +176,7 @@ export default function ServiceVoucherLookupPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-12">{t("common.stt")}</TableHead>
                   <TableHead>{t("serviceTypes.title")}</TableHead>
                   <TableHead>{t("common.quantity")}</TableHead>
                   <TableHead>{t("common.unitPrice")}</TableHead>
@@ -184,8 +187,9 @@ export default function ServiceVoucherLookupPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {detail.items.map((item) => (
+                {detail.items.map((item, index) => (
                   <TableRow key={`${detail.soPhieuDichVu}-${item.maLoaiDichVu}`}>
+                    <TableCell className="font-semibold text-muted-foreground">{index + 1}</TableCell>
                     <TableCell>{item.tenLoaiDichVu}</TableCell>
                     <TableCell>{item.soLuongDichVu}</TableCell>
                     <TableCell>{formatCurrency(item.donGiaDuocTinh)}</TableCell>

@@ -169,6 +169,17 @@
     color: oklch(0.23 0.03 258);
   }
 
+  /* Hide system default spin-buttons (up/down arrows) on input type="number" */
+  input::-webkit-outer-spin-button,
+  input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
 }
 
 @layer utilities {

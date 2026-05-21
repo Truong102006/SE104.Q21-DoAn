@@ -40,7 +40,7 @@
         "total": "Total",
         "voucherNumber": "Voucher No.",
         "dateCreated": "Date",
-        "autoGenerate": "Leave blank for auto",
+        "autoGenerate": "Auto-generated",
         "quantity": "Quantity",
         "unitPrice": "Unit price",
         "subtotal": "Subtotal",
@@ -92,7 +92,13 @@
         "serviceSearch": "Service Ticket Search",
         "accounts": "User Accounts",
         "reports": "Reports",
-        "settings": "Settings & Mandates"
+        "settings": "Settings & Mandates",
+        "notifications": "Notifications",
+        "mainScreen": "Home",
+        "entryScreen": "Data Entry",
+        "lookupScreen": "Search & Lookup",
+        "notificationScreen": "Notifications",
+        "reportsScreen": "Reports & Analytics"
     },
     "dashboard": {
         "title": "Operations Dashboard",

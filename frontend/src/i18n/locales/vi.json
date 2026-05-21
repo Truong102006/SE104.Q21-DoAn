@@ -23,7 +23,7 @@
         "stt": "STT",
         "code": "Mã",
         "name": "Tên",
-        "phone": "Số điện thoại",
+        "phone": "SĐT",
         "address": "Địa chỉ",
         "note": "Ghi chú",
         "records": "bản ghi",
@@ -40,7 +40,7 @@
         "total": "Tổng tiền",
         "voucherNumber": "Số phiếu",
         "dateCreated": "Ngày lập",
-        "autoGenerate": "Để trống để tự sinh",
+        "autoGenerate": "Hệ thống tự sinh",
         "quantity": "Số lượng",
         "unitPrice": "Đơn giá",
         "subtotal": "Thành tiền",
@@ -92,7 +92,13 @@
         "serviceSearch": "Tra cứu phiếu dịch vụ",
         "accounts": "Quản lý tài khoản",
         "reports": "Báo cáo",
-        "settings": "Thay đổi quy định"
+        "settings": "Thay đổi quy định",
+        "notifications": "Thông báo",
+        "mainScreen": "Màn hình chính",
+        "entryScreen": "Màn hình nhập liệu",
+        "lookupScreen": "Màn hình tra cứu",
+        "notificationScreen": "Màn hình thông báo",
+        "reportsScreen": "Báo biểu"
     },
     "dashboard": {
         "title": "Tổng quan vận hành",
@@ -110,7 +116,7 @@
     "suppliers": {
         "title": "Nhà cung cấp",
         "description": "Quản lý danh mục nhà cung cấp",
-        "searchDesc": "Tìm theo mã, tên, số điện thoại",
+        "searchDesc": "Tìm theo mã, tên, SĐT",
         "name": "Tên nhà cung cấp",
         "addTitle": "Thêm nhà cung cấp",
         "editTitle": "Cập nhật nhà cung cấp",
@@ -123,7 +129,7 @@
     "customers": {
         "title": "Khách hàng",
         "description": "Quản lý danh mục khách hàng",
-        "searchDesc": "Tìm theo mã, tên, số điện thoại",
+        "searchDesc": "Tìm theo mã, tên, SĐT",
         "name": "Tên khách hàng",
         "addTitle": "Thêm khách hàng",
         "editTitle": "Cập nhật khách hàng",

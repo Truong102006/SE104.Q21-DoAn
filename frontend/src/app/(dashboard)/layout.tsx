@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -67,7 +67,7 @@ export default function DashboardLayout({
         <Sidebar collapsed={false} onToggle={() => {}} />
       </div>
 
-      <div className="flex flex-col lg:ml-52">
+      <div className="flex flex-col lg:ml-[76px]">
         <Header />
 
         <main className="flex-1 px-3 py-4 lg:px-4 lg:py-4 xl:px-5">
