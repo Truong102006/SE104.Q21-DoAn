@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -76,7 +76,7 @@ export default function PurchaseOrdersPage() {
     try {
       const [supplierData, productPage, unitData, purchases] = await Promise.all([
         backendApi.suppliers.list(),
-        backendApi.products.list({ page: 0, size: 200 }),
+        backendApi.products.list({ page: 0, size: 100 }),
         backendApi.units.list(),
         backendApi.purchases.list(),
       ]);

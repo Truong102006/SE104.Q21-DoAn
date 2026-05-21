@@ -70,7 +70,7 @@ export default function SalesPage() {
     try {
       const [customerData, productPage, sales] = await Promise.all([
         backendApi.customers.list(),
-        backendApi.products.list({ page: 0, size: 200 }),
+        backendApi.products.list({ page: 0, size: 100 }),
         backendApi.sales.list(),
       ]);
 

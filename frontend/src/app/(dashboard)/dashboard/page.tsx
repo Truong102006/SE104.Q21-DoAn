@@ -45,7 +45,7 @@ export default function DashboardPage() {
       setError(null);
       try {
         const [productsPage, sales, serviceTickets] = await Promise.all([
-          backendApi.products.list({ page: 0, size: 500 }),
+          backendApi.products.list({ page: 0, size: 100 }),
           backendApi.sales.list(),
           backendApi.serviceTickets.list(),
         ]);
