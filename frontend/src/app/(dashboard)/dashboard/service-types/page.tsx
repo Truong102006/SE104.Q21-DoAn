@@ -44,7 +44,7 @@ export default function ServiceTypesPage() {
       const data = await backendApi.serviceTypes.list(query?.trim() || undefined);
       setItems(data);
     } catch (err) {
-      setError(getApiErrorMessage(err, "Khong tai duoc loai dich vu"));
+      setError(getApiErrorMessage(err, "Không tải được loại dịch vụ"));
     } finally {
       setLoading(false);
     }
@@ -91,13 +91,13 @@ export default function ServiceTypesPage() {
     event.preventDefault();
 
     if (!form.tenLoaiDichVu?.trim()) {
-      setFormError("Ten loai dich vu la bat buoc");
+      setFormError("Tên loại dịch vụ là bắt buộc");
       return;
     }
 
     const gia = toPositiveNumber(giaText);
     if (gia < 0) {
-      setFormError("Don gia phai >= 0");
+      setFormError("Don gia phải >= 0");
       return;
     }
 
@@ -119,7 +119,7 @@ export default function ServiceTypesPage() {
       setOpenForm(false);
       await loadData();
     } catch (err) {
-      setFormError(getApiErrorMessage(err, "Luu loai dich vu that bai"));
+      setFormError(getApiErrorMessage(err, "Lưu loại dịch vụ thất bại"));
     } finally {
       setSubmitting(false);
     }
@@ -135,7 +135,7 @@ export default function ServiceTypesPage() {
       setDeleting(null);
       await loadData();
     } catch (err) {
-      setError(getApiErrorMessage(err, "Xoa loai dich vu that bai"));
+      setError(getApiErrorMessage(err, "Xóa loại dịch vụ thất bại"));
       setDeleting(null);
     }
   }
@@ -144,35 +144,35 @@ export default function ServiceTypesPage() {
     <div className="space-y-3">
       <PageHeader
         eyebrow="BM4"
-        title="Loai dich vu"
-        description="Quan ly danh muc loai dich vu"
+        title="Loại dịch vụ"
+        description={"Qu\u1ea3n l\u00fd danh m\u1ee5c lo\u1ea1i d\u1ecbch v\u1ee5"}
         badges={<Badge variant="outline">{items.length} ban ghi</Badge>}
         actions={
           <Button size="sm" onClick={openCreate}>
             <Plus className="mr-1.5 h-3.5 w-3.5" />
-            Them
+            Thêm
           </Button>
         }
       />
 
       <Card>
         <TableToolbar
-          title="Danh sach"
-          description="Tim theo ma, ten loai dich vu"
+          title="Danh sách"
+          description="Tìm theo mã, tên loại dịch vụ"
           search={
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="Nhap tu khoa..." className="pl-9" />
+              <Input value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="Nhap từ khóa..." className="pl-9" />
             </div>
           }
         />
         <CardContent className="px-0">
           {error && <p className="px-4 pb-2 text-sm text-destructive">{error}</p>}
           {loading ? (
-            <p className="px-4 py-6 text-sm text-muted-foreground">Dang tai...</p>
+            <p className="px-4 py-6 text-sm text-muted-foreground">Đang tải...</p>
           ) : filtered.length === 0 ? (
             <div className="p-4">
-              <EmptyState title="Khong co du lieu" description="Thu doi tu khoa hoac them moi" />
+              <EmptyState title="Không có dữ liệu" description="Thử đổi từ khóa hoac thêm mới" />
             </div>
           ) : (
             <Table>
@@ -180,8 +180,8 @@ export default function ServiceTypesPage() {
                 <TableRow>
                   <TableHead>STT</TableHead>
                   <TableHead>Ma</TableHead>
-                  <TableHead>Ten loai dich vu</TableHead>
-                  <TableHead>Don gia dich vu</TableHead>
+                  <TableHead>Tên loại dịch vụ</TableHead>
+                  <TableHead>Đơn giá dịch vụ</TableHead>
                   <TableHead className="text-right">Tac vu</TableHead>
                 </TableRow>
               </TableHeader>
@@ -216,7 +216,7 @@ export default function ServiceTypesPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={() => setOpenForm(false)}>
           <div className="w-full max-w-xl rounded-xl border bg-background shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between border-b px-5 py-4">
-              <h2 className="text-lg font-semibold">{editing ? "Cap nhat" : "Them"} loai dich vu</h2>
+              <h2 className="text-lg font-semibold">{editing ? "Cập nhật" : "Thêm"} loại dịch vụ</h2>
               <Button variant="ghost" size="icon-sm" onClick={() => setOpenForm(false)}>
                 <X className="h-4 w-4" />
               </Button>
@@ -224,11 +224,11 @@ export default function ServiceTypesPage() {
             <form className="space-y-3 px-5 py-4" onSubmit={onSubmit}>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-2 sm:col-span-2">
-                  <Label>Ten loai dich vu</Label>
+                  <Label>Tên loại dịch vụ</Label>
                   <Input value={form.tenLoaiDichVu} onChange={(e) => updateField("tenLoaiDichVu", e.target.value)} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Don gia dich vu</Label>
+                  <Label>Đơn giá dịch vụ</Label>
                   <Input value={giaText} onChange={(e) => setGiaText(e.target.value)} />
                 </div>
               </div>
@@ -240,7 +240,7 @@ export default function ServiceTypesPage() {
                   Huy
                 </Button>
                 <Button type="submit" disabled={submitting}>
-                  {submitting ? "Dang luu..." : "Luu"}
+                  {submitting ? "Dang luu..." : "Lưu"}
                 </Button>
               </div>
             </form>
@@ -250,9 +250,9 @@ export default function ServiceTypesPage() {
 
       <ConfirmDialog
         open={deleting !== null}
-        title="Xoa loai dich vu"
-        description={deleting ? `Ban chac chan muon xoa ${deleting.tenLoaiDichVu}?` : ""}
-        confirmLabel="Xoa"
+        title="Xóa loại dịch vụ"
+        description={deleting ? `Bạn chắc chắn muốn xóa ${deleting.tenLoaiDichVu}?` : ""}
+        confirmLabel="Xóa"
         destructive
         onCancel={() => setDeleting(null)}
         onConfirm={doDelete}

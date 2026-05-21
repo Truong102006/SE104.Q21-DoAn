@@ -55,7 +55,7 @@ export async function loginWithPassword(request: LoginRequest): Promise<LoginRes
 
   const body = (await response.json()) as ApiEnvelope<BackendAuthPayload>;
   if (!response.ok || !body.success || !body.data?.accessToken) {
-    throw new Error(normalizeErrorMessage("Dang nhap that bai", body?.message));
+    throw new Error(normalizeErrorMessage("\u0110\u0103ng nh\u1eadp th\u1ea5t b\u1ea1i", body?.message));
   }
 
   return {
@@ -75,7 +75,7 @@ export async function fetchCurrentUser(token: string): Promise<User> {
 
   const body = (await response.json()) as ApiEnvelope<BackendAuthPayload>;
   if (!response.ok || !body.success || !body.data?.username) {
-    throw new Error(normalizeErrorMessage("Khong lay duoc thong tin nguoi dung", body?.message));
+    throw new Error(normalizeErrorMessage("Kh\u00f4ng l\u1ea5y \u0111\u01b0\u1ee3c th\u00f4ng tin ng\u01b0\u1eddi d\u00f9ng", body?.message));
   }
 
   return mapUser(body.data);

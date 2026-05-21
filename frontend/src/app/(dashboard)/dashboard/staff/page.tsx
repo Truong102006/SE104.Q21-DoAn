@@ -47,7 +47,7 @@ export default function StaffPage() {
       setUsers(userData);
       setGroups(groupData);
     } catch (err) {
-      setError(getApiErrorMessage(err, "Khong tai duoc du lieu tai khoan"));
+      setError(getApiErrorMessage(err, "Không tải được dữ liệu tài khoản"));
     } finally {
       setLoading(false);
     }
@@ -92,17 +92,17 @@ export default function StaffPage() {
     event.preventDefault();
 
     if (!form.tenDangNhap?.trim()) {
-      setFormError("Ten dang nhap la bat buoc");
+      setFormError("Tên đăng nhập là bắt buộc");
       return;
     }
 
     if (!form.matKhau?.trim()) {
-      setFormError("Mat khau la bat buoc");
+      setFormError("Mật khẩu là bắt buộc");
       return;
     }
 
     if (!form.maNhom) {
-      setFormError("Nhom nguoi dung la bat buoc");
+      setFormError("Nhóm người dùng là bắt buộc");
       return;
     }
 
@@ -125,7 +125,7 @@ export default function StaffPage() {
       setOpenForm(false);
       await loadData();
     } catch (err) {
-      setFormError(getApiErrorMessage(err, "Luu tai khoan that bai"));
+      setFormError(getApiErrorMessage(err, "Lưu tài khoản thất bại"));
     } finally {
       setSubmitting(false);
     }
@@ -141,7 +141,7 @@ export default function StaffPage() {
       setDeleting(null);
       await loadData();
     } catch (err) {
-      setError(getApiErrorMessage(err, "Xoa tai khoan that bai"));
+      setError(getApiErrorMessage(err, "Xóa tài khoản thất bại"));
       setDeleting(null);
     }
   }
@@ -150,22 +150,22 @@ export default function StaffPage() {
     <div className="space-y-3">
       <PageHeader
         eyebrow="Admin"
-        title="Quan ly tai khoan / phan quyen"
-        description="Quan ly tai khoan he thong theo nhom nguoi dung"
-        badges={<Badge variant="outline">{users.length} tai khoan</Badge>}
+        title="Quản lý tài khoản / phân quyền"
+        description="Quản lý tài khoản hệ thống theo nhóm người dùng"
+        badges={<Badge variant="outline">{users.length} tài khoản</Badge>}
         actions={
           <Button size="sm" onClick={openCreate}>
             <Plus className="mr-1.5 h-3.5 w-3.5" />
-            Them tai khoan
+            Thêm tài khoản
           </Button>
         }
       />
 
       <Card>
         <TableToolbar
-          title="Danh sach tai khoan"
-          description="Tim theo ten dang nhap ho?c ma nhom"
-          search={<Input value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="Nhap tu khoa..." />}
+          title="Danh sách tài khoản"
+          description="Tim theo tên đăng nhập hoặc ma nhom"
+          search={<Input value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="Nhap từ khóa..." />}
           actions={
             <Button size="sm" variant="outline" onClick={() => loadData(keyword)}>
               Tim
@@ -176,16 +176,16 @@ export default function StaffPage() {
         <CardContent className="px-0">
           {error && <p className="px-4 pb-2 text-sm text-destructive">{error}</p>}
           {loading ? (
-            <p className="px-4 py-6 text-sm text-muted-foreground">Dang tai...</p>
+            <p className="px-4 py-6 text-sm text-muted-foreground">Đang tải...</p>
           ) : filtered.length === 0 ? (
             <div className="p-4">
-              <EmptyState title="Khong co du lieu" description="Thu doi tu khoa hoac them tai khoan" />
+              <EmptyState title="Không có dữ liệu" description="Thử đổi từ khóa hoac them tài khoản" />
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Ten dang nhap</TableHead>
+                  <TableHead>Tên đăng nhập</TableHead>
                   <TableHead>Ma nhom</TableHead>
                   <TableHead className="text-right">Tac vu</TableHead>
                 </TableRow>
@@ -217,14 +217,14 @@ export default function StaffPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={() => setOpenForm(false)}>
           <div className="w-full max-w-lg rounded-xl border bg-background shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between border-b px-5 py-4">
-              <h2 className="text-lg font-semibold">{editing ? "Cap nhat" : "Them"} tai khoan</h2>
+              <h2 className="text-lg font-semibold">{editing ? "Cập nhật" : "Thêm"} tài khoản</h2>
               <Button variant="ghost" size="icon-sm" onClick={() => setOpenForm(false)}>
                 <X className="h-4 w-4" />
               </Button>
             </div>
             <form className="space-y-3 px-5 py-4" onSubmit={onSubmit}>
               <div className="space-y-2">
-                <Label>Ten dang nhap</Label>
+                <Label>Tên đăng nhập</Label>
                 <Input
                   value={form.tenDangNhap}
                   onChange={(e) => updateField("tenDangNhap", e.target.value)}
@@ -232,16 +232,16 @@ export default function StaffPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Mat khau</Label>
+                <Label>Mật khẩu</Label>
                 <Input
                   type="password"
                   value={form.matKhau}
                   onChange={(e) => updateField("matKhau", e.target.value)}
-                  placeholder={editing ? "Nhap mat khau moi" : "Nhap mat khau"}
+                  placeholder={editing ? "Nhap mật khẩu moi" : "Nhap mật khẩu"}
                 />
               </div>
               <div className="space-y-2">
-                <Label>Nhom nguoi dung</Label>
+                <Label>Nhóm người dùng</Label>
                 <Select
                   value={form.maNhom}
                   onValueChange={(value) => updateField("maNhom", value)}
@@ -256,7 +256,7 @@ export default function StaffPage() {
                   Huy
                 </Button>
                 <Button type="submit" disabled={submitting}>
-                  {submitting ? "Dang luu..." : "Luu"}
+                  {submitting ? "Dang luu..." : "Lưu"}
                 </Button>
               </div>
             </form>
@@ -266,9 +266,9 @@ export default function StaffPage() {
 
       <ConfirmDialog
         open={deleting !== null}
-        title="Xoa tai khoan"
-        description={deleting ? `Ban chac chan muon xoa ${deleting.tenDangNhap}?` : ""}
-        confirmLabel="Xoa"
+        title="Xóa tài khoản"
+        description={deleting ? `Bạn chắc chắn muốn xóa ${deleting.tenDangNhap}?` : ""}
+        confirmLabel="Xóa"
         destructive
         onCancel={() => setDeleting(null)}
         onConfirm={doDelete}

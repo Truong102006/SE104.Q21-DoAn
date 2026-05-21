@@ -17,7 +17,7 @@ function isCurrentMonth(dateText: string): boolean {
 }
 
 function isServiceTicketCompleted(ticket: ServiceTicketResponse): boolean {
-  return ticket.tinhTrangDichVu.toLowerCase().includes("hoan thanh");
+  return ticket.tinhTrangDichVu.toLowerCase().includes("hoàn thành");
 }
 
 function calcCurrentMonthRevenue(sales: SaleResponse[]): number {
@@ -59,7 +59,7 @@ export default function DashboardPage() {
         setPendingServiceTickets(serviceTickets.filter((item) => !isServiceTicketCompleted(item)).length);
       } catch (err) {
         if (mounted) {
-          setError(getApiErrorMessage(err, "Khong tai duoc dashboard"));
+          setError(getApiErrorMessage(err, "Không tải được dashboard"));
         }
       } finally {
         if (mounted) {
@@ -78,22 +78,22 @@ export default function DashboardPage() {
   const summary = useMemo(
     () => [
       {
-        label: "So san pham",
+        label: "Số sản phẩm",
         value: formatNumber(productCount),
         icon: Package,
       },
       {
-        label: "Tong ton kho",
+        label: "Tổng tồn kho",
         value: formatNumber(totalStock),
         icon: Boxes,
       },
       {
-        label: "Doanh thu thang nay",
+        label: "Doanh thu tháng nay",
         value: formatCurrency(currentMonthRevenue),
         icon: BarChart3,
       },
       {
-        label: "Phieu dich vu chua hoan thanh",
+        label: "Phiếu dịch vụ chưa hoàn thành",
         value: formatNumber(pendingServiceTickets),
         icon: FileClock,
       },
@@ -105,8 +105,8 @@ export default function DashboardPage() {
     <div className="space-y-4">
       <PageHeader
         eyebrow="Dashboard"
-        title="Tong quan van hanh"
-        description="So lieu nhanh theo thoi gian thuc tu he thong"
+        title="Tổng quan vận hành"
+        description="Số liệu nhanh theo thời gian thực từ hệ thống"
         badges={<Badge variant="outline">Realtime</Badge>}
       />
 
@@ -129,15 +129,15 @@ export default function DashboardPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Ghi chu</CardTitle>
+          <CardTitle>Ghi chú</CardTitle>
         </CardHeader>
         <CardContent>
           {!loading && !error ? (
             <p className="text-sm text-muted-foreground">
-              Dashboard dang lay doanh thu tu cac phieu ban trong thang hien tai va trang thai phieu dich vu tu backend.
+              Dashboard đang lấy doanh thu từ các phiếu bán trong tháng hiện tại và trạng thái phiếu dịch vụ từ backend.
             </p>
           ) : (
-            <EmptyState title="Dang tai du lieu" description="He thong dang dong bo so lieu tong quan" />
+            <EmptyState title="Đang tải dữ liệu" description="Hệ thống đang đồng bộ số liệu tổng quan" />
           )}
         </CardContent>
       </Card>

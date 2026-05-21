@@ -42,7 +42,7 @@ export default function SettingsPage() {
       setServiceTypesCount(serviceTypes.length);
       setPrepaymentRate(String(prepayment.value ?? 50));
     } catch (err) {
-      setError(getApiErrorMessage(err, "Khong tai duoc du lieu cai dat"));
+      setError(getApiErrorMessage(err, "Không tải được dữ liệu cài đặt"));
     } finally {
       setLoading(false);
     }
@@ -59,7 +59,7 @@ export default function SettingsPage() {
 
     const value = toPositiveNumber(prepaymentRate);
     if (value < 0 || value > 100) {
-      setError("Ty le tra truoc phai trong khoang 0-100");
+      setError("Ty le trả trước phai trong khoang 0-100");
       setSaving(false);
       return;
     }
@@ -67,9 +67,9 @@ export default function SettingsPage() {
     try {
       const result = await backendApi.settings.updateServicePrepaymentRate({ value });
       setPrepaymentRate(String(result.value));
-      setSavedMessage("Cap nhat ty le tra truoc thanh cong");
+      setSavedMessage("Cập nhật tỷ lệ trả trước thành công");
     } catch (err) {
-      setError(getApiErrorMessage(err, "Cap nhat ty le tra truoc that bai"));
+      setError(getApiErrorMessage(err, "Cập nhật tỷ lệ trả trước thất bại"));
     } finally {
       setSaving(false);
     }
@@ -78,9 +78,9 @@ export default function SettingsPage() {
   return (
     <div className="space-y-3">
       <PageHeader
-        eyebrow="QÐ13"
-        title="Thay doi quy dinh"
-        description="Quan ly cac danh muc quy dinh va ty le tra truoc dich vu"
+        eyebrow={"Q\u011013"}
+        title="Thay đổi quy định"
+        description="Quản lý cac danh mục quy định và tỷ lệ trả trước dịch vụ"
         badges={<Badge variant="outline">Admin only</Badge>}
       />
 
@@ -91,7 +91,7 @@ export default function SettingsPage() {
       )}
 
       <Card>
-        <TableToolbar title="Ty le tra truoc dich vu" description="Gia tri duoc luu trong THAMSO: SERVICE_PREPAYMENT_RATE" />
+        <TableToolbar title="Ty le trả trước dịch vụ" description="Giá trị được lưu trong THAMSO: SERVICE_PREPAYMENT_RATE" />
         <CardContent className="space-y-3 p-4">
           <div className="max-w-sm space-y-2">
             <Label>Ty le (%)</Label>
@@ -99,7 +99,7 @@ export default function SettingsPage() {
           </div>
           <div className="flex items-center gap-2">
             <Button onClick={savePrepaymentRate} disabled={saving || loading}>
-              {saving ? "Dang luu..." : "Luu thay doi"}
+              {saving ? "Dang luu..." : "Lưu thay doi"}
             </Button>
             {savedMessage && <p className="text-sm text-emerald-600">{savedMessage}</p>}
           </div>
@@ -107,26 +107,26 @@ export default function SettingsPage() {
       </Card>
 
       <Card>
-        <TableToolbar title="Danh muc quy dinh" description="Cac danh muc duoc quan ly qua trang CRUD tuong ung" />
+        <TableToolbar title="Danh muc quy định" description="Cac danh mục duoc quản lý qua trang CRUD tuong ung" />
         <CardContent className="px-0">
           {loading ? (
-            <p className="px-4 py-6 text-sm text-muted-foreground">Dang tai...</p>
+            <p className="px-4 py-6 text-sm text-muted-foreground">Đang tải...</p>
           ) : productTypesCount + unitsCount + serviceTypesCount === 0 ? (
             <div className="p-4">
-              <EmptyState title="Khong co du lieu" description="Kiem tra API settings" />
+              <EmptyState title="Không có dữ liệu" description="Kiem tra API settings" />
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Danh muc</TableHead>
-                  <TableHead>So ban ghi</TableHead>
+                  <TableHead>Số bản ghi</TableHead>
                   <TableHead className="text-right">Dieu huong</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 <TableRow>
-                  <TableCell>Loai san pham & ti le loi nhuan</TableCell>
+                  <TableCell>Loại sản phẩm & tỉ lệ lợi nhuận</TableCell>
                   <TableCell>{productTypesCount}</TableCell>
                   <TableCell className="text-right">
                     <Button size="sm" variant="outline" asChild>
@@ -135,7 +135,7 @@ export default function SettingsPage() {
                   </TableCell>
                 </TableRow>
                 <TableRow>
-                  <TableCell>Don vi tinh</TableCell>
+                  <TableCell>Đơn vị tính</TableCell>
                   <TableCell>{unitsCount}</TableCell>
                   <TableCell className="text-right">
                     <Button size="sm" variant="outline" asChild>
@@ -144,7 +144,7 @@ export default function SettingsPage() {
                   </TableCell>
                 </TableRow>
                 <TableRow>
-                  <TableCell>Loai dich vu & don gia</TableCell>
+                  <TableCell>Loại dịch vụ & đơn giá</TableCell>
                   <TableCell>{serviceTypesCount}</TableCell>
                   <TableCell className="text-right">
                     <Button size="sm" variant="outline" asChild>

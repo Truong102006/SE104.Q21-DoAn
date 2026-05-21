@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
@@ -16,11 +16,6 @@ import {
 } from "@/components/ui/card";
 import { Gem, Eye, EyeOff, Loader2 } from "lucide-react";
 
-/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-   Login Page â€” Luxury Gold Store Authentication
-   Premium split-screen layout with brand showcase + login form
-   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-
 export default function LoginPage() {
   const router = useRouter();
   const { login, isAuthenticated, hydrate, isHydrated } = useAuthStore();
@@ -31,12 +26,10 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  /* Hydrate auth state from localStorage on mount */
   useEffect(() => {
     hydrate();
   }, [hydrate]);
 
-  /* Redirect if already authenticated */
   useEffect(() => {
     if (isHydrated && isAuthenticated()) {
       router.replace("/dashboard");
@@ -54,7 +47,7 @@ export default function LoginPage() {
       login(token, me);
       router.replace("/dashboard");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "ÄÃ£ xáº£y ra lá»—i");
+      setError(err instanceof Error ? err.message : "\u0110\u00e3 x\u1ea3y ra l\u1ed7i");
     } finally {
       setLoading(false);
     }
@@ -71,7 +64,7 @@ export default function LoginPage() {
       <div className="flex min-h-dvh items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="h-8 w-8 animate-spin text-gold" />
-          <p className="text-sm text-muted-foreground">Äang khá»Ÿi táº¡o trang Ä‘Äƒng nháº­p...</p>
+          <p className="text-sm text-muted-foreground">{"\u0110ang kh\u1edfi t\u1ea1o trang \u0111\u0103ng nh\u1eadp..."}</p>
         </div>
       </div>
     );
@@ -79,53 +72,39 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-dvh">
-      {/* â”€â”€â”€ Left panel â€” Brand showcase â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
-      <div className="hidden lg:flex lg:w-1/2 xl:w-[55%] relative items-center justify-center bg-[oklch(0.14_0.01_60)] overflow-hidden">
-        {/* Decorative gold gradient circles */}
-        <div className="absolute top-[-20%] right-[-10%] h-[600px] w-[600px] rounded-full bg-[oklch(0.65_0.12_75_/_0.08)] blur-3xl" />
+      <div className="relative hidden items-center justify-center overflow-hidden bg-[oklch(0.14_0.01_60)] lg:flex lg:w-1/2 xl:w-[55%]">
+        <div className="absolute right-[-10%] top-[-20%] h-[600px] w-[600px] rounded-full bg-[oklch(0.65_0.12_75_/_0.08)] blur-3xl" />
         <div className="absolute bottom-[-15%] left-[-5%] h-[500px] w-[500px] rounded-full bg-[oklch(0.72_0.14_80_/_0.06)] blur-3xl" />
 
         <div className="relative z-10 max-w-lg px-12 text-center">
-          {/* Logo */}
           <div className="mx-auto mb-8 flex h-20 w-20 items-center justify-center rounded-2xl bg-[oklch(0.65_0.12_75)] shadow-lg shadow-[oklch(0.65_0.12_75_/_0.3)]">
             <Gem className="h-10 w-10 text-white" strokeWidth={1.5} />
           </div>
 
-          <h1 className="mb-4 text-4xl font-bold tracking-tight text-white">
-            Gold Store
-          </h1>
+          <h1 className="mb-4 text-4xl font-bold tracking-tight text-white">Gold Store</h1>
           <p className="text-lg leading-relaxed text-[oklch(0.7_0.02_75)]">
-            Há»‡ thá»‘ng quáº£n lÃ½ cá»­a hÃ ng
+            {"H\u1ec7 th\u1ed1ng qu\u1ea3n l\u00fd c\u1eeda h\u00e0ng"}
             <br />
-            <span className="text-gold-gradient font-semibold">
-              VÃ ng Â· Báº¡c Â· ÄÃ¡ QuÃ½
-            </span>
+            <span className="font-semibold text-gold-gradient">{"V\u00e0ng \u00b7 B\u1ea1c \u00b7 \u0110\u00e1 Qu\u00fd"}</span>
           </p>
 
-          {/* Stats decoration */}
           <div className="mt-12 grid grid-cols-3 gap-6">
             {[
-              { label: "Sáº£n pháº©m", value: "1,200+" },
-              { label: "ÄÆ¡n hÃ ng", value: "8,500+" },
-              { label: "KhÃ¡ch hÃ ng", value: "3,200+" },
+              { label: "S\u1ea3n ph\u1ea9m", value: "1,200+" },
+              { label: "\u0110\u01a1n h\u00e0ng", value: "8,500+" },
+              { label: "Kh\u00e1ch h\u00e0ng", value: "3,200+" },
             ].map((stat) => (
               <div key={stat.label} className="text-center">
-                <p className="text-2xl font-bold text-[oklch(0.65_0.12_75)]">
-                  {stat.value}
-                </p>
-                <p className="mt-1 text-sm text-[oklch(0.55_0.01_75)]">
-                  {stat.label}
-                </p>
+                <p className="text-2xl font-bold text-[oklch(0.65_0.12_75)]">{stat.value}</p>
+                <p className="mt-1 text-sm text-[oklch(0.55_0.01_75)]">{stat.label}</p>
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      {/* â”€â”€â”€ Right panel â€” Login form â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
-      <div className="flex flex-1 items-center justify-center px-6 py-12 bg-background">
+      <div className="flex flex-1 items-center justify-center bg-background px-6 py-12">
         <div className="w-full max-w-md space-y-8">
-          {/* Mobile logo */}
           <div className="text-center lg:hidden">
             <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-gold">
               <Gem className="h-7 w-7 text-white" strokeWidth={1.5} />
@@ -135,16 +114,13 @@ export default function LoginPage() {
 
           <Card className="border-0 shadow-xl shadow-black/5">
             <CardHeader className="space-y-1 pb-4">
-              <CardTitle className="text-2xl font-semibold tracking-tight">
-                ÄÄƒng nháº­p
-              </CardTitle>
+              <CardTitle className="text-2xl font-semibold tracking-tight">{"\u0110\u0103ng nh\u1eadp"}</CardTitle>
               <CardDescription>
-                Nháº­p thÃ´ng tin tÃ i khoáº£n Ä‘á»ƒ truy cáº­p há»‡ thá»‘ng
+                {"Nh\u1eadp th\u00f4ng tin t\u00e0i kho\u1ea3n \u0111\u1ec3 truy c\u1eadp h\u1ec7 th\u1ed1ng"}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Error message */}
                 {error && (
                   <div
                     role="alert"
@@ -154,13 +130,12 @@ export default function LoginPage() {
                   </div>
                 )}
 
-                {/* Username */}
                 <div className="space-y-2">
-                  <Label htmlFor="username">TÃªn Ä‘Äƒng nháº­p</Label>
+                  <Label htmlFor="username">{"T\u00ean \u0111\u0103ng nh\u1eadp"}</Label>
                   <Input
                     id="username"
                     type="text"
-                    placeholder="Nháº­p tÃªn Ä‘Äƒng nháº­p"
+                    placeholder="Nh\u1eadp t\u00ean \u0111\u0103ng nh\u1eadp"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     autoComplete="username"
@@ -170,14 +145,13 @@ export default function LoginPage() {
                   />
                 </div>
 
-                {/* Password */}
                 <div className="space-y-2">
-                  <Label htmlFor="password">Máº­t kháº©u</Label>
+                  <Label htmlFor="password">{"M\u1eadt kh\u1ea9u"}</Label>
                   <div className="relative">
                     <Input
                       id="password"
                       type={showPassword ? "text" : "password"}
-                      placeholder="Nháº­p máº­t kháº©u"
+                      placeholder="Nh\u1eadp m\u1eadt kh\u1ea9u"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       autoComplete="current-password"
@@ -188,42 +162,32 @@ export default function LoginPage() {
                     <button
                       type="button"
                       onClick={() => setShowPassword((p) => !p)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                      aria-label={
-                        showPassword ? "áº¨n máº­t kháº©u" : "Hiá»‡n máº­t kháº©u"
-                      }
+                      className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-muted-foreground transition-colors hover:text-foreground"
+                      aria-label={showPassword ? "\u1ea8n m\u1eadt kh\u1ea9u" : "Hi\u1ec7n m\u1eadt kh\u1ea9u"}
                     >
-                      {showPassword ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
                 </div>
 
-                {/* Submit */}
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="h-11 w-full cursor-pointer bg-gold text-gold-foreground hover:bg-gold/90 transition-colors"
+                  className="h-11 w-full cursor-pointer bg-gold text-gold-foreground transition-colors hover:bg-gold/90"
                 >
                   {loading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Äang Ä‘Äƒng nháº­p...
+                      {"\u0110ang \u0111\u0103ng nh\u1eadp..."}
                     </>
                   ) : (
-                    "ÄÄƒng nháº­p"
+                    "\u0110\u0103ng nh\u1eadp"
                   )}
                 </Button>
               </form>
 
-              {/* Demo shortcuts */}
               <div className="mt-6 border-t pt-6">
-                <p className="mb-3 text-center text-xs text-muted-foreground">
-                  TÃ i khoáº£n demo
-                </p>
+                <p className="mb-3 text-center text-xs text-muted-foreground">{"T\u00e0i kho\u1ea3n demo"}</p>
                 <div className="flex gap-3">
                   <Button
                     type="button"
@@ -239,7 +203,7 @@ export default function LoginPage() {
                     onClick={() => fillDemo("staff")}
                     className="flex-1 cursor-pointer"
                   >
-                    NhÃ¢n viÃªn
+                    {"Nh\u00e2n vi\u00ean"}
                   </Button>
                 </div>
               </div>

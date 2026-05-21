@@ -47,7 +47,7 @@ export default function ServiceVoucherLookupPage() {
       setPage(data.number ?? nextPage);
       setTotalPages(Math.max(1, data.totalPages || 1));
     } catch (err) {
-      setError(getApiErrorMessage(err, "Khong tai duoc danh sach phieu dich vu"));
+      setError(getApiErrorMessage(err, "Không tải được danh sách phiếu dịch vụ"));
     } finally {
       setLoading(false);
     }
@@ -63,18 +63,18 @@ export default function ServiceVoucherLookupPage() {
       const data = await backendApi.serviceTickets.getById(soPhieuDichVu);
       setDetail(data);
     } catch (err) {
-      setError(getApiErrorMessage(err, "Khong tai duoc chi tiet phieu"));
+      setError(getApiErrorMessage(err, "Không tải được chi tiết phieu"));
     }
   }
 
   return (
     <div className="space-y-3">
-      <PageHeader eyebrow="BM9" title="Tra cuu phieu dich vu" description="Tim theo so phieu, khach hang, trang thai, khoang ngay" />
+      <PageHeader eyebrow="BM9" title="Tra cứu phiếu dịch vụ" description="Tim theo so phieu, khách hàng, trạng thái, khoảng ngày" />
 
       <Card>
         <TableToolbar
           title="Bo loc"
-          description="QÐ9: Tinh trang hoan thanh/chua hoan thanh tinh tu chi tiet giao hang"
+          description="QĐ0.9: Tình trạng hoàn thành/chưa hoàn thành tính từ chi tiết giao hàng"
           search={
             <div className="grid gap-2 md:grid-cols-5">
               <Input value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="keyword" />
@@ -84,7 +84,7 @@ export default function ServiceVoucherLookupPage() {
                 options={[
                   { value: "all", label: "Tat ca" },
                   { value: "Hoan thanh", label: "Hoan thanh" },
-                  { value: "Chua hoan thanh", label: "Chua hoan thanh" },
+                  { value: "Chua hoàn thành", label: "Chua hoàn thành" },
                 ]}
               />
               <div>
@@ -118,19 +118,19 @@ export default function ServiceVoucherLookupPage() {
           <p className="px-4 py-2 text-xs text-muted-foreground">Trang {page + 1}/{totalPages}</p>
           {error && <p className="px-4 pb-2 text-sm text-destructive">{error}</p>}
           {loading ? (
-            <p className="px-4 py-6 text-sm text-muted-foreground">Dang tai...</p>
+            <p className="px-4 py-6 text-sm text-muted-foreground">Đang tải...</p>
           ) : items.length === 0 ? (
             <div className="p-4">
-              <EmptyState title="Khong co du lieu" description="Thu doi bo loc" />
+              <EmptyState title="Không có dữ liệu" description="Thử đổi bộ lọc" />
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>So phieu</TableHead>
+                  <TableHead>Số phiếu</TableHead>
                   <TableHead>Ngay lap</TableHead>
-                  <TableHead>Khach hang</TableHead>
-                  <TableHead>Tong tien</TableHead>
+                  <TableHead>Khách hàng</TableHead>
+                  <TableHead>Tổng tiền</TableHead>
                   <TableHead>Tra truoc</TableHead>
                   <TableHead>Con lai</TableHead>
                   <TableHead>Tinh trang</TableHead>
@@ -149,7 +149,7 @@ export default function ServiceVoucherLookupPage() {
                     <TableCell>{item.tinhTrangDichVu}</TableCell>
                     <TableCell className="text-right">
                       <Button size="sm" variant="outline" onClick={() => openDetail(item.soPhieuDichVu)}>
-                        Xem chi tiet
+                        Xem chi tiết
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -164,16 +164,16 @@ export default function ServiceVoucherLookupPage() {
         <Card>
           <TableToolbar title={`Chi tiet ${detail.soPhieuDichVu}`} description={detail.tinhTrangDichVu} />
           <CardContent className="space-y-3 p-4">
-            <p className="text-sm">Khach hang: {detail.khachHang?.tenKhachHang ?? detail.maKhachHang}</p>
-            <p className="text-sm">Tong tien: {formatCurrency(detail.tongTien)}</p>
+            <p className="text-sm">Khách hàng: {detail.khachHang?.tenKhachHang ?? detail.maKhachHang}</p>
+            <p className="text-sm">Tổng tiền: {formatCurrency(detail.tongTien)}</p>
             <p className="text-sm">Tra truoc: {formatCurrency(detail.tongTienTraTruoc)}</p>
             <p className="text-sm">Con lai: {formatCurrency(detail.tongTienConLai)}</p>
 
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Loai dich vu</TableHead>
-                  <TableHead>So luong</TableHead>
+                  <TableHead>Loại dịch vụ</TableHead>
+                  <TableHead>Số lượng</TableHead>
                   <TableHead>Don gia</TableHead>
                   <TableHead>Thanh tien</TableHead>
                   <TableHead>Tra truoc</TableHead>
