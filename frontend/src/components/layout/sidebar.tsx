@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useAuthStore } from "@/stores/auth-store";
 import { cn } from "@/lib/utils";
 import type { UserRole } from "@/types";
+import { useTranslation } from "@/i18n/i18n-context";
 import {
   BarChart3,
   ClipboardList,
@@ -20,6 +21,7 @@ import {
 } from "lucide-react";
 
 type MenuItem = {
+  key: string;
   label: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
@@ -27,26 +29,27 @@ type MenuItem = {
 };
 
 const MENU_ITEMS: MenuItem[] = [
-  { label: "Dashboard", href: "/dashboard", icon: Gauge, roles: ["ADMIN", "STAFF"] },
-  { label: "Nh\u00e0 cung c\u1ea5p", href: "/dashboard/suppliers", icon: Truck, roles: ["ADMIN", "STAFF"] },
-  { label: "Kh\u00e1ch h\u00e0ng", href: "/dashboard/customers", icon: Users, roles: ["ADMIN", "STAFF"] },
-  { label: "\u0110\u01a1n v\u1ecb t\u00ednh", href: "/dashboard/units", icon: ClipboardList, roles: ["ADMIN", "STAFF"] },
-  { label: "Lo\u1ea1i s\u1ea3n ph\u1ea9m", href: "/dashboard/product-types", icon: Store, roles: ["ADMIN", "STAFF"] },
-  { label: "Lo\u1ea1i d\u1ecbch v\u1ee5", href: "/dashboard/service-types", icon: Wrench, roles: ["ADMIN", "STAFF"] },
-  { label: "S\u1ea3n ph\u1ea9m", href: "/dashboard/products", icon: Package, roles: ["ADMIN", "STAFF"] },
-  { label: "L\u1eadp phi\u1ebfu mua", href: "/dashboard/purchase-orders", icon: ShoppingBag, roles: ["ADMIN", "STAFF"] },
-  { label: "L\u1eadp phi\u1ebfu b\u00e1n", href: "/dashboard/orders", icon: ShoppingBag, roles: ["ADMIN", "STAFF"] },
-  { label: "L\u1eadp phi\u1ebfu d\u1ecbch v\u1ee5", href: "/dashboard/service-orders", icon: Wrench, roles: ["ADMIN", "STAFF"] },
-  { label: "Tra c\u1ee9u s\u1ea3n ph\u1ea9m", href: "/dashboard/products?mode=search", icon: Search, roles: ["ADMIN", "STAFF"] },
+  { key: "nav.dashboard", label: "Dashboard", href: "/dashboard", icon: Gauge, roles: ["ADMIN", "STAFF"] },
+  { key: "nav.suppliers", label: "Nhà cung cấp", href: "/dashboard/suppliers", icon: Truck, roles: ["ADMIN", "STAFF"] },
+  { key: "nav.customers", label: "Khách hàng", href: "/dashboard/customers", icon: Users, roles: ["ADMIN", "STAFF"] },
+  { key: "nav.units", label: "Đơn vị tính", href: "/dashboard/units", icon: ClipboardList, roles: ["ADMIN", "STAFF"] },
+  { key: "nav.productTypes", label: "Loại sản phẩm", href: "/dashboard/product-types", icon: Store, roles: ["ADMIN", "STAFF"] },
+  { key: "nav.serviceTypes", label: "Loại dịch vụ", href: "/dashboard/service-types", icon: Wrench, roles: ["ADMIN", "STAFF"] },
+  { key: "nav.products", label: "Sản phẩm", href: "/dashboard/products", icon: Package, roles: ["ADMIN", "STAFF"] },
+  { key: "nav.purchaseOrders", label: "Lập phiếu mua", href: "/dashboard/purchase-orders", icon: ShoppingBag, roles: ["ADMIN", "STAFF"] },
+  { key: "nav.salesOrders", label: "Lập phiếu bán", href: "/dashboard/orders", icon: ShoppingBag, roles: ["ADMIN", "STAFF"] },
+  { key: "nav.serviceOrders", label: "Lập phiếu dịch vụ", href: "/dashboard/service-orders", icon: Wrench, roles: ["ADMIN", "STAFF"] },
+  { key: "nav.productSearch", label: "Tra cứu sản phẩm", href: "/dashboard/products?mode=search", icon: Search, roles: ["ADMIN", "STAFF"] },
   {
-    label: "Tra c\u1ee9u phi\u1ebfu d\u1ecbch v\u1ee5",
+    key: "nav.serviceSearch",
+    label: "Tra cứu phiếu dịch vụ",
     href: "/dashboard/service-voucher-lookup",
     icon: Search,
     roles: ["ADMIN", "STAFF"],
   },
-  { label: "Qu\u1ea3n l\u00fd t\u00e0i kho\u1ea3n", href: "/dashboard/staff", icon: Users, roles: ["ADMIN"] },
-  { label: "B\u00e1o c\u00e1o", href: "/dashboard/reports", icon: BarChart3, roles: ["ADMIN"] },
-  { label: "Thay \u0111\u1ed5i quy \u0111\u1ecbnh", href: "/dashboard/settings", icon: Settings, roles: ["ADMIN"] },
+  { key: "nav.accounts", label: "Quản lý tài khoản", href: "/dashboard/staff", icon: Users, roles: ["ADMIN"] },
+  { key: "nav.reports", label: "Báo cáo", href: "/dashboard/reports", icon: BarChart3, roles: ["ADMIN"] },
+  { key: "nav.settings", label: "Thay đổi quy định", href: "/dashboard/settings", icon: Settings, roles: ["ADMIN"] },
 ];
 
 interface SidebarProps {
@@ -58,6 +61,7 @@ interface SidebarProps {
 export function Sidebar({ mobile = false }: SidebarProps) {
   const pathname = usePathname();
   const role = useAuthStore((state) => state.user?.role ?? "STAFF");
+  const { t } = useTranslation();
 
   const items = MENU_ITEMS.filter((item) => item.roles.includes(role));
 
@@ -71,7 +75,7 @@ export function Sidebar({ mobile = false }: SidebarProps) {
       <div className="flex h-14 items-center border-b border-sidebar-border px-4">
         <div>
           <p className="text-sm font-semibold text-sidebar-foreground">Gold Store</p>
-          <p className="text-xs text-sidebar-foreground/60">Management</p>
+          <p className="text-xs text-sidebar-foreground/60">{mobile ? "Mobile App" : "Management"}</p>
         </div>
       </div>
 
@@ -92,7 +96,7 @@ export function Sidebar({ mobile = false }: SidebarProps) {
               )}
             >
               <Icon className="h-4 w-4" />
-              <span className="truncate">{item.label}</span>
+              <span className="truncate">{t(item.key)}</span>
             </Link>
           );
         })}

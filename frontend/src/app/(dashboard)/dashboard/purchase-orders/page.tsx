@@ -19,6 +19,7 @@ import type {
 } from "@/types/backend";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { formatCurrency, formatNumber, todayIsoDate, toPositiveInt, toPositiveNumber } from "@/lib/format";
+import { useTranslation } from "@/i18n/i18n-context";
 import { Plus, Trash2 } from "lucide-react";
 
 type PurchaseItemDraft = {
@@ -36,6 +37,7 @@ const EMPTY_ITEM: PurchaseItemDraft = {
 };
 
 export default function PurchaseOrdersPage() {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -87,7 +89,7 @@ export default function PurchaseOrdersPage() {
         setMaNhaCungCap(supplierData[0].maNhaCungCap);
       }
     } catch (err) {
-      setError(getApiErrorMessage(err, "Không tải được dữ liệu phiếu mua"));
+      setError(getApiErrorMessage(err, t("purchaseOrders.loadError")));
     } finally {
       setLoading(false);
     }
@@ -124,39 +126,39 @@ export default function PurchaseOrdersPage() {
     setFormError(null);
 
     if (!maNhaCungCap) {
-      setFormError("Nhà cung cấp là bắt buộc");
+      setFormError(t("purchaseOrders.supplierRequired"));
       return;
     }
 
     if (items.length === 0) {
-      setFormError("Cần ít nhất 1 dòng chi tiết");
+      setFormError(t("purchaseOrders.minOneItem"));
       return;
     }
 
     const seen = new Set<string>();
     for (const item of items) {
       if (!item.maSanPham) {
-        setFormError("Sản phẩm là bắt buộc");
+        setFormError(t("purchaseOrders.productRequired"));
         return;
       }
       if (seen.has(item.maSanPham)) {
-        setFormError("Không được trùng sản phẩm trong cùng một phiếu");
+        setFormError(t("purchaseOrders.duplicateProduct"));
         return;
       }
       seen.add(item.maSanPham);
 
       if (toPositiveInt(item.soLuongMua) <= 0) {
-        setFormError("Số lượng mua phải > 0");
+        setFormError(t("purchaseOrders.quantityInvalid"));
         return;
       }
 
       if (toPositiveNumber(item.donGia) < 0) {
-        setFormError("Don gia phải >= 0");
+        setFormError(t("purchaseOrders.priceInvalid"));
         return;
       }
 
       if (!item.maDonViTinh) {
-        setFormError("Đơn vị tính là bắt buộc");
+        setFormError(t("purchaseOrders.unitRequired"));
         return;
       }
     }
@@ -181,7 +183,7 @@ export default function PurchaseOrdersPage() {
       setItems([{ ...EMPTY_ITEM }]);
       await loadData();
     } catch (err) {
-      setFormError(getApiErrorMessage(err, "Tạo phiếu mua thất bại"));
+      setFormError(getApiErrorMessage(err, t("purchaseOrders.createError")));
     } finally {
       setSubmitting(false);
     }
@@ -191,23 +193,23 @@ export default function PurchaseOrdersPage() {
     <div className="space-y-3">
       <PageHeader
         eyebrow="BM5"
-        title="Lập phiếu mua hang"
-        description="Tạo phiếu mua, tinh thanh tien/tong tien realtime, cap nhat ton kho qua backend"
+        title={t("purchaseOrders.title")}
+        description={t("purchaseOrders.description")}
       />
 
       <Card>
         <CardContent className="space-y-4 p-4">
           <div className="grid gap-3 md:grid-cols-3">
             <div className="space-y-2">
-              <Label>Số phiếu</Label>
-              <Input value={soPhieuMua} onChange={(e) => setSoPhieuMua(e.target.value)} placeholder="De trong de tu sinh" />
+              <Label>{t("common.voucherNumber")}</Label>
+              <Input value={soPhieuMua} onChange={(e) => setSoPhieuMua(e.target.value)} placeholder={t("common.autoGenerate")} />
             </div>
             <div className="space-y-2">
-              <Label>Ngay lap</Label>
+              <Label>{t("common.dateCreated")}</Label>
               <Input type="date" value={ngayLapPhieuMua} onChange={(e) => setNgayLapPhieuMua(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label>Nhà cung cấp</Label>
+              <Label>{t("common.supplier")}</Label>
               <Select
                 value={maNhaCungCap || ""}
                 onValueChange={setMaNhaCungCap}
@@ -218,20 +220,20 @@ export default function PurchaseOrdersPage() {
 
           {selectedSupplier && (
             <div className="rounded-lg border p-3 text-sm text-muted-foreground">
-              <p>Số điện thoại: {selectedSupplier.soDienThoai || "-"}</p>
-              <p>Địa chỉ: {selectedSupplier.diaChi || "-"}</p>
+              <p>{t("common.phone")}: {selectedSupplier.soDienThoai || "-"}</p>
+              <p>{t("common.address")}: {selectedSupplier.diaChi || "-"}</p>
             </div>
           )}
 
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Sản phẩm</TableHead>
-                <TableHead>Đơn vị tính</TableHead>
-                <TableHead>Số lượng</TableHead>
-                <TableHead>Don gia</TableHead>
-                <TableHead>Thanh tien</TableHead>
-                <TableHead className="text-right">Tac vu</TableHead>
+                <TableHead>{t("common.product")}</TableHead>
+                <TableHead>{t("common.unit")}</TableHead>
+                <TableHead>{t("common.quantity")}</TableHead>
+                <TableHead>{t("common.unitPrice")}</TableHead>
+                <TableHead>{t("common.subtotal")}</TableHead>
+                <TableHead className="text-right">{t("common.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -279,9 +281,9 @@ export default function PurchaseOrdersPage() {
           <div className="flex items-center justify-between">
             <Button variant="outline" onClick={addRow}>
               <Plus className="mr-1.5 h-3.5 w-3.5" />
-              Thêm dong
+              {t("common.addRow")}
             </Button>
-            <Badge variant="outline">Tổng tiền: {formatCurrency(totalAmount)}</Badge>
+            <Badge variant="outline">{t("common.total")}: {formatCurrency(totalAmount)}</Badge>
           </div>
 
           {formError && <p className="text-sm text-destructive">{formError}</p>}
@@ -289,7 +291,7 @@ export default function PurchaseOrdersPage() {
 
           <div className="flex justify-end">
             <Button onClick={submit} disabled={submitting || loading}>
-              {submitting ? "Đang tạo..." : "Tạo phiếu mua"}
+              {submitting ? t("common.creating") : t("purchaseOrders.createButton")}
             </Button>
           </div>
         </CardContent>
@@ -298,8 +300,8 @@ export default function PurchaseOrdersPage() {
       {latestCreated && (
         <Card>
           <CardContent className="space-y-2 p-4">
-            <p className="font-semibold">Phieu vua tao: {latestCreated.soPhieuMua}</p>
-            <p className="text-sm text-muted-foreground">Tổng tiền: {formatCurrency(latestCreated.tongTien)}</p>
+            <p className="font-semibold">{t("purchaseOrders.justCreated")}: {latestCreated.soPhieuMua}</p>
+            <p className="text-sm text-muted-foreground">{t("common.total")}: {formatCurrency(latestCreated.tongTien)}</p>
             <Button
               variant="outline"
               size="sm"
@@ -308,34 +310,34 @@ export default function PurchaseOrdersPage() {
                   const printData = await backendApi.purchases.printData(latestCreated.soPhieuMua);
                   setLatestCreated(printData);
                 } catch (err) {
-                  setError(getApiErrorMessage(err, "Không lấy được dữ liệu in phieu"));
+                  setError(getApiErrorMessage(err, t("purchaseOrders.printDataError")));
                 }
               }}
             >
-              Xem dữ liệu in phieu
+              {t("purchaseOrders.viewPrintData")}
             </Button>
           </CardContent>
         </Card>
       )}
 
       <Card>
-        <TableToolbar title="Lịch sử phiếu mua" description="Danh sách phiếu mua đã tạo" />
+        <TableToolbar title={t("purchaseOrders.historyTitle")} description={t("purchaseOrders.historyDesc")} />
         <CardContent className="px-0">
           {loading ? (
-            <p className="px-4 py-6 text-sm text-muted-foreground">Đang tải...</p>
+            <p className="px-4 py-6 text-sm text-muted-foreground">{t("common.loading")}</p>
           ) : purchaseList.length === 0 ? (
             <div className="p-4">
-              <EmptyState title="Chưa có phiếu mua" description="Tạo phiếu mua đầu tiên" />
+              <EmptyState title={t("purchaseOrders.emptyTitle")} description={t("purchaseOrders.emptyDesc")} />
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Số phiếu</TableHead>
-                  <TableHead>Ngay lap</TableHead>
-                  <TableHead>Nhà cung cấp</TableHead>
-                  <TableHead>Số dòng</TableHead>
-                  <TableHead>Tổng tiền</TableHead>
+                  <TableHead>{t("common.voucherNumber")}</TableHead>
+                  <TableHead>{t("common.dateCreated")}</TableHead>
+                  <TableHead>{t("common.supplier")}</TableHead>
+                  <TableHead>{t("purchaseOrders.lineCount")}</TableHead>
+                  <TableHead>{t("common.total")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -356,4 +358,3 @@ export default function PurchaseOrdersPage() {
     </div>
   );
 }
-

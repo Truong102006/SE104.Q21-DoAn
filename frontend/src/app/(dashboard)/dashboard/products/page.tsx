@@ -20,6 +20,7 @@ import type {
 import { getApiErrorMessage } from "@/lib/api-error";
 import { formatCurrency, formatNumber, toPositiveInt, toPositiveNumber } from "@/lib/format";
 import { useAuthStore } from "@/stores/auth-store";
+import { useTranslation } from "@/i18n/i18n-context";
 import { Pencil, Plus, Search, Trash2, X } from "lucide-react";
 
 const PAGE_SIZE = 20;
@@ -35,6 +36,7 @@ const EMPTY_FORM: ProductRequest = {
 export default function ProductsPage() {
   const searchParams = useSearchParams();
   const role = useAuthStore((state) => state.user?.role ?? "STAFF");
+  const { t } = useTranslation();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -64,7 +66,7 @@ export default function ProductsPage() {
       setProductTypes(types);
       setUnits(unitList);
     } catch (err) {
-      setError(getApiErrorMessage(err, "Không tải được danh mục loại sản phẩm/đơn vị tính"));
+      setError(getApiErrorMessage(err, t("products.loadOptionsError")));
     }
   }
 
@@ -82,7 +84,7 @@ export default function ProductsPage() {
       setTotalPages(Math.max(1, data.totalPages || 1));
       setPage(data.number ?? nextPage);
     } catch (err) {
-      setError(getApiErrorMessage(err, "Không tải được sản phẩm"));
+      setError(getApiErrorMessage(err, t("products.loadError")));
     } finally {
       setLoading(false);
     }
@@ -132,17 +134,17 @@ export default function ProductsPage() {
     event.preventDefault();
 
     if (!form.tenSanPham?.trim()) {
-      setFormError("Tên sản phẩm là bắt buộc");
+      setFormError(t("products.nameRequired"));
       return;
     }
 
     if (!form.maLoaiSanPham) {
-      setFormError("Loại sản phẩm là bắt buộc");
+      setFormError(t("products.typeRequired"));
       return;
     }
 
     if (!form.maDonViTinh) {
-      setFormError("Đơn vị tính là bắt buộc");
+      setFormError(t("products.unitRequired"));
       return;
     }
 
@@ -168,7 +170,7 @@ export default function ProductsPage() {
       setOpenForm(false);
       await loadData();
     } catch (err) {
-      setFormError(getApiErrorMessage(err, "Lưu sản phẩm thất bại"));
+      setFormError(getApiErrorMessage(err, t("products.saveError")));
     } finally {
       setSubmitting(false);
     }
@@ -184,7 +186,7 @@ export default function ProductsPage() {
       setDeleting(null);
       await loadData();
     } catch (err) {
-      setError(getApiErrorMessage(err, "Xóa sản phẩm thất bại"));
+      setError(getApiErrorMessage(err, t("products.deleteError")));
       setDeleting(null);
     }
   }
@@ -193,32 +195,32 @@ export default function ProductsPage() {
     <div className="space-y-3">
       <PageHeader
         eyebrow="BM8"
-        title="Sản phẩm"
-        description="Tra cứu v? quản lý sản phẩm"
-        badges={<Badge variant="outline">Trang {page + 1}/{totalPages}</Badge>}
+        title={t("products.title")}
+        description={t("products.description")}
+        badges={<Badge variant="outline">{t("common.page")} {page + 1}/{totalPages}</Badge>}
         actions={
           <Button size="sm" onClick={openCreate}>
             <Plus className="mr-1.5 h-3.5 w-3.5" />
-            Thêm
+            {t("common.add")}
           </Button>
         }
       />
 
       <Card>
         <TableToolbar
-          title="Danh sách"
-          description="Tìm theo mã, tên, loại sản phẩm"
+          title={t("common.list")}
+          description={t("products.searchDesc")}
           search={
             <div className="grid gap-2 sm:grid-cols-3">
               <div className="relative sm:col-span-2">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="Nhap từ khóa..." className="pl-9" />
+                <Input value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder={t("common.searchPlaceholder")} className="pl-9" />
               </div>
               <Select
                 value={selectedType || "all"}
                 onValueChange={(value) => setSelectedType(value === "all" ? "" : value)}
                 options={[
-                  { value: "all", label: "Tat ca loai" },
+                  { value: "all", label: t("common.allTypes") },
                   ...productTypes.map((type) => ({ value: type.maLoaiSanPham, label: type.tenLoaiSanPham })),
                 ]}
               />
@@ -227,10 +229,10 @@ export default function ProductsPage() {
           actions={
             <div className="flex gap-2">
               <Button size="sm" variant="outline" onClick={() => loadData(0, keyword, selectedType)}>
-                Loc
+                {t("common.filter")}
               </Button>
               <Button size="sm" variant="outline" disabled={page <= 0} onClick={() => loadData(page - 1, keyword, selectedType)}>
-                Prev
+                {t("common.prev")}
               </Button>
               <Button
                 size="sm"
@@ -238,7 +240,7 @@ export default function ProductsPage() {
                 disabled={page + 1 >= totalPages}
                 onClick={() => loadData(page + 1, keyword, selectedType)}
               >
-                Next
+                {t("common.next")}
               </Button>
             </div>
           }
@@ -246,22 +248,22 @@ export default function ProductsPage() {
         <CardContent className="px-0">
           {error && <p className="px-4 pb-2 text-sm text-destructive">{error}</p>}
           {loading ? (
-            <p className="px-4 py-6 text-sm text-muted-foreground">Đang tải...</p>
+            <p className="px-4 py-6 text-sm text-muted-foreground">{t("common.loading")}</p>
           ) : items.length === 0 ? (
             <div className="p-4">
-              <EmptyState title="Không có dữ liệu" description="Thử đổi bộ lọc hoac thêm mới" />
+              <EmptyState title={t("common.emptyTitle")} description={t("common.emptyFilterDesc")} />
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Ma SP</TableHead>
-                  <TableHead>Tên sản phẩm</TableHead>
-                  <TableHead>Loại sản phẩm</TableHead>
-                  <TableHead>Don gia ban</TableHead>
-                  <TableHead>Ton kho</TableHead>
-                  <TableHead>Đơn vị tính</TableHead>
-                  <TableHead className="text-right">Tac vu</TableHead>
+                  <TableHead>{t("products.productCode")}</TableHead>
+                  <TableHead>{t("products.name")}</TableHead>
+                  <TableHead>{t("products.productType")}</TableHead>
+                  <TableHead>{t("products.sellingPrice")}</TableHead>
+                  <TableHead>{t("products.stock")}</TableHead>
+                  <TableHead>{t("common.unit")}</TableHead>
+                  <TableHead className="text-right">{t("common.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -297,7 +299,7 @@ export default function ProductsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={() => setOpenForm(false)}>
           <div className="w-full max-w-xl rounded-xl border bg-background shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between border-b px-5 py-4">
-              <h2 className="text-lg font-semibold">{editing ? "Cập nhật" : "Thêm"} sản phẩm</h2>
+              <h2 className="text-lg font-semibold">{editing ? t("products.editTitle") : t("products.addTitle")}</h2>
               <Button variant="ghost" size="icon-sm" onClick={() => setOpenForm(false)}>
                 <X className="h-4 w-4" />
               </Button>
@@ -305,12 +307,12 @@ export default function ProductsPage() {
             <form className="space-y-3 px-5 py-4" onSubmit={onSubmit}>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-2 sm:col-span-2">
-                  <Label>Tên sản phẩm</Label>
+                  <Label>{t("products.name")}</Label>
                   <Input value={form.tenSanPham} onChange={(e) => updateField("tenSanPham", e.target.value)} />
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Loại sản phẩm</Label>
+                  <Label>{t("products.productType")}</Label>
                   <Select
                     value={form.maLoaiSanPham || ""}
                     onValueChange={(value) => updateField("maLoaiSanPham", value)}
@@ -319,7 +321,7 @@ export default function ProductsPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Đơn vị tính</Label>
+                  <Label>{t("common.unit")}</Label>
                   <Select
                     value={form.maDonViTinh || ""}
                     onValueChange={(value) => updateField("maDonViTinh", value)}
@@ -328,12 +330,12 @@ export default function ProductsPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Don gia mua</Label>
+                  <Label>{t("products.purchasePrice")}</Label>
                   <Input value={donGiaMuaText} onChange={(e) => setDonGiaMuaText(e.target.value)} />
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Ton kho ban dau</Label>
+                  <Label>{t("products.initialStock")}</Label>
                   <Input value={tonKhoText} onChange={(e) => setTonKhoText(e.target.value)} />
                 </div>
               </div>
@@ -342,10 +344,10 @@ export default function ProductsPage() {
 
               <div className="flex justify-end gap-2 border-t pt-3">
                 <Button type="button" variant="outline" onClick={() => setOpenForm(false)}>
-                  Huy
+                  {t("common.cancel")}
                 </Button>
                 <Button type="submit" disabled={submitting}>
-                  {submitting ? "Dang luu..." : "Lưu"}
+                  {submitting ? t("common.saving") : t("common.save")}
                 </Button>
               </div>
             </form>
@@ -355,9 +357,9 @@ export default function ProductsPage() {
 
       <ConfirmDialog
         open={deleting !== null}
-        title="Xóa sản phẩm"
-        description={deleting ? `Bạn chắc chắn muốn xóa ${deleting.tenSanPham}?` : ""}
-        confirmLabel="Xóa"
+        title={t("products.deleteTitle")}
+        description={deleting ? t("common.deleteConfirm").replace("{name}", deleting.tenSanPham) : ""}
+        confirmLabel={t("common.delete")}
         destructive
         onCancel={() => setDeleting(null)}
         onConfirm={doDelete}
@@ -365,4 +367,3 @@ export default function ProductsPage() {
     </div>
   );
 }
-

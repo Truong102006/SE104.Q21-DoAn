@@ -9,6 +9,7 @@ import { getApiErrorMessage } from "@/lib/api-error";
 import { formatCurrency, formatNumber } from "@/lib/format";
 import { BarChart3, Boxes, FileClock, Package } from "lucide-react";
 import type { SaleResponse, ServiceTicketResponse } from "@/types/backend";
+import { useTranslation } from "@/i18n/i18n-context";
 
 function isCurrentMonth(dateText: string): boolean {
   const now = new Date();
@@ -27,6 +28,7 @@ function calcCurrentMonthRevenue(sales: SaleResponse[]): number {
 }
 
 export default function DashboardPage() {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -59,7 +61,7 @@ export default function DashboardPage() {
         setPendingServiceTickets(serviceTickets.filter((item) => !isServiceTicketCompleted(item)).length);
       } catch (err) {
         if (mounted) {
-          setError(getApiErrorMessage(err, "Không tải được dashboard"));
+          setError(getApiErrorMessage(err, t("dashboard.loadFailed")));
         }
       } finally {
         if (mounted) {
@@ -73,40 +75,40 @@ export default function DashboardPage() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [t]);
 
   const summary = useMemo(
     () => [
       {
-        label: "Số sản phẩm",
+        label: t("dashboard.productCount"),
         value: formatNumber(productCount),
         icon: Package,
       },
       {
-        label: "Tổng tồn kho",
+        label: t("dashboard.totalStock"),
         value: formatNumber(totalStock),
         icon: Boxes,
       },
       {
-        label: "Doanh thu tháng nay",
+        label: t("dashboard.monthRevenue"),
         value: formatCurrency(currentMonthRevenue),
         icon: BarChart3,
       },
       {
-        label: "Phiếu dịch vụ chưa hoàn thành",
+        label: t("dashboard.pendingService"),
         value: formatNumber(pendingServiceTickets),
         icon: FileClock,
       },
     ],
-    [currentMonthRevenue, pendingServiceTickets, productCount, totalStock],
+    [currentMonthRevenue, pendingServiceTickets, productCount, totalStock, t],
   );
 
   return (
     <div className="space-y-4">
       <PageHeader
-        eyebrow="Dashboard"
-        title="Tổng quan vận hành"
-        description="Số liệu nhanh theo thời gian thực từ hệ thống"
+        eyebrow={t("nav.dashboard")}
+        title={t("dashboard.title")}
+        description={t("dashboard.description")}
         badges={<Badge variant="outline">Realtime</Badge>}
       />
 
@@ -129,15 +131,15 @@ export default function DashboardPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Ghi chú</CardTitle>
+          <CardTitle>{t("dashboard.note")}</CardTitle>
         </CardHeader>
         <CardContent>
           {!loading && !error ? (
             <p className="text-sm text-muted-foreground">
-              Dashboard đang lấy doanh thu từ các phiếu bán trong tháng hiện tại và trạng thái phiếu dịch vụ từ backend.
+              {t("dashboard.noteContent")}
             </p>
           ) : (
-            <EmptyState title="Đang tải dữ liệu" description="Hệ thống đang đồng bộ số liệu tổng quan" />
+            <EmptyState title={t("dashboard.loadingTitle")} description={t("dashboard.loadingDesc")} />
           )}
         </CardContent>
       </Card>

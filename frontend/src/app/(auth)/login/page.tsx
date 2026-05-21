@@ -15,10 +15,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Gem, Eye, EyeOff, Loader2 } from "lucide-react";
+import { useTranslation } from "@/i18n/i18n-context";
+import { LanguageSwitcher } from "@/components/language-switcher";
 
 export default function LoginPage() {
   const router = useRouter();
   const { login, isAuthenticated, hydrate, isHydrated } = useAuthStore();
+  const { t } = useTranslation();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -47,7 +50,7 @@ export default function LoginPage() {
       login(token, me);
       router.replace("/dashboard");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "\u0110\u00e3 x\u1ea3y ra l\u1ed7i");
+      setError(err instanceof Error ? err.message : t("auth.errorDefault"));
     } finally {
       setLoading(false);
     }
@@ -64,35 +67,40 @@ export default function LoginPage() {
       <div className="flex min-h-dvh items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="h-8 w-8 animate-spin text-gold" />
-          <p className="text-sm text-muted-foreground">{"\u0110ang kh\u1edfi t\u1ea1o trang \u0111\u0103ng nh\u1eadp..."}</p>
+          <p className="text-sm text-muted-foreground">{t("auth.initLoading")}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-dvh">
+    <div className="flex min-h-dvh relative">
+      {/* Premium top-right Language Switcher */}
+      <div className="absolute top-4 right-4 z-50 animate-fade-in" style={{ animationDelay: "150ms" }}>
+        <LanguageSwitcher />
+      </div>
+
       <div className="relative hidden items-center justify-center overflow-hidden bg-[oklch(0.14_0.01_60)] lg:flex lg:w-1/2 xl:w-[55%]">
         <div className="absolute right-[-10%] top-[-20%] h-[600px] w-[600px] rounded-full bg-[oklch(0.65_0.12_75_/_0.08)] blur-3xl" />
         <div className="absolute bottom-[-15%] left-[-5%] h-[500px] w-[500px] rounded-full bg-[oklch(0.72_0.14_80_/_0.06)] blur-3xl" />
 
         <div className="relative z-10 max-w-lg px-12 text-center">
           <div className="mx-auto mb-8 flex h-20 w-20 items-center justify-center rounded-2xl bg-[oklch(0.65_0.12_75)] shadow-lg shadow-[oklch(0.65_0.12_75_/_0.3)]">
-            <Gem className="h-10 w-10 text-white" strokeWidth={1.5} />
+            <Gem className="h-10 w-10 text-white animate-pulse" strokeWidth={1.5} />
           </div>
 
           <h1 className="mb-4 text-4xl font-bold tracking-tight text-white">Gold Store</h1>
           <p className="text-lg leading-relaxed text-[oklch(0.7_0.02_75)]">
-            {"H\u1ec7 th\u1ed1ng qu\u1ea3n l\u00fd c\u1eeda h\u00e0ng"}
+            {t("auth.systemTitle")}
             <br />
-            <span className="font-semibold text-gold-gradient">{"V\u00e0ng \u00b7 B\u1ea1c \u00b7 \u0110\u00e1 Qu\u00fd"}</span>
+            <span className="font-semibold text-gold-gradient">{t("auth.systemSubtitle")}</span>
           </p>
 
           <div className="mt-12 grid grid-cols-3 gap-6">
             {[
-              { label: "S\u1ea3n ph\u1ea9m", value: "1,200+" },
-              { label: "\u0110\u01a1n h\u00e0ng", value: "8,500+" },
-              { label: "Kh\u00e1ch h\u00e0ng", value: "3,200+" },
+              { label: t("nav.products"), value: "1,200+" },
+              { label: t("nav.salesOrders"), value: "8,500+" },
+              { label: t("nav.customers"), value: "3,200+" },
             ].map((stat) => (
               <div key={stat.label} className="text-center">
                 <p className="text-2xl font-bold text-[oklch(0.65_0.12_75)]">{stat.value}</p>
@@ -114,9 +122,9 @@ export default function LoginPage() {
 
           <Card className="border-0 shadow-xl shadow-black/5">
             <CardHeader className="space-y-1 pb-4">
-              <CardTitle className="text-2xl font-semibold tracking-tight">{"\u0110\u0103ng nh\u1eadp"}</CardTitle>
+              <CardTitle className="text-2xl font-semibold tracking-tight">{t("auth.title")}</CardTitle>
               <CardDescription>
-                {"Nh\u1eadp th\u00f4ng tin t\u00e0i kho\u1ea3n \u0111\u1ec3 truy c\u1eadp h\u1ec7 th\u1ed1ng"}
+                {t("auth.subtitle")}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -131,11 +139,11 @@ export default function LoginPage() {
                 )}
 
                 <div className="space-y-2">
-                  <Label htmlFor="username">{"T\u00ean \u0111\u0103ng nh\u1eadp"}</Label>
+                  <Label htmlFor="username">{t("auth.username")}</Label>
                   <Input
                     id="username"
                     type="text"
-                    placeholder="Nh\u1eadp t\u00ean \u0111\u0103ng nh\u1eadp"
+                    placeholder={t("auth.usernamePlaceholder")}
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     autoComplete="username"
@@ -146,12 +154,12 @@ export default function LoginPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="password">{"M\u1eadt kh\u1ea9u"}</Label>
+                  <Label htmlFor="password">{t("auth.password")}</Label>
                   <div className="relative">
                     <Input
                       id="password"
                       type={showPassword ? "text" : "password"}
-                      placeholder="Nh\u1eadp m\u1eadt kh\u1ea9u"
+                      placeholder={t("auth.passwordPlaceholder")}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       autoComplete="current-password"
@@ -163,7 +171,7 @@ export default function LoginPage() {
                       type="button"
                       onClick={() => setShowPassword((p) => !p)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-muted-foreground transition-colors hover:text-foreground"
-                      aria-label={showPassword ? "\u1ea8n m\u1eadt kh\u1ea9u" : "Hi\u1ec7n m\u1eadt kh\u1ea9u"}
+                      aria-label={showPassword ? t("auth.hidePassword") : t("auth.showPassword")}
                     >
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
@@ -178,16 +186,16 @@ export default function LoginPage() {
                   {loading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      {"\u0110ang \u0111\u0103ng nh\u1eadp..."}
+                      {t("auth.loggingIn")}
                     </>
                   ) : (
-                    "\u0110\u0103ng nh\u1eadp"
+                    t("auth.loginButton")
                   )}
                 </Button>
               </form>
 
               <div className="mt-6 border-t pt-6">
-                <p className="mb-3 text-center text-xs text-muted-foreground">{"T\u00e0i kho\u1ea3n demo"}</p>
+                <p className="mb-3 text-center text-xs text-muted-foreground">{t("auth.demoAccounts")}</p>
                 <div className="flex gap-3">
                   <Button
                     type="button"
@@ -195,7 +203,7 @@ export default function LoginPage() {
                     onClick={() => fillDemo("admin")}
                     className="flex-1 cursor-pointer"
                   >
-                    Admin
+                    {t("auth.admin")}
                   </Button>
                   <Button
                     type="button"
@@ -203,7 +211,7 @@ export default function LoginPage() {
                     onClick={() => fillDemo("staff")}
                     className="flex-1 cursor-pointer"
                   >
-                    {"Nh\u00e2n vi\u00ean"}
+                    {t("auth.staff")}
                   </Button>
                 </div>
               </div>

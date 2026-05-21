@@ -8,25 +8,27 @@ import { Button } from "@/components/ui/button";
 import { Menu, LogOut } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Sidebar } from "./sidebar";
+import { useTranslation } from "@/i18n/i18n-context";
+import { LanguageSwitcher } from "../language-switcher";
 
 const PAGE_TITLES: Record<string, string> = {
-  "/dashboard": "Dashboard",
-  "/dashboard/suppliers": "Nh\u00e0 cung c\u1ea5p",
-  "/dashboard/customers": "Kh\u00e1ch h\u00e0ng",
-  "/dashboard/units": "\u0110\u01a1n v\u1ecb t\u00ednh",
-  "/dashboard/product-types": "Lo\u1ea1i s\u1ea3n ph\u1ea9m",
-  "/dashboard/service-types": "Lo\u1ea1i d\u1ecbch v\u1ee5",
-  "/dashboard/products": "S\u1ea3n ph\u1ea9m",
-  "/dashboard/purchase-orders": "L\u1eadp phi\u1ebfu mua",
-  "/dashboard/orders": "L\u1eadp phi\u1ebfu b\u00e1n",
-  "/dashboard/service-orders": "L\u1eadp phi\u1ebfu d\u1ecbch v\u1ee5",
-  "/dashboard/service-voucher-lookup": "Tra c\u1ee9u phi\u1ebfu d\u1ecbch v\u1ee5",
-  "/dashboard/reports": "B\u00e1o c\u00e1o",
-  "/dashboard/settings": "Thay \u0111\u1ed5i quy \u0111\u1ecbnh",
-  "/dashboard/staff": "Qu\u1ea3n l\u00fd t\u00e0i kho\u1ea3n",
+  "/dashboard": "nav.dashboard",
+  "/dashboard/suppliers": "nav.suppliers",
+  "/dashboard/customers": "nav.customers",
+  "/dashboard/units": "nav.units",
+  "/dashboard/product-types": "nav.productTypes",
+  "/dashboard/service-types": "nav.serviceTypes",
+  "/dashboard/products": "nav.products",
+  "/dashboard/purchase-orders": "nav.purchaseOrders",
+  "/dashboard/orders": "nav.salesOrders",
+  "/dashboard/service-orders": "nav.serviceOrders",
+  "/dashboard/service-voucher-lookup": "nav.serviceSearch",
+  "/dashboard/reports": "nav.reports",
+  "/dashboard/settings": "nav.settings",
+  "/dashboard/staff": "nav.accounts",
 };
 
-function getPageTitle(pathname: string): string {
+function getPageTitleKey(pathname: string): string {
   const direct = PAGE_TITLES[pathname];
   if (direct) {
     return direct;
@@ -37,15 +39,17 @@ function getPageTitle(pathname: string): string {
     return matched[1];
   }
 
-  return "Dashboard";
+  return "nav.dashboard";
 }
 
 export function Header() {
   const pathname = usePathname();
   const router = useRouter();
   const { token, user, logout } = useAuthStore();
+  const { t } = useTranslation();
 
-  const title = useMemo(() => getPageTitle(pathname), [pathname]);
+  const titleKey = useMemo(() => getPageTitleKey(pathname), [pathname]);
+  const title = t(titleKey);
 
   async function handleLogout() {
     try {
@@ -66,7 +70,7 @@ export function Header() {
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="w-72 border-r border-sidebar-border bg-sidebar p-0">
-            <Sidebar collapsed={false} onToggle={() => {}} mobile />
+            <Sidebar collapsed={false} onToggle={() => { }} mobile />
           </SheetContent>
         </Sheet>
 
@@ -75,12 +79,15 @@ export function Header() {
         </div>
 
         <div className="ml-auto flex items-center gap-3 text-sm">
+          {/* Responsive pill Language Switcher */}
+          <LanguageSwitcher className="mr-1 shadow-sm" />
+
           <span className="hidden text-muted-foreground sm:block">
             {user?.username} ({user?.role ?? "STAFF"})
           </span>
-          <Button variant="outline" size="sm" onClick={handleLogout} className="gap-1.5">
+          <Button variant="outline" size="sm" onClick={handleLogout} className="gap-1.5 cursor-pointer">
             <LogOut className="h-3.5 w-3.5" />
-            Logout
+            {t("common.logout")}
           </Button>
         </div>
       </div>

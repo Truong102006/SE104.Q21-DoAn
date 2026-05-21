@@ -13,6 +13,7 @@ import type { SupplierRequest, SupplierResponse } from "@/types/backend";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { isValidPhone10Digits } from "@/lib/format";
 import { useAuthStore } from "@/stores/auth-store";
+import { useTranslation } from "@/i18n/i18n-context";
 import { Pencil, Plus, Search, Trash2, X } from "lucide-react";
 
 const EMPTY_FORM: SupplierRequest = {
@@ -24,6 +25,7 @@ const EMPTY_FORM: SupplierRequest = {
 
 export default function SuppliersPage() {
   const role = useAuthStore((state) => state.user?.role ?? "STAFF");
+  const { t } = useTranslation();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -45,7 +47,7 @@ export default function SuppliersPage() {
       const data = await backendApi.suppliers.list(query?.trim() || undefined);
       setItems(data);
     } catch (err) {
-      setError(getApiErrorMessage(err, "Không tải được nhà cung cấp"));
+      setError(getApiErrorMessage(err, t("suppliers.loadError")));
     } finally {
       setLoading(false);
     }
@@ -94,12 +96,12 @@ export default function SuppliersPage() {
     event.preventDefault();
 
     if (!form.tenNhaCungCap?.trim()) {
-      setFormError("Ten nhà cung cấp là bắt buộc");
+      setFormError(t("suppliers.nameRequired"));
       return;
     }
 
     if (!isValidPhone10Digits(form.soDienThoai ?? "")) {
-      setFormError("Số điện thoại phải đúng 10 chữ số");
+      setFormError(t("common.phoneRequired"));
       return;
     }
 
@@ -127,7 +129,7 @@ export default function SuppliersPage() {
       setOpenForm(false);
       await loadData();
     } catch (err) {
-      setFormError(getApiErrorMessage(err, "Lưu nhà cung cấp thất bại"));
+      setFormError(getApiErrorMessage(err, t("suppliers.saveError")));
     } finally {
       setSubmitting(false);
     }
@@ -143,7 +145,7 @@ export default function SuppliersPage() {
       setDeleting(null);
       await loadData();
     } catch (err) {
-      setError(getApiErrorMessage(err, "Xóa nhà cung cấp thất bại"));
+      setError(getApiErrorMessage(err, t("suppliers.deleteError")));
       setDeleting(null);
     }
   }
@@ -152,47 +154,47 @@ export default function SuppliersPage() {
     <div className="space-y-3">
       <PageHeader
         eyebrow="BM1"
-        title="Nhà cung cấp"
-        description="Quản lý danh mục nhà cung cấp"
-        badges={<Badge variant="outline">{items.length} ban ghi</Badge>}
+        title={t("suppliers.title")}
+        description={t("suppliers.description")}
+        badges={<Badge variant="outline">{items.length} {t("common.records")}</Badge>}
         actions={
           <Button size="sm" onClick={openCreate}>
             <Plus className="mr-1.5 h-3.5 w-3.5" />
-            Thêm
+            {t("common.add")}
           </Button>
         }
       />
 
       <Card>
         <TableToolbar
-          title="Danh sách"
-          description="Tim theo ma, ten, so dien thoai"
+          title={t("common.list")}
+          description={t("suppliers.searchDesc")}
           search={
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="Nhap từ khóa..." className="pl-9" />
+              <Input value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder={t("common.searchPlaceholder")} className="pl-9" />
             </div>
           }
         />
         <CardContent className="px-0">
           {error && <p className="px-4 pb-2 text-sm text-destructive">{error}</p>}
           {loading ? (
-            <p className="px-4 py-6 text-sm text-muted-foreground">Đang tải...</p>
+            <p className="px-4 py-6 text-sm text-muted-foreground">{t("common.loading")}</p>
           ) : filtered.length === 0 ? (
             <div className="p-4">
-              <EmptyState title="Không có dữ liệu" description="Thử đổi từ khóa hoac thêm mới" />
+              <EmptyState title={t("common.emptyTitle")} description={t("common.emptyDesc")} />
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>STT</TableHead>
-                  <TableHead>Ma</TableHead>
-                  <TableHead>Ten</TableHead>
-                  <TableHead>Số điện thoại</TableHead>
-                  <TableHead>Địa chỉ</TableHead>
-                  <TableHead>Ghi chú</TableHead>
-                  <TableHead className="text-right">Tac vu</TableHead>
+                  <TableHead>{t("common.stt")}</TableHead>
+                  <TableHead>{t("common.code")}</TableHead>
+                  <TableHead>{t("common.name")}</TableHead>
+                  <TableHead>{t("common.phone")}</TableHead>
+                  <TableHead>{t("common.address")}</TableHead>
+                  <TableHead>{t("common.note")}</TableHead>
+                  <TableHead className="text-right">{t("common.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -228,7 +230,7 @@ export default function SuppliersPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={() => setOpenForm(false)}>
           <div className="w-full max-w-xl rounded-xl border bg-background shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between border-b px-5 py-4">
-              <h2 className="text-lg font-semibold">{editing ? "Cập nhật" : "Thêm"} nhà cung cấp</h2>
+              <h2 className="text-lg font-semibold">{editing ? t("suppliers.editTitle") : t("suppliers.addTitle")}</h2>
               <Button variant="ghost" size="icon-sm" onClick={() => setOpenForm(false)}>
                 <X className="h-4 w-4" />
               </Button>
@@ -236,19 +238,19 @@ export default function SuppliersPage() {
             <form className="space-y-3 px-5 py-4" onSubmit={onSubmit}>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-2 sm:col-span-2">
-                  <Label>Ten nhà cung cấp</Label>
+                  <Label>{t("suppliers.name")}</Label>
                   <Input value={form.tenNhaCungCap} onChange={(e) => updateField("tenNhaCungCap", e.target.value)} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Số điện thoại</Label>
+                  <Label>{t("common.phone")}</Label>
                   <Input value={form.soDienThoai} onChange={(e) => updateField("soDienThoai", e.target.value)} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Địa chỉ</Label>
+                  <Label>{t("common.address")}</Label>
                   <Input value={form.diaChi ?? ""} onChange={(e) => updateField("diaChi", e.target.value)} />
                 </div>
                 <div className="space-y-2 sm:col-span-2">
-                  <Label>Ghi chú</Label>
+                  <Label>{t("common.note")}</Label>
                   <Input value={form.ghiChu ?? ""} onChange={(e) => updateField("ghiChu", e.target.value)} />
                 </div>
               </div>
@@ -257,10 +259,10 @@ export default function SuppliersPage() {
 
               <div className="flex justify-end gap-2 border-t pt-3">
                 <Button type="button" variant="outline" onClick={() => setOpenForm(false)}>
-                  Huy
+                  {t("common.cancel")}
                 </Button>
                 <Button type="submit" disabled={submitting}>
-                  {submitting ? "Dang luu..." : "Lưu"}
+                  {submitting ? t("common.saving") : t("common.save")}
                 </Button>
               </div>
             </form>
@@ -270,9 +272,9 @@ export default function SuppliersPage() {
 
       <ConfirmDialog
         open={deleting !== null}
-        title="Xóa nhà cung cấp"
-        description={deleting ? `Bạn chắc chắn muốn xóa ${deleting.tenNhaCungCap}?` : ""}
-        confirmLabel="Xóa"
+        title={t("suppliers.deleteTitle")}
+        description={deleting ? t("common.deleteConfirm").replace("{name}", deleting.tenNhaCungCap) : ""}
+        confirmLabel={t("common.delete")}
         destructive
         onCancel={() => setDeleting(null)}
         onConfirm={doDelete}

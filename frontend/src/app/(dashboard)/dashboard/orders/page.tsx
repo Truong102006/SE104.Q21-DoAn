@@ -18,6 +18,7 @@ import type {
 } from "@/types/backend";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { formatCurrency, formatNumber, todayIsoDate, toPositiveInt } from "@/lib/format";
+import { useTranslation } from "@/i18n/i18n-context";
 import { Plus, Trash2 } from "lucide-react";
 
 type SaleItemDraft = {
@@ -31,6 +32,7 @@ const EMPTY_ITEM: SaleItemDraft = {
 };
 
 export default function SalesPage() {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -80,7 +82,7 @@ export default function SalesPage() {
         setMaKhachHang(customerData[0].maKhachHang);
       }
     } catch (err) {
-      setError(getApiErrorMessage(err, "Không tải được dữ liệu phiếu bán"));
+      setError(getApiErrorMessage(err, t("salesOrders.loadError")));
     } finally {
       setLoading(false);
     }
@@ -108,24 +110,24 @@ export default function SalesPage() {
     setFormError(null);
 
     if (!maKhachHang) {
-      setFormError("Khách hàng là bắt buộc");
+      setFormError(t("salesOrders.customerRequired"));
       return;
     }
 
     if (items.length === 0) {
-      setFormError("Cần ít nhất 1 dòng chi tiết");
+      setFormError(t("salesOrders.minOneItem"));
       return;
     }
 
     const seen = new Set<string>();
     for (const item of items) {
       if (!item.maSanPham) {
-        setFormError("Sản phẩm là bắt buộc");
+        setFormError(t("salesOrders.productRequired"));
         return;
       }
 
       if (seen.has(item.maSanPham)) {
-        setFormError("Không được trùng sản phẩm trong cùng một phiếu");
+        setFormError(t("salesOrders.duplicateProduct"));
         return;
       }
       seen.add(item.maSanPham);
@@ -134,12 +136,12 @@ export default function SalesPage() {
       const soLuong = toPositiveInt(item.soLuong);
 
       if (soLuong <= 0) {
-        setFormError("Số lượng phải > 0");
+        setFormError(t("salesOrders.quantityInvalid"));
         return;
       }
 
       if (product && soLuong > Number(product.tonKho ?? 0)) {
-        setFormError(`Số lượng ban vượt tồn kho cua ${product.tenSanPham}`);
+        setFormError(t("salesOrders.stockExceeded").replace("{name}", product.tenSanPham));
         return;
       }
     }
@@ -161,7 +163,7 @@ export default function SalesPage() {
       setItems([{ ...EMPTY_ITEM }]);
       await loadData();
     } catch (err) {
-      setFormError(getApiErrorMessage(err, "Tạo phiếu bán thất bại"));
+      setFormError(getApiErrorMessage(err, t("salesOrders.createError")));
     } finally {
       setSubmitting(false);
     }
@@ -171,23 +173,23 @@ export default function SalesPage() {
     <div className="space-y-3">
       <PageHeader
         eyebrow="BM6"
-        title="Lập phiếu ban hang"
-        description="Bán hàng theo tồn kho hiện tại và đơn giá bán của sản phẩm"
+        title={t("salesOrders.title")}
+        description={t("salesOrders.description")}
       />
 
       <Card>
         <CardContent className="space-y-4 p-4">
           <div className="grid gap-3 md:grid-cols-3">
             <div className="space-y-2">
-              <Label>Số phiếu</Label>
-              <Input value={soPhieuBan} onChange={(e) => setSoPhieuBan(e.target.value)} placeholder="De trong de tu sinh" />
+              <Label>{t("common.voucherNumber")}</Label>
+              <Input value={soPhieuBan} onChange={(e) => setSoPhieuBan(e.target.value)} placeholder={t("common.autoGenerate")} />
             </div>
             <div className="space-y-2">
-              <Label>Ngay lap</Label>
+              <Label>{t("common.dateCreated")}</Label>
               <Input type="date" value={ngayLapPhieuBan} onChange={(e) => setNgayLapPhieuBan(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label>Khách hàng</Label>
+              <Label>{t("common.customer")}</Label>
               <Select
                 value={maKhachHang || ""}
                 onValueChange={setMaKhachHang}
@@ -198,21 +200,21 @@ export default function SalesPage() {
 
           {selectedCustomer && (
             <div className="rounded-lg border p-3 text-sm text-muted-foreground">
-              <p>Số điện thoại: {selectedCustomer.soDienThoaiKhachHang || "-"}</p>
-              <p>Địa chỉ: {selectedCustomer.diaChiKhachHang || "-"}</p>
+              <p>{t("common.phone")}: {selectedCustomer.soDienThoaiKhachHang || "-"}</p>
+              <p>{t("common.address")}: {selectedCustomer.diaChiKhachHang || "-"}</p>
             </div>
           )}
 
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Sản phẩm</TableHead>
-                <TableHead>Loại sản phẩm</TableHead>
-                <TableHead>Ton kho</TableHead>
-                <TableHead>Số lượng</TableHead>
-                <TableHead>Don gia ban</TableHead>
-                <TableHead>Thanh tien</TableHead>
-                <TableHead className="text-right">Tac vu</TableHead>
+                <TableHead>{t("common.product")}</TableHead>
+                <TableHead>{t("products.productType")}</TableHead>
+                <TableHead>{t("products.stock")}</TableHead>
+                <TableHead>{t("common.quantity")}</TableHead>
+                <TableHead>{t("products.sellingPrice")}</TableHead>
+                <TableHead>{t("common.subtotal")}</TableHead>
+                <TableHead className="text-right">{t("common.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -257,9 +259,9 @@ export default function SalesPage() {
           <div className="flex items-center justify-between">
             <Button variant="outline" onClick={addRow}>
               <Plus className="mr-1.5 h-3.5 w-3.5" />
-              Thêm dong
+              {t("common.addRow")}
             </Button>
-            <Badge variant="outline">Tổng tiền dự kiến: {formatCurrency(estimatedTotal)}</Badge>
+            <Badge variant="outline">{t("salesOrders.estimatedTotal")}: {formatCurrency(estimatedTotal)}</Badge>
           </div>
 
           {formError && <p className="text-sm text-destructive">{formError}</p>}
@@ -267,30 +269,30 @@ export default function SalesPage() {
 
           <div className="flex justify-end">
             <Button onClick={submit} disabled={submitting || loading}>
-              {submitting ? "Đang tạo..." : "Tạo phiếu ban"}
+              {submitting ? t("common.creating") : t("salesOrders.createButton")}
             </Button>
           </div>
         </CardContent>
       </Card>
 
       <Card>
-        <TableToolbar title="Lịch sử phiếu bán" description="Danh sách phiếu bán đã tạo" />
+        <TableToolbar title={t("salesOrders.historyTitle")} description={t("salesOrders.historyDesc")} />
         <CardContent className="px-0">
           {loading ? (
-            <p className="px-4 py-6 text-sm text-muted-foreground">Đang tải...</p>
+            <p className="px-4 py-6 text-sm text-muted-foreground">{t("common.loading")}</p>
           ) : salesList.length === 0 ? (
             <div className="p-4">
-              <EmptyState title="Chưa có phiếu bán" description="Tạo phiếu bán đầu tiên" />
+              <EmptyState title={t("salesOrders.emptyTitle")} description={t("salesOrders.emptyDesc")} />
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Số phiếu</TableHead>
-                  <TableHead>Ngay lap</TableHead>
-                  <TableHead>Khách hàng</TableHead>
-                  <TableHead>Số dòng</TableHead>
-                  <TableHead>Tổng tiền</TableHead>
+                  <TableHead>{t("common.voucherNumber")}</TableHead>
+                  <TableHead>{t("common.dateCreated")}</TableHead>
+                  <TableHead>{t("common.customer")}</TableHead>
+                  <TableHead>{t("salesOrders.lineCount")}</TableHead>
+                  <TableHead>{t("common.total")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

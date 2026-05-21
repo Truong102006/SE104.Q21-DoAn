@@ -13,6 +13,7 @@ import type { ServiceTypeRequest, ServiceTypeResponse } from "@/types/backend";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { formatCurrency, toPositiveNumber } from "@/lib/format";
 import { useAuthStore } from "@/stores/auth-store";
+import { useTranslation } from "@/i18n/i18n-context";
 import { Pencil, Plus, Search, Trash2, X } from "lucide-react";
 
 const EMPTY_FORM: ServiceTypeRequest = {
@@ -22,6 +23,7 @@ const EMPTY_FORM: ServiceTypeRequest = {
 
 export default function ServiceTypesPage() {
   const role = useAuthStore((state) => state.user?.role ?? "STAFF");
+  const { t } = useTranslation();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -44,7 +46,7 @@ export default function ServiceTypesPage() {
       const data = await backendApi.serviceTypes.list(query?.trim() || undefined);
       setItems(data);
     } catch (err) {
-      setError(getApiErrorMessage(err, "Không tải được loại dịch vụ"));
+      setError(getApiErrorMessage(err, t("serviceTypes.loadError")));
     } finally {
       setLoading(false);
     }
@@ -91,13 +93,13 @@ export default function ServiceTypesPage() {
     event.preventDefault();
 
     if (!form.tenLoaiDichVu?.trim()) {
-      setFormError("Tên loại dịch vụ là bắt buộc");
+      setFormError(t("serviceTypes.nameRequired"));
       return;
     }
 
     const gia = toPositiveNumber(giaText);
     if (gia < 0) {
-      setFormError("Don gia phải >= 0");
+      setFormError(t("serviceTypes.priceInvalid"));
       return;
     }
 
@@ -119,7 +121,7 @@ export default function ServiceTypesPage() {
       setOpenForm(false);
       await loadData();
     } catch (err) {
-      setFormError(getApiErrorMessage(err, "Lưu loại dịch vụ thất bại"));
+      setFormError(getApiErrorMessage(err, t("serviceTypes.saveError")));
     } finally {
       setSubmitting(false);
     }
@@ -135,7 +137,7 @@ export default function ServiceTypesPage() {
       setDeleting(null);
       await loadData();
     } catch (err) {
-      setError(getApiErrorMessage(err, "Xóa loại dịch vụ thất bại"));
+      setError(getApiErrorMessage(err, t("serviceTypes.deleteError")));
       setDeleting(null);
     }
   }
@@ -144,45 +146,45 @@ export default function ServiceTypesPage() {
     <div className="space-y-3">
       <PageHeader
         eyebrow="BM4"
-        title="Loại dịch vụ"
-        description={"Qu\u1ea3n l\u00fd danh m\u1ee5c lo\u1ea1i d\u1ecbch v\u1ee5"}
-        badges={<Badge variant="outline">{items.length} ban ghi</Badge>}
+        title={t("serviceTypes.title")}
+        description={t("serviceTypes.description")}
+        badges={<Badge variant="outline">{items.length} {t("common.records")}</Badge>}
         actions={
           <Button size="sm" onClick={openCreate}>
             <Plus className="mr-1.5 h-3.5 w-3.5" />
-            Thêm
+            {t("common.add")}
           </Button>
         }
       />
 
       <Card>
         <TableToolbar
-          title="Danh sách"
-          description="Tìm theo mã, tên loại dịch vụ"
+          title={t("common.list")}
+          description={t("serviceTypes.searchDesc")}
           search={
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="Nhap từ khóa..." className="pl-9" />
+              <Input value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder={t("common.searchPlaceholder")} className="pl-9" />
             </div>
           }
         />
         <CardContent className="px-0">
           {error && <p className="px-4 pb-2 text-sm text-destructive">{error}</p>}
           {loading ? (
-            <p className="px-4 py-6 text-sm text-muted-foreground">Đang tải...</p>
+            <p className="px-4 py-6 text-sm text-muted-foreground">{t("common.loading")}</p>
           ) : filtered.length === 0 ? (
             <div className="p-4">
-              <EmptyState title="Không có dữ liệu" description="Thử đổi từ khóa hoac thêm mới" />
+              <EmptyState title={t("common.emptyTitle")} description={t("common.emptyDesc")} />
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>STT</TableHead>
-                  <TableHead>Ma</TableHead>
-                  <TableHead>Tên loại dịch vụ</TableHead>
-                  <TableHead>Đơn giá dịch vụ</TableHead>
-                  <TableHead className="text-right">Tac vu</TableHead>
+                  <TableHead>{t("common.stt")}</TableHead>
+                  <TableHead>{t("common.code")}</TableHead>
+                  <TableHead>{t("serviceTypes.name")}</TableHead>
+                  <TableHead>{t("serviceTypes.price")}</TableHead>
+                  <TableHead className="text-right">{t("common.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -216,7 +218,7 @@ export default function ServiceTypesPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={() => setOpenForm(false)}>
           <div className="w-full max-w-xl rounded-xl border bg-background shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between border-b px-5 py-4">
-              <h2 className="text-lg font-semibold">{editing ? "Cập nhật" : "Thêm"} loại dịch vụ</h2>
+              <h2 className="text-lg font-semibold">{editing ? t("serviceTypes.editTitle") : t("serviceTypes.addTitle")}</h2>
               <Button variant="ghost" size="icon-sm" onClick={() => setOpenForm(false)}>
                 <X className="h-4 w-4" />
               </Button>
@@ -224,11 +226,11 @@ export default function ServiceTypesPage() {
             <form className="space-y-3 px-5 py-4" onSubmit={onSubmit}>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-2 sm:col-span-2">
-                  <Label>Tên loại dịch vụ</Label>
+                  <Label>{t("serviceTypes.name")}</Label>
                   <Input value={form.tenLoaiDichVu} onChange={(e) => updateField("tenLoaiDichVu", e.target.value)} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Đơn giá dịch vụ</Label>
+                  <Label>{t("serviceTypes.price")}</Label>
                   <Input value={giaText} onChange={(e) => setGiaText(e.target.value)} />
                 </div>
               </div>
@@ -237,10 +239,10 @@ export default function ServiceTypesPage() {
 
               <div className="flex justify-end gap-2 border-t pt-3">
                 <Button type="button" variant="outline" onClick={() => setOpenForm(false)}>
-                  Huy
+                  {t("common.cancel")}
                 </Button>
                 <Button type="submit" disabled={submitting}>
-                  {submitting ? "Dang luu..." : "Lưu"}
+                  {submitting ? t("common.saving") : t("common.save")}
                 </Button>
               </div>
             </form>
@@ -250,9 +252,9 @@ export default function ServiceTypesPage() {
 
       <ConfirmDialog
         open={deleting !== null}
-        title="Xóa loại dịch vụ"
-        description={deleting ? `Bạn chắc chắn muốn xóa ${deleting.tenLoaiDichVu}?` : ""}
-        confirmLabel="Xóa"
+        title={t("serviceTypes.deleteTitle")}
+        description={deleting ? t("common.deleteConfirm").replace("{name}", deleting.tenLoaiDichVu) : ""}
+        confirmLabel={t("common.delete")}
         destructive
         onCancel={() => setDeleting(null)}
         onConfirm={doDelete}

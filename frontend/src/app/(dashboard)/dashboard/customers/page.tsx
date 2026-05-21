@@ -13,6 +13,7 @@ import type { CustomerRequest, CustomerResponse } from "@/types/backend";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { isValidPhone10Digits } from "@/lib/format";
 import { useAuthStore } from "@/stores/auth-store";
+import { useTranslation } from "@/i18n/i18n-context";
 import { Pencil, Plus, Search, Trash2, X } from "lucide-react";
 
 const EMPTY_FORM: CustomerRequest = {
@@ -24,6 +25,7 @@ const EMPTY_FORM: CustomerRequest = {
 
 export default function CustomersPage() {
   const role = useAuthStore((state) => state.user?.role ?? "STAFF");
+  const { t } = useTranslation();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -45,7 +47,7 @@ export default function CustomersPage() {
       const data = await backendApi.customers.list(query?.trim() || undefined);
       setItems(data);
     } catch (err) {
-      setError(getApiErrorMessage(err, "Không tải được khách hàng"));
+      setError(getApiErrorMessage(err, t("customers.loadError")));
     } finally {
       setLoading(false);
     }
@@ -96,12 +98,12 @@ export default function CustomersPage() {
     event.preventDefault();
 
     if (!form.tenKhachHang?.trim()) {
-      setFormError("Ten khách hàng là bắt buộc");
+      setFormError(t("customers.nameRequired"));
       return;
     }
 
     if (!isValidPhone10Digits(form.soDienThoaiKhachHang ?? "")) {
-      setFormError("Số điện thoại phải đúng 10 chữ số");
+      setFormError(t("common.phoneRequired"));
       return;
     }
 
@@ -129,7 +131,7 @@ export default function CustomersPage() {
       setOpenForm(false);
       await loadData();
     } catch (err) {
-      setFormError(getApiErrorMessage(err, "Lưu khách hàng thất bại"));
+      setFormError(getApiErrorMessage(err, t("customers.saveError")));
     } finally {
       setSubmitting(false);
     }
@@ -145,7 +147,7 @@ export default function CustomersPage() {
       setDeleting(null);
       await loadData();
     } catch (err) {
-      setError(getApiErrorMessage(err, "Xóa khách hàng thất bại"));
+      setError(getApiErrorMessage(err, t("customers.deleteError")));
       setDeleting(null);
     }
   }
@@ -154,47 +156,47 @@ export default function CustomersPage() {
     <div className="space-y-3">
       <PageHeader
         eyebrow="BM2"
-        title="Khách hàng"
-        description="Quản lý danh mục khách hàng"
-        badges={<Badge variant="outline">{items.length} ban ghi</Badge>}
+        title={t("customers.title")}
+        description={t("customers.description")}
+        badges={<Badge variant="outline">{items.length} {t("common.records")}</Badge>}
         actions={
           <Button size="sm" onClick={openCreate}>
             <Plus className="mr-1.5 h-3.5 w-3.5" />
-            Thêm
+            {t("common.add")}
           </Button>
         }
       />
 
       <Card>
         <TableToolbar
-          title="Danh sách"
-          description="Tim theo ma, ten, so dien thoai"
+          title={t("common.list")}
+          description={t("customers.searchDesc")}
           search={
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="Nhap từ khóa..." className="pl-9" />
+              <Input value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder={t("common.searchPlaceholder")} className="pl-9" />
             </div>
           }
         />
         <CardContent className="px-0">
           {error && <p className="px-4 pb-2 text-sm text-destructive">{error}</p>}
           {loading ? (
-            <p className="px-4 py-6 text-sm text-muted-foreground">Đang tải...</p>
+            <p className="px-4 py-6 text-sm text-muted-foreground">{t("common.loading")}</p>
           ) : filtered.length === 0 ? (
             <div className="p-4">
-              <EmptyState title="Không có dữ liệu" description="Thử đổi từ khóa hoac thêm mới" />
+              <EmptyState title={t("common.emptyTitle")} description={t("common.emptyDesc")} />
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>STT</TableHead>
-                  <TableHead>Ma</TableHead>
-                  <TableHead>Ten</TableHead>
-                  <TableHead>Số điện thoại</TableHead>
-                  <TableHead>Địa chỉ</TableHead>
-                  <TableHead>Ghi chú</TableHead>
-                  <TableHead className="text-right">Tac vu</TableHead>
+                  <TableHead>{t("common.stt")}</TableHead>
+                  <TableHead>{t("common.code")}</TableHead>
+                  <TableHead>{t("common.name")}</TableHead>
+                  <TableHead>{t("common.phone")}</TableHead>
+                  <TableHead>{t("common.address")}</TableHead>
+                  <TableHead>{t("common.note")}</TableHead>
+                  <TableHead className="text-right">{t("common.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -230,7 +232,7 @@ export default function CustomersPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={() => setOpenForm(false)}>
           <div className="w-full max-w-xl rounded-xl border bg-background shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between border-b px-5 py-4">
-              <h2 className="text-lg font-semibold">{editing ? "Cập nhật" : "Thêm"} khách hàng</h2>
+              <h2 className="text-lg font-semibold">{editing ? t("customers.editTitle") : t("customers.addTitle")}</h2>
               <Button variant="ghost" size="icon-sm" onClick={() => setOpenForm(false)}>
                 <X className="h-4 w-4" />
               </Button>
@@ -238,22 +240,22 @@ export default function CustomersPage() {
             <form className="space-y-3 px-5 py-4" onSubmit={onSubmit}>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-2 sm:col-span-2">
-                  <Label>Ten khách hàng</Label>
+                  <Label>{t("customers.name")}</Label>
                   <Input value={form.tenKhachHang} onChange={(e) => updateField("tenKhachHang", e.target.value)} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Số điện thoại</Label>
+                  <Label>{t("common.phone")}</Label>
                   <Input
                     value={form.soDienThoaiKhachHang}
                     onChange={(e) => updateField("soDienThoaiKhachHang", e.target.value)}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Địa chỉ</Label>
+                  <Label>{t("common.address")}</Label>
                   <Input value={form.diaChiKhachHang ?? ""} onChange={(e) => updateField("diaChiKhachHang", e.target.value)} />
                 </div>
                 <div className="space-y-2 sm:col-span-2">
-                  <Label>Ghi chú</Label>
+                  <Label>{t("common.note")}</Label>
                   <Input value={form.ghiChu ?? ""} onChange={(e) => updateField("ghiChu", e.target.value)} />
                 </div>
               </div>
@@ -262,10 +264,10 @@ export default function CustomersPage() {
 
               <div className="flex justify-end gap-2 border-t pt-3">
                 <Button type="button" variant="outline" onClick={() => setOpenForm(false)}>
-                  Huy
+                  {t("common.cancel")}
                 </Button>
                 <Button type="submit" disabled={submitting}>
-                  {submitting ? "Dang luu..." : "Lưu"}
+                  {submitting ? t("common.saving") : t("common.save")}
                 </Button>
               </div>
             </form>
@@ -275,9 +277,9 @@ export default function CustomersPage() {
 
       <ConfirmDialog
         open={deleting !== null}
-        title="Xóa khách hàng"
-        description={deleting ? `Bạn chắc chắn muốn xóa ${deleting.tenKhachHang}?` : ""}
-        confirmLabel="Xóa"
+        title={t("customers.deleteTitle")}
+        description={deleting ? t("common.deleteConfirm").replace("{name}", deleting.tenKhachHang) : ""}
+        confirmLabel={t("common.delete")}
         destructive
         onCancel={() => setDeleting(null)}
         onConfirm={doDelete}

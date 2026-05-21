@@ -18,6 +18,7 @@ import type {
 } from "@/types/backend";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { formatCurrency, todayIsoDate, toPositiveInt, toPositiveNumber } from "@/lib/format";
+import { useTranslation } from "@/i18n/i18n-context";
 import { Plus, Truck, Trash2 } from "lucide-react";
 
 type ServiceItemDraft = {
@@ -37,6 +38,7 @@ const EMPTY_ITEM: ServiceItemDraft = {
 };
 
 export default function ServiceOrdersPage() {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -101,7 +103,7 @@ export default function ServiceOrdersPage() {
         setMaKhachHang(customerData[0].maKhachHang);
       }
     } catch (err) {
-      setError(getApiErrorMessage(err, "Không tải được dữ liệu phiếu dịch vụ"));
+      setError(getApiErrorMessage(err, t("serviceOrders.loadError")));
     } finally {
       setLoading(false);
     }
@@ -129,12 +131,12 @@ export default function ServiceOrdersPage() {
     setFormError(null);
 
     if (!maKhachHang) {
-      setFormError("Khách hàng là bắt buộc");
+      setFormError(t("serviceOrders.customerRequired"));
       return;
     }
 
     if (items.length === 0) {
-      setFormError("Cần ít nhất 1 dòng chi tiết");
+      setFormError(t("serviceOrders.minOneItem"));
       return;
     }
 
@@ -142,12 +144,12 @@ export default function ServiceOrdersPage() {
 
     for (const item of items) {
       if (!item.maLoaiDichVu) {
-        setFormError("Loại dịch vụ là bắt buộc");
+        setFormError(t("serviceOrders.serviceTypeRequired"));
         return;
       }
 
       if (seen.has(item.maLoaiDichVu)) {
-        setFormError("Không được trùng loại dịch vụ trong cùng một phiếu");
+        setFormError(t("serviceOrders.duplicateServiceType"));
         return;
       }
       seen.add(item.maLoaiDichVu);
@@ -155,7 +157,7 @@ export default function ServiceOrdersPage() {
       const serviceType = serviceTypes.find((type) => type.maLoaiDichVu === item.maLoaiDichVu);
       const soLuong = toPositiveInt(item.soLuongDichVu);
       if (soLuong <= 0) {
-        setFormError("Số lượng dịch vụ phải > 0");
+        setFormError(t("serviceOrders.quantityInvalid"));
         return;
       }
 
@@ -167,7 +169,11 @@ export default function ServiceOrdersPage() {
       const minPrepayment = (prepaymentRate / 100) * thanhTien;
 
       if (tienTraTruoc < minPrepayment) {
-        setFormError(`Tien trả trước cho ${serviceType?.tenLoaiDichVu ?? item.maLoaiDichVu} phải >= ${formatCurrency(minPrepayment)}`);
+        setFormError(
+          t("serviceOrders.prepaymentInsufficient")
+            .replace("{name}", serviceType?.tenLoaiDichVu ?? item.maLoaiDichVu)
+            .replace("{amount}", formatCurrency(minPrepayment)),
+        );
         return;
       }
     }
@@ -192,7 +198,7 @@ export default function ServiceOrdersPage() {
       setItems([{ ...EMPTY_ITEM }]);
       await loadData();
     } catch (err) {
-      setFormError(getApiErrorMessage(err, "Tạo phiếu dịch vụ thất bại"));
+      setFormError(getApiErrorMessage(err, t("serviceOrders.createError")));
     } finally {
       setSubmitting(false);
     }
@@ -203,7 +209,7 @@ export default function ServiceOrdersPage() {
       await backendApi.serviceTickets.deliverItem(ticket.soPhieuDichVu, maLoaiDichVu);
       await loadData();
     } catch (err) {
-      setError(getApiErrorMessage(err, "Cập nhật giao hàng thất bại"));
+      setError(getApiErrorMessage(err, t("serviceOrders.deliverError")));
     }
   }
 
@@ -212,7 +218,7 @@ export default function ServiceOrdersPage() {
       await backendApi.serviceTickets.deliverAll(ticket.soPhieuDichVu);
       await loadData();
     } catch (err) {
-      setError(getApiErrorMessage(err, "Cập nhật giao toàn bộ thất bại"));
+      setError(getApiErrorMessage(err, t("serviceOrders.deliverAllError")));
     }
   }
 
@@ -220,24 +226,24 @@ export default function ServiceOrdersPage() {
     <div className="space-y-3">
       <PageHeader
         eyebrow="BM7"
-        title="Lập phiếu dịch vụ"
-        description="Quản lý dịch vụ, tien trả trước v? giao hàng"
-        badges={<Badge variant="outline">Ty le trả trước toi thieu: {prepaymentRate}%</Badge>}
+        title={t("serviceOrders.title")}
+        description={t("serviceOrders.description")}
+        badges={<Badge variant="outline">{t("serviceOrders.minPrepaymentRate")}: {prepaymentRate}%</Badge>}
       />
 
       <Card>
         <CardContent className="space-y-4 p-4">
           <div className="grid gap-3 md:grid-cols-3">
             <div className="space-y-2">
-              <Label>Số phiếu</Label>
-              <Input value={soPhieuDichVu} onChange={(e) => setSoPhieuDichVu(e.target.value)} placeholder="De trong de tu sinh" />
+              <Label>{t("common.voucherNumber")}</Label>
+              <Input value={soPhieuDichVu} onChange={(e) => setSoPhieuDichVu(e.target.value)} placeholder={t("common.autoGenerate")} />
             </div>
             <div className="space-y-2">
-              <Label>Ngay lap</Label>
+              <Label>{t("common.dateCreated")}</Label>
               <Input type="date" value={ngayLapPhieuDichVu} onChange={(e) => setNgayLapPhieuDichVu(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label>Khách hàng</Label>
+              <Label>{t("common.customer")}</Label>
               <Select
                 value={maKhachHang || ""}
                 onValueChange={setMaKhachHang}
@@ -248,24 +254,24 @@ export default function ServiceOrdersPage() {
 
           {selectedCustomer && (
             <div className="rounded-lg border p-3 text-sm text-muted-foreground">
-              <p>Số điện thoại: {selectedCustomer.soDienThoaiKhachHang || "-"}</p>
-              <p>Địa chỉ: {selectedCustomer.diaChiKhachHang || "-"}</p>
+              <p>{t("common.phone")}: {selectedCustomer.soDienThoaiKhachHang || "-"}</p>
+              <p>{t("common.address")}: {selectedCustomer.diaChiKhachHang || "-"}</p>
             </div>
           )}
 
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Loại dịch vụ</TableHead>
-                <TableHead>Đơn giá dịch vụ</TableHead>
-                <TableHead>Chi phi rieng</TableHead>
-                <TableHead>Don gia duoc tinh</TableHead>
-                <TableHead>Số lượng</TableHead>
-                <TableHead>Thanh tien</TableHead>
-                <TableHead>Tra truoc</TableHead>
-                <TableHead>Con lai</TableHead>
-                <TableHead>Ngay giao</TableHead>
-                <TableHead className="text-right">Tac vu</TableHead>
+                <TableHead>{t("serviceTypes.title")}</TableHead>
+                <TableHead>{t("serviceOrders.serviceTypePrice")}</TableHead>
+                <TableHead>{t("serviceOrders.additionalCost")}</TableHead>
+                <TableHead>{t("serviceOrders.calculatedPrice")}</TableHead>
+                <TableHead>{t("common.quantity")}</TableHead>
+                <TableHead>{t("common.subtotal")}</TableHead>
+                <TableHead>{t("serviceOrders.prepaid")}</TableHead>
+                <TableHead>{t("serviceOrders.remaining")}</TableHead>
+                <TableHead>{t("serviceOrders.deliveryDate")}</TableHead>
+                <TableHead className="text-right">{t("common.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -323,12 +329,12 @@ export default function ServiceOrdersPage() {
           <div className="flex items-center justify-between">
             <Button variant="outline" onClick={addRow}>
               <Plus className="mr-1.5 h-3.5 w-3.5" />
-              Thêm dong
+              {t("common.addRow")}
             </Button>
             <div className="flex flex-wrap gap-2">
-              <Badge variant="outline">Tổng tiền: {formatCurrency(totals.tongTien)}</Badge>
-              <Badge variant="outline">Tra truoc: {formatCurrency(totals.tongTraTruoc)}</Badge>
-              <Badge variant="outline">Con lai: {formatCurrency(totals.tongConLai)}</Badge>
+              <Badge variant="outline">{t("common.total")}: {formatCurrency(totals.tongTien)}</Badge>
+              <Badge variant="outline">{t("serviceOrders.prepaid")}: {formatCurrency(totals.tongTraTruoc)}</Badge>
+              <Badge variant="outline">{t("serviceOrders.remaining")}: {formatCurrency(totals.tongConLai)}</Badge>
             </div>
           </div>
 
@@ -337,33 +343,33 @@ export default function ServiceOrdersPage() {
 
           <div className="flex justify-end">
             <Button onClick={submit} disabled={submitting || loading}>
-              {submitting ? "Đang tạo..." : "Tạo phiếu dịch vụ"}
+              {submitting ? t("common.creating") : t("serviceOrders.createButton")}
             </Button>
           </div>
         </CardContent>
       </Card>
 
       <Card>
-        <TableToolbar title="Lịch sử phiếu dịch vụ" description="Danh sách phiếu dịch vụ đã tạo" />
+        <TableToolbar title={t("serviceOrders.historyTitle")} description={t("serviceOrders.historyDesc")} />
         <CardContent className="px-0">
           {loading ? (
-            <p className="px-4 py-6 text-sm text-muted-foreground">Đang tải...</p>
+            <p className="px-4 py-6 text-sm text-muted-foreground">{t("common.loading")}</p>
           ) : tickets.length === 0 ? (
             <div className="p-4">
-              <EmptyState title="Chưa có phiếu dịch vụ" description="Tạo phiếu dịch vụ đầu tiên" />
+              <EmptyState title={t("serviceOrders.emptyTitle")} description={t("serviceOrders.emptyDesc")} />
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Số phiếu</TableHead>
-                  <TableHead>Ngay lap</TableHead>
-                  <TableHead>Khách hàng</TableHead>
-                  <TableHead>Tổng tiền</TableHead>
-                  <TableHead>Tra truoc</TableHead>
-                  <TableHead>Con lai</TableHead>
-                  <TableHead>Tinh trang</TableHead>
-                  <TableHead className="text-right">Tac vu</TableHead>
+                  <TableHead>{t("common.voucherNumber")}</TableHead>
+                  <TableHead>{t("common.dateCreated")}</TableHead>
+                  <TableHead>{t("common.customer")}</TableHead>
+                  <TableHead>{t("common.total")}</TableHead>
+                  <TableHead>{t("serviceOrders.prepaid")}</TableHead>
+                  <TableHead>{t("serviceOrders.remaining")}</TableHead>
+                  <TableHead>{t("serviceOrders.serviceStatus")}</TableHead>
+                  <TableHead className="text-right">{t("common.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -380,7 +386,7 @@ export default function ServiceOrdersPage() {
                       <div className="flex justify-end gap-1">
                         <Button variant="outline" size="sm" onClick={() => deliverAll(ticket)}>
                           <Truck className="mr-1 h-3.5 w-3.5" />
-                          Deliver all
+                          {t("serviceOrders.deliverAll")}
                         </Button>
                         {ticket.items
                           .filter((item) => !item.tinhTrang.toLowerCase().includes("da giao"))
@@ -392,7 +398,7 @@ export default function ServiceOrdersPage() {
                               size="sm"
                               onClick={() => deliverItem(ticket, item.maLoaiDichVu)}
                             >
-                              Deliver 1
+                              {t("serviceOrders.deliverOne")}
                             </Button>
                           ))}
                       </div>

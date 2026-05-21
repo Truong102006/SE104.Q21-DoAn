@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { backendApi } from "@/services/backend-api";
 import type { UserGroupResponse, UserRequest, UserResponse } from "@/types/backend";
 import { getApiErrorMessage } from "@/lib/api-error";
+import { useTranslation } from "@/i18n/i18n-context";
 import { Pencil, Plus, Trash2, X } from "lucide-react";
 
 const EMPTY_FORM: UserRequest = {
@@ -21,6 +22,7 @@ const EMPTY_FORM: UserRequest = {
 };
 
 export default function StaffPage() {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -47,7 +49,7 @@ export default function StaffPage() {
       setUsers(userData);
       setGroups(groupData);
     } catch (err) {
-      setError(getApiErrorMessage(err, "Không tải được dữ liệu tài khoản"));
+      setError(getApiErrorMessage(err, t("staff.loadError")));
     } finally {
       setLoading(false);
     }
@@ -92,17 +94,17 @@ export default function StaffPage() {
     event.preventDefault();
 
     if (!form.tenDangNhap?.trim()) {
-      setFormError("Tên đăng nhập là bắt buộc");
+      setFormError(t("staff.usernameRequired"));
       return;
     }
 
     if (!form.matKhau?.trim()) {
-      setFormError("Mật khẩu là bắt buộc");
+      setFormError(t("staff.passwordRequired"));
       return;
     }
 
     if (!form.maNhom) {
-      setFormError("Nhóm người dùng là bắt buộc");
+      setFormError(t("staff.groupRequired"));
       return;
     }
 
@@ -125,7 +127,7 @@ export default function StaffPage() {
       setOpenForm(false);
       await loadData();
     } catch (err) {
-      setFormError(getApiErrorMessage(err, "Lưu tài khoản thất bại"));
+      setFormError(getApiErrorMessage(err, t("staff.saveError")));
     } finally {
       setSubmitting(false);
     }
@@ -141,7 +143,7 @@ export default function StaffPage() {
       setDeleting(null);
       await loadData();
     } catch (err) {
-      setError(getApiErrorMessage(err, "Xóa tài khoản thất bại"));
+      setError(getApiErrorMessage(err, t("staff.deleteError")));
       setDeleting(null);
     }
   }
@@ -150,25 +152,25 @@ export default function StaffPage() {
     <div className="space-y-3">
       <PageHeader
         eyebrow="Admin"
-        title="Quản lý tài khoản / phân quyền"
-        description="Quản lý tài khoản hệ thống theo nhóm người dùng"
-        badges={<Badge variant="outline">{users.length} tài khoản</Badge>}
+        title={t("staff.title")}
+        description={t("staff.description")}
+        badges={<Badge variant="outline">{users.length} {t("staff.accounts")}</Badge>}
         actions={
           <Button size="sm" onClick={openCreate}>
             <Plus className="mr-1.5 h-3.5 w-3.5" />
-            Thêm tài khoản
+            {t("staff.addAccount")}
           </Button>
         }
       />
 
       <Card>
         <TableToolbar
-          title="Danh sách tài khoản"
-          description="Tim theo tên đăng nhập hoặc ma nhom"
-          search={<Input value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="Nhap từ khóa..." />}
+          title={t("common.list")}
+          description={t("staff.searchDesc")}
+          search={<Input value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder={t("common.searchPlaceholder")} />}
           actions={
             <Button size="sm" variant="outline" onClick={() => loadData(keyword)}>
-              Tim
+              {t("common.search")}
             </Button>
           }
         />
@@ -176,18 +178,18 @@ export default function StaffPage() {
         <CardContent className="px-0">
           {error && <p className="px-4 pb-2 text-sm text-destructive">{error}</p>}
           {loading ? (
-            <p className="px-4 py-6 text-sm text-muted-foreground">Đang tải...</p>
+            <p className="px-4 py-6 text-sm text-muted-foreground">{t("common.loading")}</p>
           ) : filtered.length === 0 ? (
             <div className="p-4">
-              <EmptyState title="Không có dữ liệu" description="Thử đổi từ khóa hoac them tài khoản" />
+              <EmptyState title={t("common.emptyTitle")} description={t("staff.emptyDesc")} />
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Tên đăng nhập</TableHead>
-                  <TableHead>Ma nhom</TableHead>
-                  <TableHead className="text-right">Tac vu</TableHead>
+                  <TableHead>{t("staff.username")}</TableHead>
+                  <TableHead>{t("staff.groupCode")}</TableHead>
+                  <TableHead className="text-right">{t("common.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -217,14 +219,14 @@ export default function StaffPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={() => setOpenForm(false)}>
           <div className="w-full max-w-lg rounded-xl border bg-background shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between border-b px-5 py-4">
-              <h2 className="text-lg font-semibold">{editing ? "Cập nhật" : "Thêm"} tài khoản</h2>
+              <h2 className="text-lg font-semibold">{editing ? t("staff.editTitle") : t("staff.addTitle")}</h2>
               <Button variant="ghost" size="icon-sm" onClick={() => setOpenForm(false)}>
                 <X className="h-4 w-4" />
               </Button>
             </div>
             <form className="space-y-3 px-5 py-4" onSubmit={onSubmit}>
               <div className="space-y-2">
-                <Label>Tên đăng nhập</Label>
+                <Label>{t("staff.username")}</Label>
                 <Input
                   value={form.tenDangNhap}
                   onChange={(e) => updateField("tenDangNhap", e.target.value)}
@@ -232,16 +234,16 @@ export default function StaffPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Mật khẩu</Label>
+                <Label>{t("staff.password")}</Label>
                 <Input
                   type="password"
                   value={form.matKhau}
                   onChange={(e) => updateField("matKhau", e.target.value)}
-                  placeholder={editing ? "Nhap mật khẩu moi" : "Nhap mật khẩu"}
+                  placeholder={editing ? t("staff.newPasswordPlaceholder") : t("staff.passwordPlaceholder")}
                 />
               </div>
               <div className="space-y-2">
-                <Label>Nhóm người dùng</Label>
+                <Label>{t("staff.userGroup")}</Label>
                 <Select
                   value={form.maNhom}
                   onValueChange={(value) => updateField("maNhom", value)}
@@ -253,10 +255,10 @@ export default function StaffPage() {
 
               <div className="flex justify-end gap-2 border-t pt-3">
                 <Button type="button" variant="outline" onClick={() => setOpenForm(false)}>
-                  Huy
+                  {t("common.cancel")}
                 </Button>
                 <Button type="submit" disabled={submitting}>
-                  {submitting ? "Dang luu..." : "Lưu"}
+                  {submitting ? t("common.saving") : t("common.save")}
                 </Button>
               </div>
             </form>
@@ -266,9 +268,9 @@ export default function StaffPage() {
 
       <ConfirmDialog
         open={deleting !== null}
-        title="Xóa tài khoản"
-        description={deleting ? `Bạn chắc chắn muốn xóa ${deleting.tenDangNhap}?` : ""}
-        confirmLabel="Xóa"
+        title={t("staff.deleteTitle")}
+        description={deleting ? t("common.deleteConfirm").replace("{name}", deleting.tenDangNhap) : ""}
+        confirmLabel={t("common.delete")}
         destructive
         onCancel={() => setDeleting(null)}
         onConfirm={doDelete}

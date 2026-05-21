@@ -12,8 +12,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { backendApi } from "@/services/backend-api";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { toPositiveNumber } from "@/lib/format";
+import { useTranslation } from "@/i18n/i18n-context";
 
 export default function SettingsPage() {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,7 +44,7 @@ export default function SettingsPage() {
       setServiceTypesCount(serviceTypes.length);
       setPrepaymentRate(String(prepayment.value ?? 50));
     } catch (err) {
-      setError(getApiErrorMessage(err, "Không tải được dữ liệu cài đặt"));
+      setError(getApiErrorMessage(err, t("settings.loadError")));
     } finally {
       setLoading(false);
     }
@@ -59,7 +61,7 @@ export default function SettingsPage() {
 
     const value = toPositiveNumber(prepaymentRate);
     if (value < 0 || value > 100) {
-      setError("Ty le trả trước phai trong khoang 0-100");
+      setError(t("settings.rateInvalid"));
       setSaving(false);
       return;
     }
@@ -67,9 +69,9 @@ export default function SettingsPage() {
     try {
       const result = await backendApi.settings.updateServicePrepaymentRate({ value });
       setPrepaymentRate(String(result.value));
-      setSavedMessage("Cập nhật tỷ lệ trả trước thành công");
+      setSavedMessage(t("settings.saveSuccess"));
     } catch (err) {
-      setError(getApiErrorMessage(err, "Cập nhật tỷ lệ trả trước thất bại"));
+      setError(getApiErrorMessage(err, t("settings.saveError")));
     } finally {
       setSaving(false);
     }
@@ -78,10 +80,10 @@ export default function SettingsPage() {
   return (
     <div className="space-y-3">
       <PageHeader
-        eyebrow={"Q\u011013"}
-        title="Thay đổi quy định"
-        description="Quản lý cac danh mục quy định và tỷ lệ trả trước dịch vụ"
-        badges={<Badge variant="outline">Admin only</Badge>}
+        eyebrow={"QĐ13"}
+        title={t("settings.title")}
+        description={t("settings.description")}
+        badges={<Badge variant="outline">{t("settings.adminOnly")}</Badge>}
       />
 
       {error && (
@@ -91,15 +93,15 @@ export default function SettingsPage() {
       )}
 
       <Card>
-        <TableToolbar title="Ty le trả trước dịch vụ" description="Giá trị được lưu trong THAMSO: SERVICE_PREPAYMENT_RATE" />
+        <TableToolbar title={t("settings.prepaymentTitle")} description={t("settings.prepaymentDesc")} />
         <CardContent className="space-y-3 p-4">
           <div className="max-w-sm space-y-2">
-            <Label>Ty le (%)</Label>
+            <Label>{t("settings.rateLabel")}</Label>
             <Input value={prepaymentRate} onChange={(e) => setPrepaymentRate(e.target.value)} />
           </div>
           <div className="flex items-center gap-2">
             <Button onClick={savePrepaymentRate} disabled={saving || loading}>
-              {saving ? "Dang luu..." : "Lưu thay doi"}
+              {saving ? t("common.saving") : t("settings.saveChanges")}
             </Button>
             {savedMessage && <p className="text-sm text-emerald-600">{savedMessage}</p>}
           </div>
@@ -107,48 +109,48 @@ export default function SettingsPage() {
       </Card>
 
       <Card>
-        <TableToolbar title="Danh muc quy định" description="Cac danh mục duoc quản lý qua trang CRUD tuong ung" />
+        <TableToolbar title={t("settings.categoriesTitle")} description={t("settings.categoriesDesc")} />
         <CardContent className="px-0">
           {loading ? (
-            <p className="px-4 py-6 text-sm text-muted-foreground">Đang tải...</p>
+            <p className="px-4 py-6 text-sm text-muted-foreground">{t("common.loading")}</p>
           ) : productTypesCount + unitsCount + serviceTypesCount === 0 ? (
             <div className="p-4">
-              <EmptyState title="Không có dữ liệu" description="Kiem tra API settings" />
+              <EmptyState title={t("common.emptyTitle")} description={t("settings.checkApi")} />
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Danh muc</TableHead>
-                  <TableHead>Số bản ghi</TableHead>
-                  <TableHead className="text-right">Dieu huong</TableHead>
+                  <TableHead>{t("settings.category")}</TableHead>
+                  <TableHead>{t("settings.recordCount")}</TableHead>
+                  <TableHead className="text-right">{t("settings.navigate")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 <TableRow>
-                  <TableCell>Loại sản phẩm & tỉ lệ lợi nhuận</TableCell>
+                  <TableCell>{t("settings.productTypesAndProfit")}</TableCell>
                   <TableCell>{productTypesCount}</TableCell>
                   <TableCell className="text-right">
                     <Button size="sm" variant="outline" asChild>
-                      <Link href="/dashboard/product-types">Mo trang</Link>
+                      <Link href="/dashboard/product-types">{t("common.openPage")}</Link>
                     </Button>
                   </TableCell>
                 </TableRow>
                 <TableRow>
-                  <TableCell>Đơn vị tính</TableCell>
+                  <TableCell>{t("units.title")}</TableCell>
                   <TableCell>{unitsCount}</TableCell>
                   <TableCell className="text-right">
                     <Button size="sm" variant="outline" asChild>
-                      <Link href="/dashboard/units">Mo trang</Link>
+                      <Link href="/dashboard/units">{t("common.openPage")}</Link>
                     </Button>
                   </TableCell>
                 </TableRow>
                 <TableRow>
-                  <TableCell>Loại dịch vụ & đơn giá</TableCell>
+                  <TableCell>{t("settings.serviceTypesAndPrice")}</TableCell>
                   <TableCell>{serviceTypesCount}</TableCell>
                   <TableCell className="text-right">
                     <Button size="sm" variant="outline" asChild>
-                      <Link href="/dashboard/service-types">Mo trang</Link>
+                      <Link href="/dashboard/service-types">{t("common.openPage")}</Link>
                     </Button>
                   </TableCell>
                 </TableRow>

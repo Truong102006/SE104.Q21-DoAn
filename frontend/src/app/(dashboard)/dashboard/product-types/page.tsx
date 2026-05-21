@@ -13,6 +13,7 @@ import type { ProductTypeRequest, ProductTypeResponse } from "@/types/backend";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { toPositiveNumber } from "@/lib/format";
 import { useAuthStore } from "@/stores/auth-store";
+import { useTranslation } from "@/i18n/i18n-context";
 import { Pencil, Plus, Search, Trash2, X } from "lucide-react";
 
 const EMPTY_FORM: ProductTypeRequest = {
@@ -22,6 +23,7 @@ const EMPTY_FORM: ProductTypeRequest = {
 
 export default function ProductTypesPage() {
   const role = useAuthStore((state) => state.user?.role ?? "STAFF");
+  const { t } = useTranslation();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -44,7 +46,7 @@ export default function ProductTypesPage() {
       const data = await backendApi.productTypes.list(query?.trim() || undefined);
       setItems(data);
     } catch (err) {
-      setError(getApiErrorMessage(err, "Không tải được loại sản phẩm"));
+      setError(getApiErrorMessage(err, t("productTypes.loadError")));
     } finally {
       setLoading(false);
     }
@@ -91,13 +93,13 @@ export default function ProductTypesPage() {
     event.preventDefault();
 
     if (!form.tenLoaiSanPham?.trim()) {
-      setFormError("Tên loại sản phẩm là bắt buộc");
+      setFormError(t("productTypes.nameRequired"));
       return;
     }
 
     const tiLe = toPositiveNumber(tiLeText);
     if (tiLe < 0) {
-      setFormError("Ti le lợi nhuận phải >= 0");
+      setFormError(t("productTypes.rateInvalid"));
       return;
     }
 
@@ -119,7 +121,7 @@ export default function ProductTypesPage() {
       setOpenForm(false);
       await loadData();
     } catch (err) {
-      setFormError(getApiErrorMessage(err, "Lưu loại sản phẩm thất bại"));
+      setFormError(getApiErrorMessage(err, t("productTypes.saveError")));
     } finally {
       setSubmitting(false);
     }
@@ -135,7 +137,7 @@ export default function ProductTypesPage() {
       setDeleting(null);
       await loadData();
     } catch (err) {
-      setError(getApiErrorMessage(err, "Xóa loại sản phẩm thất bại"));
+      setError(getApiErrorMessage(err, t("productTypes.deleteError")));
       setDeleting(null);
     }
   }
@@ -143,46 +145,46 @@ export default function ProductTypesPage() {
   return (
     <div className="space-y-3">
       <PageHeader
-        eyebrow={"Q\u01106/Q\u011013"}
-        title="Loại sản phẩm"
-        description="Quản lý tỉ lệ lợi nhuận theo loai"
-        badges={<Badge variant="outline">{items.length} ban ghi</Badge>}
+        eyebrow={"QĐ6/QĐ13"}
+        title={t("productTypes.title")}
+        description={t("productTypes.description")}
+        badges={<Badge variant="outline">{items.length} {t("common.records")}</Badge>}
         actions={
           <Button size="sm" onClick={openCreate}>
             <Plus className="mr-1.5 h-3.5 w-3.5" />
-            Thêm
+            {t("common.add")}
           </Button>
         }
       />
 
       <Card>
         <TableToolbar
-          title="Danh sách"
-          description="Tim theo ma, ten loai"
+          title={t("common.list")}
+          description={t("productTypes.searchDesc")}
           search={
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="Nhap từ khóa..." className="pl-9" />
+              <Input value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder={t("common.searchPlaceholder")} className="pl-9" />
             </div>
           }
         />
         <CardContent className="px-0">
           {error && <p className="px-4 pb-2 text-sm text-destructive">{error}</p>}
           {loading ? (
-            <p className="px-4 py-6 text-sm text-muted-foreground">Đang tải...</p>
+            <p className="px-4 py-6 text-sm text-muted-foreground">{t("common.loading")}</p>
           ) : filtered.length === 0 ? (
             <div className="p-4">
-              <EmptyState title="Không có dữ liệu" description="Thử đổi từ khóa hoac thêm mới" />
+              <EmptyState title={t("common.emptyTitle")} description={t("common.emptyDesc")} />
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>STT</TableHead>
-                  <TableHead>Ma</TableHead>
-                  <TableHead>Ten loai</TableHead>
-                  <TableHead>Ti le lợi nhuận (%)</TableHead>
-                  <TableHead className="text-right">Tac vu</TableHead>
+                  <TableHead>{t("common.stt")}</TableHead>
+                  <TableHead>{t("common.code")}</TableHead>
+                  <TableHead>{t("productTypes.name")}</TableHead>
+                  <TableHead>{t("productTypes.profitRate")}</TableHead>
+                  <TableHead className="text-right">{t("common.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -216,7 +218,7 @@ export default function ProductTypesPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={() => setOpenForm(false)}>
           <div className="w-full max-w-xl rounded-xl border bg-background shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between border-b px-5 py-4">
-              <h2 className="text-lg font-semibold">{editing ? "Cập nhật" : "Thêm"} loại sản phẩm</h2>
+              <h2 className="text-lg font-semibold">{editing ? t("productTypes.editTitle") : t("productTypes.addTitle")}</h2>
               <Button variant="ghost" size="icon-sm" onClick={() => setOpenForm(false)}>
                 <X className="h-4 w-4" />
               </Button>
@@ -224,11 +226,11 @@ export default function ProductTypesPage() {
             <form className="space-y-3 px-5 py-4" onSubmit={onSubmit}>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-2 sm:col-span-2">
-                  <Label>Tên loại sản phẩm</Label>
+                  <Label>{t("productTypes.name")}</Label>
                   <Input value={form.tenLoaiSanPham} onChange={(e) => updateField("tenLoaiSanPham", e.target.value)} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Ti le lợi nhuận (%)</Label>
+                  <Label>{t("productTypes.profitRate")}</Label>
                   <Input value={tiLeText} onChange={(e) => setTiLeText(e.target.value)} />
                 </div>
               </div>
@@ -237,10 +239,10 @@ export default function ProductTypesPage() {
 
               <div className="flex justify-end gap-2 border-t pt-3">
                 <Button type="button" variant="outline" onClick={() => setOpenForm(false)}>
-                  Huy
+                  {t("common.cancel")}
                 </Button>
                 <Button type="submit" disabled={submitting}>
-                  {submitting ? "Dang luu..." : "Lưu"}
+                  {submitting ? t("common.saving") : t("common.save")}
                 </Button>
               </div>
             </form>
@@ -250,9 +252,9 @@ export default function ProductTypesPage() {
 
       <ConfirmDialog
         open={deleting !== null}
-        title="Xóa loại sản phẩm"
-        description={deleting ? `Bạn chắc chắn muốn xóa ${deleting.tenLoaiSanPham}?` : ""}
-        confirmLabel="Xóa"
+        title={t("productTypes.deleteTitle")}
+        description={deleting ? t("common.deleteConfirm").replace("{name}", deleting.tenLoaiSanPham) : ""}
+        confirmLabel={t("common.delete")}
         destructive
         onCancel={() => setDeleting(null)}
         onConfirm={doDelete}
