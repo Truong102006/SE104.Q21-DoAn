@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState, MetricCard, PageHeader } from "@/components/dashboard/management";
 import { backendApi } from "@/services/backend-api";
 import { getApiErrorMessage } from "@/lib/api-error";
@@ -34,6 +35,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer,
+  Cell,
+} from "recharts";
 import type { SaleResponse, ServiceTicketResponse } from "@/types/backend";
 import { useTranslation } from "@/i18n/i18n-context";
 import { motion, AnimatePresence } from "framer-motion";
@@ -68,6 +79,39 @@ function formatServiceStatus(status: string, t: any): string {
   const s = status.toLowerCase();
   if (s.includes("hoàn thành") || s.includes("hoan thanh")) return t("serviceLookup.completed") || "Hoàn thành";
   return t("serviceLookup.incomplete") || "Chưa hoàn thành";
+}
+
+function DashboardSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="rounded-xl border border-border/70 bg-card p-4 shadow-xs space-y-3">
+            <div className="flex justify-between items-start">
+              <div className="space-y-2 w-full">
+                <Skeleton className="h-3 w-1/2" />
+                <Skeleton className="h-7 w-3/4" />
+              </div>
+              <Skeleton className="h-10 w-10 rounded-xl" />
+            </div>
+            <Skeleton className="h-3 w-2/3" />
+          </div>
+        ))}
+      </div>
+      <div className="grid gap-4 lg:grid-cols-12">
+        <div className="lg:col-span-8 h-[400px] rounded-xl border border-border/70 bg-card p-6">
+            <Skeleton className="h-6 w-1/4 mb-4" />
+            <Skeleton className="h-full w-full rounded-lg" />
+        </div>
+        <div className="lg:col-span-4 h-[400px] rounded-xl border border-border/70 bg-card p-6">
+            <Skeleton className="h-6 w-1/2 mb-4" />
+            <div className="space-y-4">
+                {[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-10 w-full" />)}
+            </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function calcCurrentMonthRevenue(sales: SaleResponse[]): number {
@@ -456,474 +500,355 @@ export default function DashboardPage() {
         </Card>
       )}
 
-      {/* Premium Dashboard Metrics Panel */}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {summaryMetrics.map((item, idx) => {
-          const Icon = item.icon;
-          return (
-            <motion.div
-              key={item.label}
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: idx * 0.05 }}
-              className="hover-elevate cursor-pointer rounded-xl border border-border/70 bg-card p-4 shadow-xs"
-            >
-              <div className="flex items-start justify-between">
-                <div className="space-y-1">
-                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{item.label}</p>
-                  <h3 className="text-2xl font-extrabold tracking-tight text-foreground">
-                    {loading ? (
-                      <span className="inline-block h-6 w-16 animate-pulse rounded bg-muted" />
-                    ) : (
-                      item.value
-                    )}
-                  </h3>
+      {loading ? (
+        <DashboardSkeleton />
+      ) : (
+        <>
+          {/* Premium Dashboard Metrics Panel */}
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {summaryMetrics.map((item, idx) => {
+              const Icon = item.icon;
+              return (
+                <motion.div
+                  key={item.label}
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: idx * 0.05 }}
+                  className="hover-elevate cursor-pointer rounded-xl border border-border/70 bg-card p-4 shadow-xs"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-1">
+                      <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{item.label}</p>
+                      <h3 className="text-2xl font-extrabold tracking-tight text-foreground">
+                        {item.value}
+                      </h3>
+                    </div>
+                    <div className="rounded-xl border border-border/60 bg-muted/40 p-2.5">
+                      <Icon className="h-5 w-5 text-amber-500" />
+                    </div>
+                  </div>
+                  <div className={`mt-3 flex items-center gap-1.5 text-[11px] font-bold ${idx === 3 ? "text-rose-600 bg-rose-500/10 px-2 py-0.5 rounded-full w-fit border border-rose-500/20" : "text-emerald-600"}`}>
+                    <Sparkles className="h-3 w-3" />
+                    <span>{item.growth}</span>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+
+          {/* Middle Sections Grid */}
+          <div className="grid gap-4 lg:grid-cols-12">
+            {/* Visual Revenue Sparkline Chart */}
+            <Card className="col-span-12 lg:col-span-8 shadow-xs border-border/70 overflow-hidden">
+              <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-3 gap-3 border-b bg-muted/10">
+                <div>
+                  <CardTitle className="text-base font-bold flex items-center gap-2">
+                    <BarChart3 className="h-4 w-4 text-amber-500" />
+                    {t("dashboard.revenueAnalysis")}
+                  </CardTitle>
+                  <p className="text-xs text-muted-foreground">{t("dashboard.revenueDesc")}</p>
                 </div>
-                <div className="rounded-xl border border-border/60 bg-muted/40 p-2.5">
-                  <Icon className="h-5 w-5 text-amber-500" />
+
+                <div className="flex items-center gap-2">
+                  {/* Time filter */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" className="h-7 text-[10px] gap-1 px-2.5 border-dashed">
+                        {t(`dashboard.${timeFilter}`)}
+                        <ChevronDown className="h-3 w-3" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="text-xs">
+                      <DropdownMenuItem onClick={() => setTimeFilter("thisWeek")}>{t("dashboard.thisWeek")}</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setTimeFilter("lastWeek")}>{t("dashboard.lastWeek")}</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setTimeFilter("last30Days")}>{t("dashboard.last30Days")}</DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  {/* Tab switch controller */}
+                  <div className="flex items-center gap-1 rounded-lg border bg-muted/45 p-0.5">
+                    <Button
+                      variant={chartMode === "sales" ? "default" : "ghost"}
+                      size="xs"
+                      className="text-[10px] h-6 px-2.5"
+                      onClick={() => setChartMode("sales")}
+                    >
+                      {t("common.sale")}
+                    </Button>
+                    <Button
+                      variant={chartMode === "services" ? "default" : "ghost"}
+                      size="xs"
+                      className="text-[10px] h-6 px-2.5"
+                      onClick={() => setChartMode("services")}
+                    >
+                      {t("common.service")}
+                    </Button>
+                    <Button
+                      variant={chartMode === "combined" ? "default" : "ghost"}
+                      size="xs"
+                      className="text-[10px] h-6 px-2.5"
+                      onClick={() => setChartMode("combined")}
+                    >
+                      {t("common.total")}
+                    </Button>
+                  </div>
                 </div>
-              </div>
-              <div className={`mt-3 flex items-center gap-1.5 text-[11px] font-bold ${idx === 3 ? "text-rose-600 bg-rose-500/10 px-2 py-0.5 rounded-full w-fit border border-rose-500/20" : "text-emerald-600"}`}>
-                <Sparkles className="h-3 w-3" />
-                <span>{item.growth}</span>
-              </div>
-            </motion.div>
-          );
-        })}
-      </div>
-
-      {/* Middle Sections Grid */}
-      <div className="grid gap-4 lg:grid-cols-12">
-        {/* Visual Revenue Sparkline Chart */}
-        <Card className="col-span-12 lg:col-span-8 shadow-xs border-border/70 overflow-hidden">
-          <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-3 gap-3 border-b bg-muted/10">
-            <div>
-              <CardTitle className="text-base font-bold flex items-center gap-2">
-                <BarChart3 className="h-4 w-4 text-amber-500" />
-                {t("dashboard.revenueAnalysis")}
-              </CardTitle>
-              <p className="text-xs text-muted-foreground">{t("dashboard.revenueDesc")}</p>
-            </div>
-
-            <div className="flex items-center gap-2">
-              {/* Time filter */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-7 text-[10px] gap-1 px-2.5 border-dashed">
-                    {t(`dashboard.${timeFilter}`)}
-                    <ChevronDown className="h-3 w-3" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="text-xs">
-                  <DropdownMenuItem onClick={() => setTimeFilter("thisWeek")}>{t("dashboard.thisWeek")}</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setTimeFilter("lastWeek")}>{t("dashboard.lastWeek")}</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setTimeFilter("last30Days")}>{t("dashboard.last30Days")}</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              {/* Tab switch controller */}
-              <div className="flex items-center gap-1 rounded-lg border bg-muted/45 p-0.5">
-                <Button
-                  variant={chartMode === "sales" ? "default" : "ghost"}
-                  size="xs"
-                  className="text-[10px] h-6 px-2.5"
-                  onClick={() => setChartMode("sales")}
-                >
-                  {t("common.sale")}
-                </Button>
-                <Button
-                  variant={chartMode === "services" ? "default" : "ghost"}
-                  size="xs"
-                  className="text-[10px] h-6 px-2.5"
-                  onClick={() => setChartMode("services")}
-                >
-                  {t("common.service")}
-                </Button>
-                <Button
-                  variant={chartMode === "combined" ? "default" : "ghost"}
-                  size="xs"
-                  className="text-[10px] h-6 px-2.5"
-                  onClick={() => setChartMode("combined")}
-                >
-                  {t("common.total")}
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-5 pb-4 px-2 sm:px-4">
-            {loading ? (
-              <div className="flex h-64 items-center justify-center">
-                <span className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-              </div>
-            ) : (
-              <div className="relative">
-                {/* SVG Bar Chart Render */}
-                <svg
-                  ref={svgRef}
-                  viewBox={`0 0 ${chartPathData.width} ${chartPathData.height}`}
-                  preserveAspectRatio="xMidYMid meet"
-                  className="w-full overflow-visible cursor-crosshair"
-                  onMouseMove={handleMouseMove}
-                  onMouseLeave={() => setHoveredChartPoint(null)}
-                >
-                  <defs>
-                    <linearGradient id="bar-gradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="oklch(0.65 0.16 261)" />
-                      <stop offset="50%" stopColor="oklch(0.60 0.17 280)" />
-                      <stop offset="100%" stopColor="oklch(0.71 0.12 74)" />
-                    </linearGradient>
-                    <linearGradient id="bar-gradient-hover" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="oklch(0.56 0.20 261)" />
-                      <stop offset="100%" stopColor="oklch(0.62 0.16 74)" />
-                    </linearGradient>
-                    <filter id="bar-shadow">
-                      <feDropShadow dx="0" dy="2" stdDeviation="2" floodColor="oklch(0.56 0.18 261)" floodOpacity="0.15" />
-                    </filter>
-                  </defs>
-
-                  {/* Horizontal gridlines and Y-axis labels */}
-                  {chartPathData.yAxisLabels.map((item, index) => (
-                    <g key={index}>
-                      <text
-                        x={chartPathData.startX - 10}
-                        y={item.y + 4}
-                        textAnchor="end"
-                        className="text-[10px] fill-muted-foreground/50 font-medium"
-                      >
-                        {item.label}
-                      </text>
-                      <line
-                        x1={chartPathData.startX}
-                        y1={item.y}
-                        x2={chartPathData.endX}
-                        y2={item.y}
-                        stroke="currentColor"
-                        strokeOpacity="0.06"
-                        strokeWidth="1"
-                        strokeDasharray={index === 4 ? "0" : "4 3"}
-                      />
-                    </g>
-                  ))}
-
-                  {/* Baseline axis */}
-                  <line
-                    x1={chartPathData.startX}
-                    y1={chartPathData.baseY}
-                    x2={chartPathData.endX}
-                    y2={chartPathData.baseY}
-                    stroke="currentColor"
-                    strokeOpacity="0.12"
-                    strokeWidth="1"
-                  />
-
-                  {/* Data Bars */}
-                  {chartPathData.points.map((pt, idx) => {
-                    const isHovered = hoveredChartPoint === idx;
-                    const slotW = pt.slotW;
-                    const barWidth = Math.min(48, slotW * 0.55);
-                    const barHeight = Math.max(2, chartPathData.baseY - pt.y);
-                    const barRadius = Math.min(6, barWidth / 3);
-
-                    return (
-                      <g key={idx}>
-                        {/* Hover Column Background */}
-                        {isHovered && (
-                          <rect
-                            x={pt.x - slotW / 2}
-                            y={chartPathData.yAxisLabels[0]?.y ?? 20}
-                            width={slotW}
-                            height={chartPathData.baseY - (chartPathData.yAxisLabels[0]?.y ?? 20)}
-                            fill="currentColor"
-                            fillOpacity="0.03"
-                            rx="6"
-                          />
-                        )}
-
-                        <motion.rect
-                          x={pt.x - barWidth / 2}
-                          y={pt.y}
-                          width={barWidth}
-                          height={barHeight}
-                          fill={isHovered ? "url(#bar-gradient-hover)" : "url(#bar-gradient)"}
-                          fillOpacity={isHovered ? 1 : 0.88}
-                          rx={barRadius}
-                          filter={isHovered ? "url(#bar-shadow)" : undefined}
-                          className="transition-colors duration-200"
-                          style={{ originY: 1 }}
-                          initial={{ scaleY: 0 }}
-                          animate={{ scaleY: 1 }}
-                          transition={{ duration: 0.45, ease: "easeOut", delay: idx * 0.025 }}
-                        />
-
-                        {/* Value label above bar on hover */}
-                        {isHovered && (
-                          <text
-                            x={pt.x}
-                            y={pt.y - 8}
-                            textAnchor="middle"
-                            className="text-[10px] fill-primary font-bold"
-                          >
-                            {formatCurrency(
-                              chartMode === "sales"
-                                ? chartData[idx].sales
-                                : chartMode === "services"
-                                ? chartData[idx].services
-                                : chartData[idx].combined
-                            )}
-                          </text>
-                        )}
-
-                        {/* X-axis day label */}
-                        <text
-                          x={pt.x}
-                          y={chartPathData.baseY + 18}
-                          textAnchor="middle"
-                          className={`text-[10px] font-semibold transition-colors duration-200 ${isHovered ? "fill-primary" : "fill-muted-foreground/65"}`}
-                        >
-                          {pt.label}
-                        </text>
-                      </g>
-                    );
-                  })}
-                </svg>
-
-                {/* Floating Tooltip Overlay */}
-                <AnimatePresence>
-                  {hoveredChartPoint !== null && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.92, y: 8 }}
-                      animate={{ opacity: 1, scale: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.95 }}
-                      transition={{ duration: 0.15 }}
-                      className="absolute top-2 left-1/2 -translate-x-1/2 z-10 bg-card/95 backdrop-blur-md px-4 py-2.5 rounded-xl text-xs shadow-xl flex items-center gap-4 border border-border/80 ring-1 ring-amber-500/10"
+              </CardHeader>
+              <CardContent className="pt-8 pb-4 px-2 sm:px-4 h-[340px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData}>
+                    <defs>
+                      <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="oklch(0.71 0.12 74)" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="oklch(0.56 0.18 261)" stopOpacity={0.8}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="oklch(0.27 0.03 258 / 5%)" />
+                    <XAxis
+                      dataKey="label"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 10, fontWeight: 600, fill: 'oklch(0.5 0.02 258)' }}
+                      dy={10}
+                    />
+                    <YAxis
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 10, fontWeight: 600, fill: 'oklch(0.5 0.02 258)' }}
+                      tickFormatter={(val) => {
+                        const mUnit = t("common.million") || "Tr";
+                        const kUnit = t("common.thousand") || "k";
+                        if (val >= 1000000) return (val / 1000000).toFixed(1) + mUnit;
+                        if (val >= 1000) return (val / 1000).toFixed(0) + kUnit;
+                        return val;
+                      }}
+                    />
+                    <RechartsTooltip
+                      cursor={{ fill: 'oklch(0.27 0.03 258 / 2%)', radius: 4 }}
+                      content={({ active, payload, label }) => {
+                        if (active && payload && payload.length) {
+                          return (
+                            <div className="bg-card/95 backdrop-blur-md px-4 py-2.5 rounded-xl text-xs shadow-xl border border-border/80 ring-1 ring-amber-500/10 space-y-1">
+                              <p className="font-bold text-[9px] text-muted-foreground uppercase">{t("common.date")} {label}</p>
+                              <p className="font-extrabold text-foreground text-sm">
+                                {formatCurrency(payload[0].value as number)}
+                              </p>
+                              <Badge variant="outline" className="text-[9px] capitalize text-amber-600 bg-amber-500/10 border-amber-500/20 font-bold">
+                                {chartMode === "sales" ? t("common.sale") : chartMode === "services" ? t("common.service") : t("common.total")}
+                              </Badge>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                    <Bar
+                      dataKey={chartMode === "sales" ? "sales" : chartMode === "services" ? "services" : "combined"}
+                      fill="url(#barGradient)"
+                      radius={[4, 4, 0, 0]}
+                      barSize={chartData.length > 10 ? 12 : 32}
                     >
-                      <div className="text-left space-y-0.5">
-                        <span className="block text-[9px] font-bold text-muted-foreground uppercase tracking-wider">
-                          {t("common.date")} {chartData[hoveredChartPoint].label}
-                        </span>
-                        <span className="text-sm font-extrabold text-foreground">
-                          {formatCurrency(
-                            chartMode === "sales"
-                              ? chartData[hoveredChartPoint].sales
-                              : chartMode === "services"
-                              ? chartData[hoveredChartPoint].services
-                              : chartData[hoveredChartPoint].combined
-                          )}
-                        </span>
-                      </div>
-                      <Badge variant="outline" className="text-[9px] capitalize text-amber-600 bg-amber-500/10 border-amber-500/20 font-bold">
-                        {chartMode === "sales" ? t("common.sale") : chartMode === "services" ? t("common.service") : t("common.total")}
-                      </Badge>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                       {chartData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fillOpacity={hoveredChartPoint === index ? 1 : 0.8} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
 
-        {/* Live Gold Price Board */}
-        <Card className="col-span-12 lg:col-span-4 shadow-xs border-border/70 flex flex-col justify-between">
-          <div>
-            <CardHeader className="pb-3 border-b bg-muted/10">
-              <CardTitle className="text-base font-bold flex items-center justify-between">
-                <span className="flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-amber-500" />
-                  {t("dashboard.goldPriceLive")}
-                </span>
-                <Badge variant="outline" className="animate-pulse bg-emerald-500/15 text-emerald-600 border-emerald-500/20 text-[9px] py-0.5 px-2">
-                  {t("dashboard.live").toUpperCase()}
-                </Badge>
-              </CardTitle>
-              <p className="text-xs text-muted-foreground">{t("dashboard.goldPriceDesc")}</p>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="divide-y divide-border/60">
-                {goldPrices.map((gold) => {
-                  const isFlashing = flashRow === gold.type;
-                  return (
-                    <div
-                      key={gold.type}
-                      className={`flex items-center justify-between p-3.5 transition-colors duration-500 ${
-                        isFlashing
-                          ? flashDirection === "up"
-                            ? "bg-emerald-500/10"
-                            : "bg-rose-500/10"
-                          : "hover:bg-muted/30"
-                      }`}
-                    >
-                      <div className="min-w-0">
-                        <span className="block text-xs font-bold text-foreground">{gold.type}</span>
-                        <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                          <Clock className="h-2.5 w-2.5" />
-                          {t("common.updatedJustNow")}
-                        </span>
-                      </div>
-                      <div className="flex gap-4 text-right">
-                        <div>
-                          <span className="block text-[9px] uppercase font-bold text-muted-foreground">{t("common.buy")}</span>
-                          <span className="text-xs font-bold">{formatNumber(gold.buy / 1000)}k</span>
-                        </div>
-                        <div>
-                          <span className="block text-[9px] uppercase font-bold text-muted-foreground">{t("common.sell")}</span>
-                          <span className={`text-xs font-bold transition-all duration-300 ${
+            {/* Live Gold Price Board */}
+            <Card className="col-span-12 lg:col-span-4 shadow-xs border-border/70 flex flex-col justify-between">
+              <div>
+                <CardHeader className="pb-3 border-b bg-muted/10">
+                  <CardTitle className="text-base font-bold flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 text-amber-500" />
+                      {t("dashboard.goldPriceLive")}
+                    </span>
+                    <Badge variant="outline" className="animate-pulse bg-emerald-500/15 text-emerald-600 border-emerald-500/20 text-[9px] py-0.5 px-2">
+                      {t("dashboard.live").toUpperCase()}
+                    </Badge>
+                  </CardTitle>
+                  <p className="text-xs text-muted-foreground">{t("dashboard.goldPriceDesc")}</p>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="divide-y divide-border/60">
+                    {goldPrices.map((gold) => {
+                      const isFlashing = flashRow === gold.type;
+                      return (
+                        <div
+                          key={gold.type}
+                          className={`flex items-center justify-between p-3.5 transition-colors duration-500 ${
                             isFlashing
                               ? flashDirection === "up"
-                                ? "text-emerald-600 font-extrabold"
-                                : "text-rose-600 font-extrabold"
-                              : "text-foreground"
-                          }`}>
-                            {formatNumber(gold.sell / 1000)}k
-                          </span>
+                                ? "bg-emerald-500/10"
+                                : "bg-rose-500/10"
+                              : "hover:bg-muted/30"
+                          }`}
+                        >
+                          <div className="min-w-0">
+                            <span className="block text-xs font-bold text-foreground">{gold.type}</span>
+                            <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                              <Clock className="h-2.5 w-2.5" />
+                              {t("common.updatedJustNow")}
+                            </span>
+                          </div>
+                          <div className="flex gap-4 text-right">
+                            <div>
+                              <span className="block text-[9px] uppercase font-bold text-muted-foreground">{t("common.buy")}</span>
+                              <span className="text-xs font-bold">{formatNumber(gold.buy / 1000)}k</span>
+                            </div>
+                            <div>
+                              <span className="block text-[9px] uppercase font-bold text-muted-foreground">{t("common.sell")}</span>
+                              <span className={`text-xs font-bold transition-all duration-300 ${
+                                isFlashing
+                                  ? flashDirection === "up"
+                                    ? "text-emerald-600 font-extrabold"
+                                    : "text-rose-600 font-extrabold"
+                                  : "text-foreground"
+                              }`}>
+                                {formatNumber(gold.sell / 1000)}k
+                              </span>
+                            </div>
+                          </div>
+                          {/* Fluctuating mini indicator */}
+                          <div className="w-14 flex flex-col items-end justify-center">
+                            {gold.change !== 0 && (
+                              <div className={`flex items-center gap-0.5 text-[10px] font-bold ${gold.change > 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                                {gold.change > 0 ? <ArrowUp className="h-2.5 w-2.5" /> : <ArrowDown className="h-2.5 w-2.5" />}
+                                {formatNumber(Math.abs(gold.change) / 1000)}k
+                              </div>
+                            )}
+                            {gold.change === 0 && <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/35" />}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </div>
+              <div className="p-3 border-t bg-muted/10 text-center">
+                <Link href="/dashboard/gold-prices">
+                  <Button variant="outline" size="sm" className="w-full text-xs font-semibold hover:bg-muted">
+                    {t("dashboard.manageGoldPrices")}
+                    <ArrowUpRight className="ml-1.5 h-3.5 w-3.5" />
+                  </Button>
+                </Link>
+              </div>
+            </Card>
+          </div>
+
+          {/* Bottom Layout Row */}
+          <div className="grid gap-4 lg:grid-cols-12">
+            {/* Recent Transactions & Operations Timeline */}
+            <Card className="col-span-12 lg:col-span-8 shadow-xs border-border/70">
+              <CardHeader className="pb-3 border-b bg-muted/10">
+                <CardTitle className="text-base font-bold flex items-center gap-2">
+                  <Activity className="h-4 w-4 text-amber-500" />
+                  {t("dashboard.activityLog")}
+                </CardTitle>
+                <p className="text-xs text-muted-foreground">{t("dashboard.activityDesc")}</p>
+              </CardHeader>
+              <CardContent className="pt-4 pb-2">
+                {activities.length === 0 ? (
+                  <div className="py-8">
+                    <EmptyState title="Chưa có giao dịch" description="Chưa ghi nhận hoạt động giao dịch nào hôm nay." />
+                  </div>
+                ) : (
+                  <div className="relative border-l border-border/60 pl-5 ml-2.5 space-y-5 py-2">
+                    {activities.map((act) => (
+                      <div key={act.id} className="relative group">
+                        {/* Bullet marker */}
+                        <span className="absolute -left-[26px] top-1.5 flex h-3 w-3 items-center justify-center rounded-full bg-background border border-border group-hover:border-amber-500/50 transition-colors">
+                          <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                        </span>
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                          <div className="space-y-0.5 min-w-0">
+                            <span className="block text-xs font-bold text-foreground leading-tight">
+                              {act.title}
+                            </span>
+                            <span className="block text-xs text-muted-foreground truncate leading-relaxed">
+                              {act.desc}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className={`rounded px-1.5 py-0.5 text-[9px] font-bold uppercase border ${act.tagColor}`}>
+                              {act.label}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground flex items-center gap-1 font-medium">
+                              <Clock className="h-3 w-3" />
+                              {act.time}
+                            </span>
+                          </div>
                         </div>
                       </div>
-                      {/* Fluctuating mini indicator */}
-                      <div className="w-14 flex flex-col items-end justify-center">
-                        {gold.change !== 0 && (
-                          <div className={`flex items-center gap-0.5 text-[10px] font-bold ${gold.change > 0 ? "text-emerald-600" : "text-rose-600"}`}>
-                            {gold.change > 0 ? <ArrowUp className="h-2.5 w-2.5" /> : <ArrowDown className="h-2.5 w-2.5" />}
-                            {formatNumber(Math.abs(gold.change) / 1000)}k
-                          </div>
-                        )}
-                        {gold.change === 0 && <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/35" />}
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Quick Operations panel */}
+            <Card className="col-span-12 lg:col-span-4 shadow-xs border-border/70 flex flex-col justify-between">
+              <CardHeader className="pb-3 border-b bg-muted/10">
+                <CardTitle className="text-base font-bold flex items-center gap-2">
+                  <Zap className="h-4 w-4 text-amber-500" />
+                  {t("dashboard.quickActions")}
+                </CardTitle>
+                <p className="text-xs text-muted-foreground">{t("dashboard.quickActionsDesc")}</p>
+              </CardHeader>
+              <CardContent className="p-4 flex-1 flex flex-col justify-center">
+                <div className="grid grid-cols-2 gap-3 w-full">
+                  <Link href="/dashboard/orders">
+                    <Button variant="outline" className="h-auto py-4 flex-col gap-2 w-full hover:border-amber-500/40 hover:bg-amber-500/5 group shadow-xs">
+                      <div className="rounded-full bg-amber-500/10 p-2 group-hover:bg-amber-500/20 transition-colors">
+                        <PlusCircle className="h-5 w-5 text-amber-600" />
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </div>
-          <div className="p-3 border-t bg-muted/10 text-center">
-            <Link href="/dashboard/gold-prices">
-              <Button variant="outline" size="sm" className="w-full text-xs font-semibold hover:bg-muted">
-                {t("dashboard.manageGoldPrices")}
-                <ArrowUpRight className="ml-1.5 h-3.5 w-3.5" />
-              </Button>
-            </Link>
-          </div>
-        </Card>
-      </div>
+                      <span className="text-xs font-bold text-foreground">{t("nav.salesOrders")}</span>
+                    </Button>
+                  </Link>
 
-      {/* Bottom Layout Row */}
-      <div className="grid gap-4 lg:grid-cols-12">
-        {/* Recent Transactions & Operations Timeline */}
-        <Card className="col-span-12 lg:col-span-8 shadow-xs border-border/70">
-          <CardHeader className="pb-3 border-b bg-muted/10">
-            <CardTitle className="text-base font-bold flex items-center gap-2">
-              <Activity className="h-4 w-4 text-amber-500" />
-              {t("dashboard.activityLog")}
-            </CardTitle>
-            <p className="text-xs text-muted-foreground">{t("dashboard.activityDesc")}</p>
-          </CardHeader>
-          <CardContent className="pt-4 pb-2">
-            {loading ? (
-              <div className="space-y-4 py-4">
-                {[1, 2, 3].map((n) => (
-                  <div key={n} className="flex gap-3 animate-pulse">
-                    <div className="h-8 w-8 rounded-full bg-muted" />
-                    <div className="flex-1 space-y-2 py-0.5">
-                      <div className="h-3.5 w-1/4 rounded bg-muted" />
-                      <div className="h-3 w-3/4 rounded bg-muted" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : activities.length === 0 ? (
-              <div className="py-8">
-                <EmptyState title="Chưa có giao dịch" description="Chưa ghi nhận hoạt động giao dịch nào hôm nay." />
-              </div>
-            ) : (
-              <div className="relative border-l border-border/60 pl-5 ml-2.5 space-y-5 py-2">
-                {activities.map((act) => (
-                  <div key={act.id} className="relative group">
-                    {/* Bullet marker */}
-                    <span className="absolute -left-[26px] top-1.5 flex h-3 w-3 items-center justify-center rounded-full bg-background border border-border group-hover:border-amber-500/50 transition-colors">
-                      <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-                    </span>
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
-                      <div className="space-y-0.5 min-w-0">
-                        <span className="block text-xs font-bold text-foreground leading-tight">
-                          {act.title}
-                        </span>
-                        <span className="block text-xs text-muted-foreground truncate leading-relaxed">
-                          {act.desc}
-                        </span>
+                  <Link href="/dashboard/service-orders">
+                    <Button variant="outline" className="h-auto py-4 flex-col gap-2 w-full hover:border-primary/40 hover:bg-primary/5 group shadow-xs">
+                      <div className="rounded-full bg-primary/10 p-2 group-hover:bg-primary/20 transition-colors">
+                        <FileClock className="h-5 w-5 text-primary" />
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className={`rounded px-1.5 py-0.5 text-[9px] font-bold uppercase border ${act.tagColor}`}>
-                          {act.label}
-                        </span>
-                        <span className="text-[10px] text-muted-foreground flex items-center gap-1 font-medium">
-                          <Clock className="h-3 w-3" />
-                          {act.time}
-                        </span>
+                      <span className="text-xs font-bold text-foreground">{t("nav.serviceOrders")}</span>
+                    </Button>
+                  </Link>
+
+                  <Link href="/dashboard/service-voucher-lookup">
+                    <Button variant="outline" className="h-auto py-4 flex-col gap-2 w-full hover:border-emerald-500/40 hover:bg-emerald-500/5 group shadow-xs">
+                      <div className="rounded-full bg-emerald-500/10 p-2 group-hover:bg-emerald-500/20 transition-colors">
+                        <Eye className="h-5 w-5 text-emerald-600" />
                       </div>
-                    </div>
-                  </div>
-                ))}
+                      <span className="text-xs font-bold text-foreground">{t("common.serviceSearch")}</span>
+                    </Button>
+                  </Link>
+
+                  <Link href="/dashboard/reports">
+                    <Button variant="outline" className="h-auto py-4 flex-col gap-2 w-full hover:border-blue-500/40 hover:bg-blue-500/5 group shadow-xs">
+                      <div className="rounded-full bg-blue-500/10 p-2 group-hover:bg-blue-500/20 transition-colors">
+                        <FileText className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <span className="text-xs font-bold text-foreground">{t("common.reportsMonthly")}</span>
+                    </Button>
+                  </Link>
+                </div>
+              </CardContent>
+              <div className="p-3 border-t bg-muted/10 text-center">
+                <Link href="/dashboard/settings">
+                  <Button variant="ghost" size="sm" className="w-full text-xs text-muted-foreground hover:text-foreground">
+                    <Settings className="mr-1.5 h-3.5 w-3.5" />
+                    {t("dashboard.configSystem")}
+                  </Button>
+                </Link>
               </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Quick Operations panel */}
-        <Card className="col-span-12 lg:col-span-4 shadow-xs border-border/70 flex flex-col justify-between">
-          <CardHeader className="pb-3 border-b bg-muted/10">
-            <CardTitle className="text-base font-bold flex items-center gap-2">
-              <Zap className="h-4 w-4 text-amber-500" />
-              {t("dashboard.quickActions")}
-            </CardTitle>
-            <p className="text-xs text-muted-foreground">{t("dashboard.quickActionsDesc")}</p>
-          </CardHeader>
-          <CardContent className="p-4 flex-1 flex flex-col justify-center">
-            <div className="grid grid-cols-2 gap-3 w-full">
-              <Link href="/dashboard/orders">
-                <Button variant="outline" className="h-auto py-4 flex-col gap-2 w-full hover:border-amber-500/40 hover:bg-amber-500/5 group shadow-xs">
-                  <div className="rounded-full bg-amber-500/10 p-2 group-hover:bg-amber-500/20 transition-colors">
-                    <PlusCircle className="h-5 w-5 text-amber-600" />
-                  </div>
-                  <span className="text-xs font-bold text-foreground">{t("nav.salesOrders")}</span>
-                </Button>
-              </Link>
-
-              <Link href="/dashboard/service-orders">
-                <Button variant="outline" className="h-auto py-4 flex-col gap-2 w-full hover:border-primary/40 hover:bg-primary/5 group shadow-xs">
-                  <div className="rounded-full bg-primary/10 p-2 group-hover:bg-primary/20 transition-colors">
-                    <FileClock className="h-5 w-5 text-primary" />
-                  </div>
-                  <span className="text-xs font-bold text-foreground">{t("nav.serviceOrders")}</span>
-                </Button>
-              </Link>
-
-              <Link href="/dashboard/service-voucher-lookup">
-                <Button variant="outline" className="h-auto py-4 flex-col gap-2 w-full hover:border-emerald-500/40 hover:bg-emerald-500/5 group shadow-xs">
-                  <div className="rounded-full bg-emerald-500/10 p-2 group-hover:bg-emerald-500/20 transition-colors">
-                    <Eye className="h-5 w-5 text-emerald-600" />
-                  </div>
-                  <span className="text-xs font-bold text-foreground">{t("common.serviceSearch")}</span>
-                </Button>
-              </Link>
-
-              <Link href="/dashboard/reports">
-                <Button variant="outline" className="h-auto py-4 flex-col gap-2 w-full hover:border-blue-500/40 hover:bg-blue-500/5 group shadow-xs">
-                  <div className="rounded-full bg-blue-500/10 p-2 group-hover:bg-blue-500/20 transition-colors">
-                    <FileText className="h-5 w-5 text-blue-600" />
-                  </div>
-                  <span className="text-xs font-bold text-foreground">{t("common.reportsMonthly")}</span>
-                </Button>
-              </Link>
-            </div>
-          </CardContent>
-          <div className="p-3 border-t bg-muted/10 text-center">
-            <Link href="/dashboard/settings">
-              <Button variant="ghost" size="sm" className="w-full text-xs text-muted-foreground hover:text-foreground">
-                <Settings className="mr-1.5 h-3.5 w-3.5" />
-                {t("dashboard.configSystem")}
-              </Button>
-            </Link>
+            </Card>
           </div>
-        </Card>
-      </div>
+        </>
+      )}
     </div>
   );
 }

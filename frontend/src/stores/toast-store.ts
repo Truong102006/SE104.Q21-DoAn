@@ -1,83 +1,57 @@
 "use client";
 
-import { create } from "zustand";
+import { toast as sonnerToast } from "sonner";
 
 export interface ToastAction {
   label: string;
   onClick: () => void;
 }
 
-export interface Toast {
-  id: string;
-  message: string;
-  type: "success" | "error" | "warning" | "info";
+interface ToastOptions {
   duration?: number;
   action?: ToastAction;
 }
 
-interface ToastState {
-  toasts: Toast[];
-  toast: (
-    message: string,
-    options?: {
-      type?: Toast["type"];
-      duration?: number;
-      action?: ToastAction;
+/**
+ * Compatibility wrapper around sonner toast system.
+ * Keeps existing store-like interface for legacy code while using modern sonner under the hood.
+ */
+export const useToastStore = {
+  getState: () => ({
+    success: (message: string, action?: ToastAction) => {
+      sonnerToast.success(message, {
+        action: action ? { label: action.label, onClick: action.onClick } : undefined,
+        duration: 6000,
+      });
+    },
+    error: (message: string) => {
+      sonnerToast.error(message);
+    },
+    warning: (message: string) => {
+      sonnerToast.warning(message);
+    },
+    info: (message: string) => {
+      sonnerToast.info(message);
+    },
+    dismiss: (id?: string) => {
+        if (id) sonnerToast.dismiss(id);
+        else sonnerToast.dismiss();
     }
-  ) => string;
-  success: (message: string, action?: ToastAction) => string;
-  error: (message: string) => string;
-  warning: (message: string) => string;
-  info: (message: string) => string;
-  dismiss: (id: string) => void;
-}
-
-export const useToastStore = create<ToastState>((set, get) => ({
-  toasts: [],
-
-  toast: (message, options = {}) => {
-    const id = Math.random().toString(36).substring(2, 9);
-    const type = options.type ?? "info";
-    const duration = options.duration ?? 5000;
-    const action = options.action;
-
-    const newToast: Toast = { id, message, type, duration, action };
-
-    set((state) => ({
-      toasts: [...state.toasts, newToast],
-    }));
-
-    // Auto-dismiss
-    if (duration > 0) {
-      setTimeout(() => {
-        set((state) => ({
-          toasts: state.toasts.filter((t) => t.id !== id),
-        }));
-      }, duration);
-    }
-
-    return id;
+  }),
+  // For hooks
+  success: (message: string, action?: ToastAction) => {
+    sonnerToast.success(message, {
+      action: action ? { label: action.label, onClick: action.onClick } : undefined,
+      duration: 6000,
+    });
   },
-
-  success: (message, action) => {
-    return get().toast(message, { type: "success", action, duration: 6000 });
+  error: (message: string) => {
+    sonnerToast.error(message);
   },
-
-  error: (message) => {
-    return get().toast(message, { type: "error" });
+  warning: (message: string) => {
+    sonnerToast.warning(message);
   },
-
-  warning: (message) => {
-    return get().toast(message, { type: "warning" });
+  info: (message: string) => {
+    sonnerToast.info(message);
   },
-
-  info: (message) => {
-    return get().toast(message, { type: "info" });
-  },
-
-  dismiss: (id) => {
-    set((state) => ({
-      toasts: state.toasts.filter((t) => t.id !== id),
-    }));
-  },
-}));
+};

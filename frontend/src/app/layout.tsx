@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { I18nProvider } from "@/i18n/i18n-context";
+import { ThemeProvider } from "next-themes";
 import "./globals.css";
 
 const inter = Inter({
@@ -22,11 +23,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="vi" className={`h-full antialiased ${inter.variable}`}>
+    <html lang="vi" className={`h-full antialiased ${inter.variable}`} suppressHydrationWarning>
       <body className="min-h-full flex flex-col font-sans">
-        <I18nProvider>
-          <TooltipProvider delayDuration={300}>{children}</TooltipProvider>
-        </I18nProvider>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <I18nProvider>
+            <TooltipProvider delayDuration={300}>{children}</TooltipProvider>
+          </I18nProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

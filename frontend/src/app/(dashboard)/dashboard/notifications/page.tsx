@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +25,7 @@ import {
   ShoppingCart,
   SlidersHorizontal,
   TrendingUp,
+  X,
   type LucideIcon,
 } from "lucide-react";
 
@@ -283,8 +284,17 @@ export default function NotificationsPage() {
                   value={keyword}
                   onChange={(event) => setKeyword(event.target.value)}
                   placeholder="Tìm theo tiêu đề hoặc nội dung thông báo"
-                  className="pl-9"
+                  className="pl-9 pr-8"
                 />
+                {keyword && (
+                  <button
+                    type="button"
+                    onClick={() => setKeyword("")}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
               </div>
 
               <div className="flex flex-wrap items-center gap-2">

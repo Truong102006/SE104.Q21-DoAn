@@ -24,13 +24,14 @@ import {
 import { backendApi } from "@/services/backend-api";
 import type { SearchServiceTicketResponse, ServiceTicketResponse } from "@/types/backend";
 import { getApiErrorMessage } from "@/lib/api-error";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency, formatVietnameseStatus } from "@/lib/format";
 import { useTranslation } from "@/i18n/i18n-context";
 import {
   Search,
   Eye,
   Filter,
   RotateCcw,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -75,10 +76,14 @@ export default function ServiceVoucherLookupPage() {
     }
   }
 
+  // Debounced search when any filter changes
   useEffect(() => {
-    loadData(0);
+    const timer = setTimeout(() => {
+      loadData(0);
+    }, 300);
+    return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [keyword, status, fromDate, toDate]);
 
   async function openDetail(soPhieuDichVu: string) {
     try {
@@ -94,16 +99,16 @@ export default function ServiceVoucherLookupPage() {
     setStatus("");
     setFromDate("");
     setToDate("");
-    loadData(0);
   }
 
 
   function getStatusBadge(statusStr: string) {
     const s = statusStr.toLowerCase();
+    const displayStatus = formatVietnameseStatus(statusStr);
     if (s.includes("hoan thanh") || s.includes("hoàn thành") || s.includes("da giao") || s.includes("đã giao")) {
-      return <StatusBadge tone="success">{statusStr}</StatusBadge>;
+      return <StatusBadge tone="success">{displayStatus}</StatusBadge>;
     }
-    return <StatusBadge tone="warning">{statusStr}</StatusBadge>;
+    return <StatusBadge tone="warning">{displayStatus}</StatusBadge>;
   }
 
   function ServiceStatusStepper({ status }: { status: string }) {
@@ -204,8 +209,17 @@ export default function ServiceVoucherLookupPage() {
                 if (e.key === "Enter") loadData(0);
               }}
               placeholder="Tìm kiếm theo số phiếu hoặc tên khách hàng..."
-              className="pl-9 h-10 w-full rounded-xl border border-input/90 bg-card text-sm shadow-xs focus:border-gold focus:ring-2 focus:ring-gold/20 transition-all duration-150"
+              className="pl-9 pr-8 h-10 w-full rounded-xl border border-input/90 bg-card text-sm shadow-xs focus:border-gold focus:ring-2 focus:ring-gold/20 transition-all duration-150"
             />
+            {keyword && (
+              <button
+                type="button"
+                onClick={() => setKeyword("")}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-gold cursor-pointer transition-colors duration-150"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
         </div>
 
@@ -220,7 +234,7 @@ export default function ServiceVoucherLookupPage() {
             options={[
               { value: "all", label: t("serviceLookup.allStatus") },
               { value: "Hoan thanh", label: t("serviceLookup.completed") },
-              { value: "Chua hoàn thành", label: t("serviceLookup.incomplete") },
+              { value: "Chua hoan thanh", label: t("serviceLookup.incomplete") },
             ]}
             className="h-10 rounded-xl border border-border bg-card text-sm w-full focus:ring-2 focus:ring-gold/20"
           />
@@ -412,7 +426,7 @@ export default function ServiceVoucherLookupPage() {
                       <TableHead className="w-12 font-bold">{t("common.stt")}</TableHead>
                       <TableHead className="font-bold">{t("serviceTypes.title")}</TableHead>
                       <TableHead className="text-center font-bold">{t("common.quantity")}</TableHead>
-                      <TableHead className="text-right font-bold">{t("common.unitPrice")}</TableHead>
+                      <TableHead className="text-right font-bold">{t("serviceOrders.calculatedPrice")}</TableHead>
                       <TableHead className="text-right font-bold">{t("common.subtotal")}</TableHead>
                       <TableHead className="text-right font-bold">{t("serviceLookup.prepaid")}</TableHead>
                       <TableHead className="text-right font-bold">{t("serviceLookup.remaining")}</TableHead>

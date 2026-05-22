@@ -12,19 +12,20 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { backendApi } from "@/services/backend-api";
 import type { UserGroupResponse, UserRequest, UserResponse } from "@/types/backend";
 import { getApiErrorMessage } from "@/lib/api-error";
+import { useToastStore } from "@/stores/toast-store";
 import { useTranslation } from "@/i18n/i18n-context";
-import { Pencil, Plus, Trash2, X } from "lucide-react";
+import { Pencil, Plus, Search, Trash2, X } from "lucide-react";
 
 const EMPTY_FORM: UserRequest = {
   tenDangNhap: "",
   matKhau: "",
   maNhom: "",
+  isActive: true,
 };
 
 export default function StaffPage() {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   const [users, setUsers] = useState<UserResponse[]>([]);
   const [groups, setGroups] = useState<UserGroupResponse[]>([]);
@@ -33,14 +34,12 @@ export default function StaffPage() {
   const [openForm, setOpenForm] = useState(false);
   const [editing, setEditing] = useState<UserResponse | null>(null);
   const [form, setForm] = useState<UserRequest>(EMPTY_FORM);
-  const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const [deleting, setDeleting] = useState<UserResponse | null>(null);
 
   async function loadData(search?: string) {
     setLoading(true);
-    setError(null);
     try {
       const [userData, groupData] = await Promise.all([
         backendApi.users.list(search?.trim() || undefined),
@@ -49,7 +48,7 @@ export default function StaffPage() {
       setUsers(userData);
       setGroups(groupData);
     } catch (err) {
-      setError(getApiErrorMessage(err, t("staff.loadError")));
+      useToastStore.getState().error(getApiErrorMessage(err, t("staff.loadError")));
     } finally {
       setLoading(false);
     }
@@ -69,8 +68,7 @@ export default function StaffPage() {
 
   function openCreate() {
     setEditing(null);
-    setForm({ ...EMPTY_FORM, maNhom: groups[0]?.maNhom ?? "" });
-    setFormError(null);
+    setForm({ ...EMPTY_FORM, maNhom: groups[0]?.maNhom ?? "", isActive: true });
     setOpenForm(true);
   }
 
@@ -80,42 +78,61 @@ export default function StaffPage() {
       tenDangNhap: item.tenDangNhap,
       matKhau: "",
       maNhom: item.maNhom,
+      isActive: item.isActive !== false,
     });
-    setFormError(null);
     setOpenForm(true);
   }
 
   function updateField<K extends keyof UserRequest>(key: K, value: UserRequest[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
-    setFormError(null);
+  }
+
+  async function toggleActive(item: UserResponse) {
+    try {
+      const newActive = item.isActive === false ? true : false;
+      const payload: UserRequest = {
+        tenDangNhap: item.tenDangNhap,
+        maNhom: item.maNhom,
+        isActive: newActive,
+      };
+
+      await backendApi.users.update(item.tenDangNhap, payload);
+      setUsers((prev) =>
+        prev.map((u) => (u.tenDangNhap === item.tenDangNhap ? { ...u, isActive: newActive } : u))
+      );
+      useToastStore.getState().success(
+        newActive ? "Đã kích hoạt tài khoản nhân viên!" : "Đã ngưng kích hoạt tài khoản nhân viên!"
+      );
+    } catch (err) {
+      useToastStore.getState().error(getApiErrorMessage(err, "Không thể cập nhật trạng thái tài khoản nhân viên"));
+    }
   }
 
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
 
     if (!form.tenDangNhap?.trim()) {
-      setFormError(t("staff.usernameRequired"));
+      useToastStore.getState().error(t("staff.usernameRequired"));
       return;
     }
 
-    if (!form.matKhau?.trim()) {
-      setFormError(t("staff.passwordRequired"));
+    if (!editing && !form.matKhau?.trim()) {
+      useToastStore.getState().error(t("staff.passwordRequired"));
       return;
     }
 
     if (!form.maNhom) {
-      setFormError(t("staff.groupRequired"));
+      useToastStore.getState().error(t("staff.groupRequired"));
       return;
     }
 
     setSubmitting(true);
-    setFormError(null);
-
     try {
       const payload: UserRequest = {
         tenDangNhap: form.tenDangNhap.trim(),
-        matKhau: form.matKhau,
+        matKhau: form.matKhau?.trim() || undefined,
         maNhom: form.maNhom,
+        isActive: form.isActive !== false,
       };
 
       if (editing) {
@@ -127,7 +144,7 @@ export default function StaffPage() {
       setOpenForm(false);
       await loadData();
     } catch (err) {
-      setFormError(getApiErrorMessage(err, t("staff.saveError")));
+      useToastStore.getState().error(getApiErrorMessage(err, t("staff.saveError")));
     } finally {
       setSubmitting(false);
     }
@@ -143,7 +160,7 @@ export default function StaffPage() {
       setDeleting(null);
       await loadData();
     } catch (err) {
-      setError(getApiErrorMessage(err, t("staff.deleteError")));
+      useToastStore.getState().error(getApiErrorMessage(err, t("staff.deleteError")));
       setDeleting(null);
     }
   }
@@ -156,8 +173,12 @@ export default function StaffPage() {
         description={t("staff.description")}
         badges={<Badge variant="outline">{users.length} {t("staff.accounts")}</Badge>}
         actions={
-          <Button size="sm" onClick={openCreate}>
-            <Plus className="mr-1.5 h-3.5 w-3.5" />
+          <Button
+            size="default"
+            className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-extrabold hover:from-blue-500 hover:to-indigo-500 hover:shadow-blue-500/35 active:scale-95 shadow-lg shadow-blue-500/20 gap-2 h-11 px-6 rounded-xl cursor-pointer transition-all text-sm sm:text-base border-none"
+            onClick={openCreate}
+          >
+            <Plus className="h-5 w-5 stroke-[3]" />
             {t("staff.addAccount")}
           </Button>
         }
@@ -167,16 +188,29 @@ export default function StaffPage() {
         <TableToolbar
           title={t("common.list")}
           description={t("staff.searchDesc")}
-          search={<Input value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder={t("common.searchPlaceholder")} />}
-          actions={
-            <Button size="sm" variant="outline" onClick={() => loadData(keyword)}>
-              {t("common.search")}
-            </Button>
+          search={
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={keyword}
+                onChange={(e) => setKeyword(e.target.value)}
+                placeholder={t("common.searchPlaceholder")}
+                className="pl-9 pr-8"
+              />
+              {keyword && (
+                <button
+                  type="button"
+                  onClick={() => setKeyword("")}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
           }
         />
 
         <CardContent className="px-0">
-          {error && <p className="px-4 pb-2 text-sm text-destructive">{error}</p>}
           {loading ? (
             <p className="px-4 py-6 text-sm text-muted-foreground">{t("common.loading")}</p>
           ) : filtered.length === 0 ? (
@@ -187,20 +221,46 @@ export default function StaffPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-12">{t("common.stt")}</TableHead>
-                  <TableHead>{t("staff.username")}</TableHead>
-                  <TableHead>{t("staff.groupCode")}</TableHead>
-                  <TableHead className="text-right">{t("common.actions")}</TableHead>
+                  <TableHead className="w-16 pl-5">{t("common.stt")}</TableHead>
+                  <TableHead className="w-48">{t("staff.username")}</TableHead>
+                  <TableHead className="w-48">{t("staff.groupCode")}</TableHead>
+                  <TableHead className="w-64 pl-4">{t("common.status") || "Trạng thái"}</TableHead>
+                  <TableHead className="w-28 pr-5 text-right">{t("common.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filtered.map((item, index) => (
-                  <TableRow key={item.tenDangNhap}>
-                    <TableCell className="font-semibold text-muted-foreground">{index + 1}</TableCell>
-                    <TableCell>{item.tenDangNhap}</TableCell>
+                  <TableRow
+                    key={item.tenDangNhap}
+                    className={item.isActive === false ? "opacity-60 bg-slate-50/40 dark:bg-slate-900/10" : ""}
+                  >
+                    <TableCell className="pl-5 font-semibold text-muted-foreground">{index + 1}</TableCell>
+                    <TableCell className="font-semibold text-foreground">{item.tenDangNhap}</TableCell>
                     <TableCell>{item.maNhom}</TableCell>
-                    <TableCell>
-                      <div className="flex justify-end gap-1">
+                    <TableCell className="pl-4">
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => toggleActive(item)}
+                          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                            item.isActive !== false ? "bg-emerald-500" : "bg-slate-300 dark:bg-slate-700"
+                          }`}
+                          aria-label="Toggle active status"
+                        >
+                          <span
+                            aria-hidden="true"
+                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                              item.isActive !== false ? "translate-x-5" : "translate-x-0"
+                            }`}
+                          />
+                        </button>
+                        <span className={`text-xs font-semibold select-none ${item.isActive !== false ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"}`}>
+                          {item.isActive !== false ? "Đang hoạt động" : "Ngừng hoạt động"}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="pr-5">
+                      <div className="flex justify-end gap-1.5">
                         <Button variant="outline" size="icon-sm" onClick={() => openEdit(item)}>
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
@@ -252,8 +312,18 @@ export default function StaffPage() {
                   options={groups.map((group) => ({ value: group.maNhom, label: `${group.maNhom} - ${group.tenNhom}` }))}
                 />
               </div>
-
-              {formError && <p className="text-sm text-destructive">{formError}</p>}
+              <div className="flex items-center space-x-2 pt-2">
+                <input
+                  type="checkbox"
+                  id="isActive"
+                  checked={form.isActive !== false}
+                  onChange={(e) => updateField("isActive", e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                />
+                <Label htmlFor="isActive" className="cursor-pointer font-semibold text-slate-700 dark:text-slate-300">
+                  Kích hoạt hoạt động
+                </Label>
+              </div>
 
               <div className="flex justify-end gap-2 border-t pt-3">
                 <Button type="button" variant="outline" onClick={() => setOpenForm(false)}>
@@ -280,3 +350,4 @@ export default function StaffPage() {
     </div>
   );
 }
+

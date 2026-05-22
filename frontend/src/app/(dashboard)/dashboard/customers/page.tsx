@@ -160,8 +160,12 @@ export default function CustomersPage() {
         description={t("customers.description")}
         badges={<Badge variant="outline">{items.length} {t("common.records")}</Badge>}
         actions={
-          <Button size="sm" onClick={openCreate}>
-            <Plus className="mr-1.5 h-3.5 w-3.5" />
+          <Button
+            size="default"
+            className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-extrabold hover:from-blue-500 hover:to-indigo-500 hover:shadow-blue-500/35 active:scale-95 shadow-lg shadow-blue-500/20 gap-2 h-11 px-6 rounded-xl cursor-pointer transition-all text-sm sm:text-base border-none"
+            onClick={openCreate}
+          >
+            <Plus className="h-5 w-5 stroke-[3]" />
             {t("common.add")}
           </Button>
         }
@@ -174,7 +178,21 @@ export default function CustomersPage() {
           search={
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder={t("common.searchPlaceholder")} className="pl-9" />
+              <Input
+                value={keyword}
+                onChange={(e) => setKeyword(e.target.value)}
+                placeholder={t("common.searchPlaceholder")}
+                className="pl-9 pr-8"
+              />
+              {keyword && (
+                <button
+                  type="button"
+                  onClick={() => setKeyword("")}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
             </div>
           }
         />

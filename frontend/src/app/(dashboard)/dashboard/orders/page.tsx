@@ -1,15 +1,17 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState, PageHeader, TableToolbar } from "@/components/dashboard/management";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DatePickerInput } from "@/components/ui/date-picker";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ContactPanel, DetailGrid, DetailModal, LineError, StickySummaryBar, VoucherSection } from "@/components/dashboard/voucher-ui";
 import { Combobox } from "@/components/ui/combobox";
+import { CustomerSelect } from "@/components/dashboard/customer-select";
 import { useToastStore } from "@/stores/toast-store";
 import { backendApi } from "@/services/backend-api";
 import type {
@@ -21,7 +23,7 @@ import type {
 import { getApiErrorMessage } from "@/lib/api-error";
 import { formatCurrency, formatNumber, todayIsoDate, toPositiveInt } from "@/lib/format";
 import { useTranslation } from "@/i18n/i18n-context";
-import { ClipboardList, Eye, Plus, ReceiptText, Trash2 } from "lucide-react";
+import { ClipboardList, Eye, Plus, ReceiptText, Trash2, X } from "lucide-react";
 
 type SaleItemDraft = {
   keyId: string;
@@ -40,7 +42,7 @@ export default function SalesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [customers, setCustomers] = useState<CustomerResponse[]>([]);
+  const [selectedCustomer, setSelectedCustomer] = useState<CustomerResponse | null>(null);
   const [products, setProducts] = useState<ProductResponse[]>([]);
 
   const [salesList, setSalesList] = useState<SaleResponse[]>([]);
@@ -54,10 +56,18 @@ export default function SalesPage() {
   const [historyQuery, setHistoryQuery] = useState("");
   const [selectedSale, setSelectedSale] = useState<SaleResponse | null>(null);
 
-  const selectedCustomer = useMemo(
-    () => customers.find((item) => item.maKhachHang === maKhachHang) ?? null,
-    [customers, maKhachHang],
-  );
+  useEffect(() => {
+    if (maKhachHang) {
+      backendApi.customers.getById(maKhachHang)
+        .then(setSelectedCustomer)
+        .catch((err) => {
+          console.error("Error loading selected customer", err);
+          setSelectedCustomer(null);
+        });
+    } else {
+      setSelectedCustomer(null);
+    }
+  }, [maKhachHang]);
 
   const estimatedTotal = useMemo(
     () =>
@@ -85,19 +95,13 @@ export default function SalesPage() {
     setLoading(true);
     setError(null);
     try {
-      const [customerData, productPage, sales] = await Promise.all([
-        backendApi.customers.list(),
+      const [productPage, sales] = await Promise.all([
         backendApi.products.list({ page: 0, size: 100 }),
         backendApi.sales.list(),
       ]);
 
-      setCustomers(customerData);
       setProducts(productPage.content);
       setSalesList(sales);
-
-      if (!maKhachHang && customerData.length > 0) {
-        setMaKhachHang(customerData[0].maKhachHang);
-      }
     } catch (err) {
       setError(getApiErrorMessage(err, t("salesOrders.loadError")));
     } finally {
@@ -108,6 +112,30 @@ export default function SalesPage() {
   useEffect(() => {
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Ref-based keyboard listener to avoid resetting event handler on state updates
+  const submitRef = useRef(submit);
+  const addRowRef = useRef(addRow);
+
+  useEffect(() => {
+    submitRef.current = submit;
+    addRowRef.current = addRow;
+  });
+
+  useEffect(() => {
+    function handleGlobalKeys(e: KeyboardEvent) {
+      if (e.altKey && e.key.toLowerCase() === "n") {
+        e.preventDefault();
+        addRowRef.current();
+      }
+      if (e.ctrlKey && e.key === "Enter") {
+        e.preventDefault();
+        submitRef.current();
+      }
+    }
+    window.addEventListener("keydown", handleGlobalKeys);
+    return () => window.removeEventListener("keydown", handleGlobalKeys);
   }, []);
 
   function addRow() {
@@ -239,25 +267,24 @@ export default function SalesPage() {
       <Card className="glass-card hover-elevate shadow-sm">
         <CardContent className="space-y-6 p-6">
           <VoucherSection title="Thông tin chung" description="Chọn khách hàng và ngày lập phiếu" icon={ClipboardList}>
-            <div className="grid gap-4 lg:grid-cols-[220px_minmax(260px,1fr)_minmax(320px,1.2fr)] lg:items-end">
+            <div className="grid gap-4 lg:grid-cols-[220px_220px_1fr] lg:items-end">
               <div className="space-y-2">
                 <Label className="text-sm font-semibold text-muted-foreground">{t("common.dateCreated")}</Label>
-                <Input type="date" className="h-9 text-sm" value={ngayLapPhieuBan} onChange={(e) => setNgayLapPhieuBan(e.target.value)} />
+                <DatePickerInput value={ngayLapPhieuBan} onValueChange={setNgayLapPhieuBan} />
               </div>
               <div className="space-y-2">
-                <Label className="text-sm font-semibold text-muted-foreground">{t("common.customer")}</Label>
-                <Combobox
+                <Label className="text-sm font-semibold text-muted-foreground">{t("common.phone")}</Label>
+                <CustomerSelect
                   value={maKhachHang || ""}
                   onValueChange={setMaKhachHang}
-                  options={customers.map((item) => ({ value: item.maKhachHang, label: `${item.maKhachHang} - ${item.tenKhachHang}` }))}
                   className="h-9"
-                  placeholder="Chọn khách hàng..."
+                  placeholder="Nhập Số điện thoại..."
                 />
               </div>
               <ContactPanel
                 emptyText="Chưa chọn khách hàng"
                 rows={selectedCustomer ? [
-                  { label: t("common.phone"), value: selectedCustomer.soDienThoaiKhachHang },
+                  { label: "Tên khách hàng", value: selectedCustomer.tenKhachHang },
                   { label: t("common.address"), value: selectedCustomer.diaChiKhachHang },
                 ] : []}
               />
@@ -265,7 +292,7 @@ export default function SalesPage() {
           </VoucherSection>
 
           <VoucherSection title="Chi tiết bán hàng" description="Chọn sản phẩm và số lượng bán theo tồn kho hiện tại" icon={ReceiptText}>
-          <div className="rounded-md border border-border/80 overflow-visible [&_[data-slot=table-container]]:overflow-visible">
+            <div className="rounded-md border border-border/80 overflow-visible [&_[data-slot=table-container]]:overflow-visible mt-2">
             <Table>
               <TableHeader className="bg-muted/30">
                 <TableRow className="hover:bg-transparent">
@@ -294,10 +321,12 @@ export default function SalesPage() {
                         <Combobox
                           value={item.maSanPham || ""}
                           onValueChange={(value) => updateItem(index, { maSanPham: value })}
-                          options={products.map((productOption) => ({
-                            value: productOption.maSanPham,
-                            label: `${productOption.maSanPham} - ${productOption.tenSanPham}`,
-                          }))}
+                          options={products
+                            .filter((p) => (p.isActive !== false || p.maSanPham === item.maSanPham) && !items.some((draftItem, idx) => idx !== index && draftItem.maSanPham === p.maSanPham))
+                            .map((productOption) => ({
+                              value: productOption.maSanPham,
+                              label: productOption.tenSanPham,
+                            }))}
                           className="h-9"
                           placeholder="Chọn sản phẩm..."
                         />
@@ -318,12 +347,18 @@ export default function SalesPage() {
                             -
                           </button>
                           <input
-                            value={item.soLuong}
-                            type="number"
-                            min="1"
-                            onChange={(e) => updateItem(index, { soLuong: e.target.value })}
-                            className="h-full w-full min-w-0 border-0 bg-transparent text-center focus:outline-none focus:ring-0 text-sm font-semibold px-1"
-                          />
+                             value={item.soLuong}
+                             type="number"
+                             min="1"
+                             onChange={(e) => updateItem(index, { soLuong: e.target.value })}
+                             onBlur={(e) => {
+                               const val = toPositiveInt(e.target.value);
+                               if (val <= 0) {
+                                 updateItem(index, { soLuong: "1" });
+                               }
+                             }}
+                             className="h-full w-full min-w-0 border-0 bg-transparent text-center focus:outline-none focus:ring-0 text-sm font-semibold px-1"
+                           />
                           <button
                             type="button"
                             className="h-full w-8 border-l border-border text-muted-foreground hover:text-foreground hover:bg-muted/50 flex items-center justify-center font-bold text-sm select-none cursor-pointer"
@@ -370,14 +405,23 @@ export default function SalesPage() {
                     {formatCurrency(estimatedTotal)}
                   </div>
                 </div>
-                <Button size="default" className="h-10 text-sm font-semibold px-6 cursor-pointer" onClick={submit} disabled={submitting || loading}>
+                <Button
+                  size="default"
+                  className="bg-gold-gradient text-gold-foreground font-bold hover:brightness-105 active:scale-95 shadow-md shadow-gold/25 h-10 text-sm px-6 cursor-pointer rounded-xl transition-all border-none"
+                  onClick={submit}
+                  disabled={submitting || loading}
+                >
                   {submitting ? t("common.creating") : t("salesOrders.createButton")}
                 </Button>
               </div>
             )}
           >
-            <Button variant="outline" size="sm" className="h-9 text-sm px-4" onClick={addRow}>
-              <Plus className="mr-1.5 h-4 w-4" />
+            <Button
+              variant="outline"
+              className="border-blue-500/40 text-blue-600 hover:bg-blue-500/10 active:scale-95 transition-all shadow-xs h-10 text-sm px-5 font-bold rounded-xl cursor-pointer border"
+              onClick={addRow}
+            >
+              <Plus className="mr-1.5 h-4.5 w-4.5 stroke-[2.5]" />
               {t("common.addRow")}
             </Button>
           </StickySummaryBar>
@@ -449,7 +493,6 @@ export default function SalesPage() {
               items={[
                 { label: "Ngày lập", value: selectedSale.ngayLapPhieuBan },
                 { label: "Khách hàng", value: selectedSale.khachHang?.tenKhachHang ?? selectedSale.maKhachHang },
-                { label: "SĐT", value: selectedSale.khachHang?.soDienThoai },
                 { label: "Tổng tiền", value: formatCurrency(selectedSale.tongTien) },
               ]}
             />
@@ -460,7 +503,7 @@ export default function SalesPage() {
                     <TableHead>Sản phẩm</TableHead>
                     <TableHead>Đơn vị</TableHead>
                     <TableHead className="text-right">SL</TableHead>
-                    <TableHead className="text-right">Đơn giá</TableHead>
+                    <TableHead className="text-right">Đơn giá bán</TableHead>
                     <TableHead className="text-right">Thành tiền</TableHead>
                   </TableRow>
                 </TableHeader>

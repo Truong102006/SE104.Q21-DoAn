@@ -1,12 +1,13 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState, PageHeader, TableToolbar } from "@/components/dashboard/management";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DatePickerInput } from "@/components/ui/date-picker";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ContactPanel, DetailGrid, DetailModal, LineError, StickySummaryBar, VoucherSection } from "@/components/dashboard/voucher-ui";
 import { Combobox } from "@/components/ui/combobox";
@@ -22,7 +23,7 @@ import type {
 import { getApiErrorMessage } from "@/lib/api-error";
 import { formatCurrency, formatNumber, todayIsoDate, toPositiveInt, toPositiveNumber, formatVNCurrencyInput, parseVNCurrencyInput } from "@/lib/format";
 import { useTranslation } from "@/i18n/i18n-context";
-import { ClipboardList, Eye, Plus, ReceiptText, Trash2 } from "lucide-react";
+import { ClipboardList, Eye, Plus, ReceiptText, Trash2, X } from "lucide-react";
 
 type PurchaseItemDraft = {
   keyId: string;
@@ -115,6 +116,30 @@ export default function PurchaseOrdersPage() {
   useEffect(() => {
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Ref-based keyboard listener to avoid resetting event handler on state updates
+  const submitRef = useRef(submit);
+  const addRowRef = useRef(addRow);
+
+  useEffect(() => {
+    submitRef.current = submit;
+    addRowRef.current = addRow;
+  });
+
+  useEffect(() => {
+    function handleGlobalKeys(e: KeyboardEvent) {
+      if (e.altKey && e.key.toLowerCase() === "n") {
+        e.preventDefault();
+        addRowRef.current();
+      }
+      if (e.ctrlKey && e.key === "Enter") {
+        e.preventDefault();
+        submitRef.current();
+      }
+    }
+    window.addEventListener("keydown", handleGlobalKeys);
+    return () => window.removeEventListener("keydown", handleGlobalKeys);
   }, []);
 
   function addRow() {
@@ -254,14 +279,16 @@ export default function PurchaseOrdersPage() {
             <div className="grid gap-4 lg:grid-cols-[220px_minmax(260px,1fr)_minmax(320px,1.2fr)] lg:items-end">
               <div className="space-y-2">
                 <Label className="text-sm font-semibold text-muted-foreground">{t("common.dateCreated")}</Label>
-                <Input type="date" className="h-9 text-sm" value={ngayLapPhieuMua} onChange={(e) => setNgayLapPhieuMua(e.target.value)} />
+                <DatePickerInput value={ngayLapPhieuMua} onValueChange={setNgayLapPhieuMua} />
               </div>
               <div className="space-y-2">
                 <Label className="text-sm font-semibold text-muted-foreground">{t("common.supplier")}</Label>
                 <Combobox
                   value={maNhaCungCap || ""}
                   onValueChange={setMaNhaCungCap}
-                  options={suppliers.map((item) => ({ value: item.maNhaCungCap, label: `${item.maNhaCungCap} - ${item.tenNhaCungCap}` }))}
+                  options={suppliers
+                    .filter((item) => item.isActive !== false || item.maNhaCungCap === maNhaCungCap)
+                    .map((item) => ({ value: item.maNhaCungCap, label: item.tenNhaCungCap }))}
                   className="h-9"
                   placeholder="Chọn nhà cung cấp..."
                 />
@@ -277,7 +304,7 @@ export default function PurchaseOrdersPage() {
           </VoucherSection>
 
           <VoucherSection title="Chi tiết sản phẩm" description="Chọn sản phẩm, đơn vị và số lượng nhập kho" icon={ReceiptText}>
-          <div className="rounded-md border border-border/80 overflow-visible [&_[data-slot=table-container]]:overflow-visible">
+            <div className="rounded-md border border-border/80 overflow-visible [&_[data-slot=table-container]]:overflow-visible mt-2">
             <Table>
               <TableHeader className="bg-muted/30">
                 <TableRow className="hover:bg-transparent">
@@ -286,7 +313,7 @@ export default function PurchaseOrdersPage() {
                   <TableHead className="py-3 px-4 h-10 text-xs font-bold uppercase tracking-wider">{t("products.productType")}</TableHead>
                   <TableHead className="py-3 px-4 h-10 text-xs font-bold uppercase tracking-wider">{t("common.unit")}</TableHead>
                   <TableHead className="py-3 px-4 h-10 text-xs font-bold uppercase tracking-wider w-32">{t("common.quantity")}</TableHead>
-                  <TableHead className="py-3 px-4 h-10 text-xs font-bold uppercase tracking-wider min-w-[140px]">{t("common.unitPrice")}</TableHead>
+                  <TableHead className="py-3 px-4 h-10 text-xs font-bold uppercase tracking-wider min-w-[140px]">{t("products.purchasePrice")}</TableHead>
                   <TableHead className="py-3 px-4 h-10 text-xs font-bold uppercase tracking-wider">{t("common.subtotal")}</TableHead>
                   <TableHead className="py-3 px-4 h-10 text-xs font-bold uppercase tracking-wider text-right w-16">{t("common.actions")}</TableHead>
                 </TableRow>
@@ -306,10 +333,12 @@ export default function PurchaseOrdersPage() {
                         <Combobox
                           value={item.maSanPham || ""}
                           onValueChange={(value) => onProductChange(index, value)}
-                          options={products.map((productOption) => ({
-                            value: productOption.maSanPham,
-                            label: `${productOption.maSanPham} - ${productOption.tenSanPham}`,
-                          }))}
+                          options={products
+                            .filter((p) => (p.isActive !== false || p.maSanPham === item.maSanPham) && !items.some((draftItem, idx) => idx !== index && draftItem.maSanPham === p.maSanPham))
+                            .map((productOption) => ({
+                              value: productOption.maSanPham,
+                              label: productOption.tenSanPham,
+                            }))}
                           className="h-9"
                           placeholder="Chọn sản phẩm..."
                         />
@@ -338,6 +367,12 @@ export default function PurchaseOrdersPage() {
                             type="number"
                             min="1"
                             onChange={(e) => updateItem(index, { soLuongMua: e.target.value })}
+                            onBlur={(e) => {
+                              const val = toPositiveInt(e.target.value);
+                              if (val <= 0) {
+                                updateItem(index, { soLuongMua: "1" });
+                              }
+                            }}
                             className="h-full w-full min-w-0 border-0 bg-transparent text-center focus:outline-none focus:ring-0 text-sm font-semibold px-1"
                           />
                           <button
@@ -400,14 +435,23 @@ export default function PurchaseOrdersPage() {
                     {formatCurrency(totalAmount)}
                   </div>
                 </div>
-                <Button size="default" className="h-10 text-sm font-semibold px-6 cursor-pointer" onClick={submit} disabled={submitting || loading}>
+                <Button
+                  size="default"
+                  className="bg-gold-gradient text-gold-foreground font-bold hover:brightness-105 active:scale-95 shadow-md shadow-gold/25 h-10 text-sm px-6 cursor-pointer rounded-xl transition-all border-none"
+                  onClick={submit}
+                  disabled={submitting || loading}
+                >
                   {submitting ? t("common.creating") : t("purchaseOrders.createButton")}
                 </Button>
               </div>
             )}
           >
-            <Button variant="outline" size="sm" className="h-9 text-sm px-4" onClick={addRow}>
-              <Plus className="mr-1.5 h-4 w-4" />
+            <Button
+              variant="outline"
+              className="border-blue-500/40 text-blue-600 hover:bg-blue-500/10 active:scale-95 transition-all shadow-xs h-10 text-sm px-5 font-bold rounded-xl cursor-pointer border"
+              onClick={addRow}
+            >
+              <Plus className="mr-1.5 h-4.5 w-4.5 stroke-[2.5]" />
               {t("common.addRow")}
             </Button>
           </StickySummaryBar>
@@ -514,7 +558,7 @@ export default function PurchaseOrdersPage() {
                     <TableHead>Sản phẩm</TableHead>
                     <TableHead>Đơn vị</TableHead>
                     <TableHead className="text-right">SL</TableHead>
-                    <TableHead className="text-right">Đơn giá</TableHead>
+                    <TableHead className="text-right">Đơn giá mua</TableHead>
                     <TableHead className="text-right">Thành tiền</TableHead>
                   </TableRow>
                 </TableHeader>

@@ -43,6 +43,7 @@ export interface SupplierResponse {
   soDienThoai: string;
   diaChi?: string;
   ghiChu?: string;
+  isActive?: boolean;
 }
 
 export interface SupplierRequest {
@@ -51,6 +52,7 @@ export interface SupplierRequest {
   soDienThoai: string;
   diaChi?: string;
   ghiChu?: string;
+  isActive?: boolean;
 }
 
 export interface CustomerResponse {
@@ -75,6 +77,7 @@ export interface UnitResponse {
   loaiDonVi?: string;
   heSoQuyDoi?: number;
   ghiChu?: string;
+  isActive?: boolean;
 }
 
 export interface UnitRequest {
@@ -83,30 +86,35 @@ export interface UnitRequest {
   loaiDonVi?: string;
   heSoQuyDoi?: number;
   ghiChu?: string;
+  isActive?: boolean;
 }
 
 export interface ProductTypeResponse {
   maLoaiSanPham: string;
   tenLoaiSanPham: string;
   tiLeLoiNhuan: number;
+  isActive?: boolean;
 }
 
 export interface ProductTypeRequest {
   maLoaiSanPham?: string;
   tenLoaiSanPham: string;
   tiLeLoiNhuan: number;
+  isActive?: boolean;
 }
 
 export interface ServiceTypeResponse {
   maLoaiDichVu: string;
   tenLoaiDichVu: string;
   donGiaDichVu: number;
+  isActive?: boolean;
 }
 
 export interface ServiceTypeRequest {
   maLoaiDichVu?: string;
   tenLoaiDichVu: string;
   donGiaDichVu: number;
+  isActive?: boolean;
 }
 
 export interface ProductResponse {
@@ -117,6 +125,7 @@ export interface ProductResponse {
   donGiaMua: number;
   donGiaBan: number;
   tonKho: number;
+  isActive?: boolean;
   loaiSanPham?: {
     maLoaiSanPham: string;
     tenLoaiSanPham: string;
@@ -136,6 +145,7 @@ export interface ProductRequest {
   donGiaMua: number;
   donGiaBan?: number;
   tonKho?: number;
+  isActive?: boolean;
 }
 
 export interface PurchaseRequest {
@@ -326,12 +336,14 @@ export interface ServicePrepaymentRateRequest {
 export interface UserResponse {
   tenDangNhap: string;
   maNhom: string;
+  isActive?: boolean;
 }
 
 export interface UserRequest {
   tenDangNhap?: string;
-  matKhau: string;
+  matKhau?: string;
   maNhom: string;
+  isActive?: boolean;
 }
 
 export interface UserGroupResponse {

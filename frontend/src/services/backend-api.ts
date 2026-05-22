@@ -47,8 +47,8 @@ export const backendApi = {
   },
 
   customers: {
-    list: (q?: string) =>
-      apiRequest<CustomerResponse[]>("/api/customers", { query: { q } }),
+    list: (q?: string, page?: number, size?: number) =>
+      apiRequest<CustomerResponse[]>("/api/customers", { query: { q, page, size } }),
     getById: (id: string) => apiRequest<CustomerResponse>(`/api/customers/${id}`),
     create: (payload: CustomerRequest) =>
       apiRequest<CustomerResponse>("/api/customers", { method: "POST", body: payload }),
