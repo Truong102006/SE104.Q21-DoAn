@@ -1,14 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState, PageHeader, TableToolbar } from "@/components/dashboard/management";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ContactPanel, DetailGrid, DetailModal, LineError, StickySummaryBar, VoucherSection } from "@/components/dashboard/voucher-ui";
+import { Combobox } from "@/components/ui/combobox";
+import { useToastStore } from "@/stores/toast-store";
 import { backendApi } from "@/services/backend-api";
 import type {
   CustomerResponse,
@@ -19,17 +21,19 @@ import type {
 import { getApiErrorMessage } from "@/lib/api-error";
 import { formatCurrency, formatNumber, todayIsoDate, toPositiveInt } from "@/lib/format";
 import { useTranslation } from "@/i18n/i18n-context";
-import { Plus, Trash2 } from "lucide-react";
+import { ClipboardList, Eye, Plus, ReceiptText, Trash2 } from "lucide-react";
 
 type SaleItemDraft = {
+  keyId: string;
   maSanPham: string;
   soLuong: string;
 };
 
-const EMPTY_ITEM: SaleItemDraft = {
+const createEmptyItem = (): SaleItemDraft => ({
+  keyId: Math.random().toString(36).substring(2, 9),
   maSanPham: "",
   soLuong: "1",
-};
+});
 
 export default function SalesPage() {
   const { t } = useTranslation();
@@ -44,9 +48,11 @@ export default function SalesPage() {
   const [soPhieuBan, setSoPhieuBan] = useState("");
   const [ngayLapPhieuBan, setNgayLapPhieuBan] = useState(todayIsoDate());
   const [maKhachHang, setMaKhachHang] = useState("");
-  const [items, setItems] = useState<SaleItemDraft[]>([{ ...EMPTY_ITEM }]);
+  const [items, setItems] = useState<SaleItemDraft[]>([createEmptyItem()]);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [historyQuery, setHistoryQuery] = useState("");
+  const [selectedSale, setSelectedSale] = useState<SaleResponse | null>(null);
 
   const selectedCustomer = useMemo(
     () => customers.find((item) => item.maKhachHang === maKhachHang) ?? null,
@@ -64,13 +70,24 @@ export default function SalesPage() {
     [items, products],
   );
 
+  const filteredSalesList = useMemo(() => {
+    const query = historyQuery.trim().toLowerCase();
+    if (!query) {
+      return salesList;
+    }
+    return salesList.filter((item) =>
+      item.soPhieuBan.toLowerCase().includes(query)
+      || (item.khachHang?.tenKhachHang ?? item.maKhachHang).toLowerCase().includes(query),
+    );
+  }, [historyQuery, salesList]);
+
   async function loadData() {
     setLoading(true);
     setError(null);
     try {
       const [customerData, productPage, sales] = await Promise.all([
         backendApi.customers.list(),
-        backendApi.products.list({ page: 0, size: 200 }),
+        backendApi.products.list({ page: 0, size: 100 }),
         backendApi.sales.list(),
       ]);
 
@@ -94,16 +111,57 @@ export default function SalesPage() {
   }, []);
 
   function addRow() {
-    setItems((prev) => [...prev, { ...EMPTY_ITEM }]);
+    setItems((prev) => [...prev, createEmptyItem()]);
   }
 
   function removeRow(index: number) {
+    const itemToDelete = items[index];
+    if (!itemToDelete) return;
+
+    const product = products.find((p) => p.maSanPham === itemToDelete.maSanPham);
+    const productName = product ? product.tenSanPham : itemToDelete.maSanPham || "chưa chọn";
+
     setItems((prev) => prev.filter((_, i) => i !== index));
+
+    useToastStore.getState().success(`Đã xóa dòng sản phẩm: ${productName}`, {
+      label: "Hoàn tác",
+      onClick: () => {
+        setItems((prev) => {
+          const updated = [...prev];
+          updated.splice(index, 0, itemToDelete);
+          return updated;
+        });
+      },
+    });
+  }
+
+  // Define helper function to restore row
+  function restoreRow(index: number, item: SaleItemDraft) {
+    setItems((prev) => {
+      const updated = [...prev];
+      updated.splice(index, 0, item);
+      return updated;
+    });
   }
 
   function updateItem(index: number, patch: Partial<SaleItemDraft>) {
     setItems((prev) => prev.map((item, i) => (i === index ? { ...item, ...patch } : item)));
     setFormError(null);
+  }
+
+  function getItemError(item: SaleItemDraft) {
+    if (!item.maSanPham) {
+      return t("salesOrders.productRequired");
+    }
+    const product = products.find((p) => p.maSanPham === item.maSanPham);
+    const soLuong = toPositiveInt(item.soLuong);
+    if (soLuong <= 0) {
+      return t("salesOrders.quantityInvalid");
+    }
+    if (product && soLuong > Number(product.tonKho ?? 0)) {
+      return t("salesOrders.stockExceeded").replace("{name}", product.tenSanPham);
+    }
+    return null;
   }
 
   async function submit() {
@@ -160,7 +218,7 @@ export default function SalesPage() {
     try {
       await backendApi.sales.create(payload);
       setSoPhieuBan("");
-      setItems([{ ...EMPTY_ITEM }]);
+      setItems([createEmptyItem()]);
       await loadData();
     } catch (err) {
       setFormError(getApiErrorMessage(err, t("salesOrders.createError")));
@@ -170,146 +228,258 @@ export default function SalesPage() {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-6">
       <PageHeader
         eyebrow="BM6"
         title={t("salesOrders.title")}
         description={t("salesOrders.description")}
       />
 
-      <Card>
-        <CardContent className="space-y-4 p-4">
-          <div className="grid gap-3 md:grid-cols-3">
-            <div className="space-y-2">
-              <Label>{t("common.voucherNumber")}</Label>
-              <Input value={soPhieuBan} onChange={(e) => setSoPhieuBan(e.target.value)} placeholder={t("common.autoGenerate")} />
-            </div>
-            <div className="space-y-2">
-              <Label>{t("common.dateCreated")}</Label>
-              <Input type="date" value={ngayLapPhieuBan} onChange={(e) => setNgayLapPhieuBan(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label>{t("common.customer")}</Label>
-              <Select
-                value={maKhachHang || ""}
-                onValueChange={setMaKhachHang}
-                options={customers.map((item) => ({ value: item.maKhachHang, label: `${item.maKhachHang} - ${item.tenKhachHang}` }))}
+      {/* KHỐI FORM LẬP PHIẾU BÁN HÀNG - Ở TRÊN */}
+      <Card className="glass-card hover-elevate shadow-sm">
+        <CardContent className="space-y-6 p-6">
+          <VoucherSection title="Thông tin chung" description="Chọn khách hàng và ngày lập phiếu" icon={ClipboardList}>
+            <div className="grid gap-4 lg:grid-cols-[220px_minmax(260px,1fr)_minmax(320px,1.2fr)] lg:items-end">
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold text-muted-foreground">{t("common.dateCreated")}</Label>
+                <Input type="date" className="h-9 text-sm" value={ngayLapPhieuBan} onChange={(e) => setNgayLapPhieuBan(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold text-muted-foreground">{t("common.customer")}</Label>
+                <Combobox
+                  value={maKhachHang || ""}
+                  onValueChange={setMaKhachHang}
+                  options={customers.map((item) => ({ value: item.maKhachHang, label: `${item.maKhachHang} - ${item.tenKhachHang}` }))}
+                  className="h-9"
+                  placeholder="Chọn khách hàng..."
+                />
+              </div>
+              <ContactPanel
+                emptyText="Chưa chọn khách hàng"
+                rows={selectedCustomer ? [
+                  { label: t("common.phone"), value: selectedCustomer.soDienThoaiKhachHang },
+                  { label: t("common.address"), value: selectedCustomer.diaChiKhachHang },
+                ] : []}
               />
             </div>
-          </div>
+          </VoucherSection>
 
-          {selectedCustomer && (
-            <div className="rounded-lg border p-3 text-sm text-muted-foreground">
-              <p>{t("common.phone")}: {selectedCustomer.soDienThoaiKhachHang || "-"}</p>
-              <p>{t("common.address")}: {selectedCustomer.diaChiKhachHang || "-"}</p>
-            </div>
-          )}
-
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t("common.product")}</TableHead>
-                <TableHead>{t("products.productType")}</TableHead>
-                <TableHead>{t("products.stock")}</TableHead>
-                <TableHead>{t("common.quantity")}</TableHead>
-                <TableHead>{t("products.sellingPrice")}</TableHead>
-                <TableHead>{t("common.subtotal")}</TableHead>
-                <TableHead className="text-right">{t("common.actions")}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {items.map((item, index) => {
-                const product = products.find((p) => p.maSanPham === item.maSanPham);
-                const soLuong = toPositiveInt(item.soLuong);
-                const donGia = Number(product?.donGiaBan ?? 0);
-                const thanhTien = soLuong * donGia;
-
-                return (
-                  <TableRow key={index}>
-                    <TableCell>
-                      <Select
-                        value={item.maSanPham || ""}
-                        onValueChange={(value) => updateItem(index, { maSanPham: value })}
-                        options={products.map((productOption) => ({
-                          value: productOption.maSanPham,
-                          label: `${productOption.maSanPham} - ${productOption.tenSanPham}`,
-                        }))}
-                      />
-                    </TableCell>
-                    <TableCell>{product?.loaiSanPham?.tenLoaiSanPham ?? "-"}</TableCell>
-                    <TableCell>{formatNumber(product?.tonKho ?? 0)}</TableCell>
-                    <TableCell>
-                      <Input value={item.soLuong} onChange={(e) => updateItem(index, { soLuong: e.target.value })} />
-                    </TableCell>
-                    <TableCell>{formatCurrency(donGia)}</TableCell>
-                    <TableCell>{formatCurrency(thanhTien)}</TableCell>
-                    <TableCell>
-                      <div className="flex justify-end">
-                        <Button variant="destructive" size="icon-sm" onClick={() => removeRow(index)} disabled={items.length <= 1}>
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-
-          <div className="flex items-center justify-between">
-            <Button variant="outline" onClick={addRow}>
-              <Plus className="mr-1.5 h-3.5 w-3.5" />
-              {t("common.addRow")}
-            </Button>
-            <Badge variant="outline">{t("salesOrders.estimatedTotal")}: {formatCurrency(estimatedTotal)}</Badge>
-          </div>
-
-          {formError && <p className="text-sm text-destructive">{formError}</p>}
-          {error && <p className="text-sm text-destructive">{error}</p>}
-
-          <div className="flex justify-end">
-            <Button onClick={submit} disabled={submitting || loading}>
-              {submitting ? t("common.creating") : t("salesOrders.createButton")}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <TableToolbar title={t("salesOrders.historyTitle")} description={t("salesOrders.historyDesc")} />
-        <CardContent className="px-0">
-          {loading ? (
-            <p className="px-4 py-6 text-sm text-muted-foreground">{t("common.loading")}</p>
-          ) : salesList.length === 0 ? (
-            <div className="p-4">
-              <EmptyState title={t("salesOrders.emptyTitle")} description={t("salesOrders.emptyDesc")} />
-            </div>
-          ) : (
+          <VoucherSection title="Chi tiết bán hàng" description="Chọn sản phẩm và số lượng bán theo tồn kho hiện tại" icon={ReceiptText}>
+          <div className="rounded-md border border-border/80 overflow-visible [&_[data-slot=table-container]]:overflow-visible">
             <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t("common.voucherNumber")}</TableHead>
-                  <TableHead>{t("common.dateCreated")}</TableHead>
-                  <TableHead>{t("common.customer")}</TableHead>
-                  <TableHead>{t("salesOrders.lineCount")}</TableHead>
-                  <TableHead>{t("common.total")}</TableHead>
+              <TableHeader className="bg-muted/30">
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="w-14 text-center py-3 px-4 h-10 text-xs font-bold uppercase tracking-wider">{t("common.stt")}</TableHead>
+                  <TableHead className="py-3 px-4 h-10 text-xs font-bold uppercase tracking-wider min-w-[200px]">{t("common.product")}</TableHead>
+                  <TableHead className="py-3 px-4 h-10 text-xs font-bold uppercase tracking-wider">{t("products.productType")}</TableHead>
+                  <TableHead className="py-3 px-4 h-10 text-xs font-bold uppercase tracking-wider">{t("products.stock")}</TableHead>
+                  <TableHead className="py-3 px-4 h-10 text-xs font-bold uppercase tracking-wider w-32">{t("common.quantity")}</TableHead>
+                  <TableHead className="py-3 px-4 h-10 text-xs font-bold uppercase tracking-wider">{t("products.sellingPrice")}</TableHead>
+                  <TableHead className="py-3 px-4 h-10 text-xs font-bold uppercase tracking-wider">{t("common.subtotal")}</TableHead>
+                  <TableHead className="py-3 px-4 h-10 text-xs font-bold uppercase tracking-wider text-right w-16">{t("common.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {salesList.map((item) => (
-                  <TableRow key={item.soPhieuBan}>
-                    <TableCell>{item.soPhieuBan}</TableCell>
-                    <TableCell>{item.ngayLapPhieuBan}</TableCell>
-                    <TableCell>{item.khachHang?.tenKhachHang ?? item.maKhachHang}</TableCell>
-                    <TableCell>{formatNumber(item.items.length)}</TableCell>
-                    <TableCell>{formatCurrency(item.tongTien)}</TableCell>
-                  </TableRow>
-                ))}
+                {items.map((item, index) => {
+                  const product = products.find((p) => p.maSanPham === item.maSanPham);
+                  const soLuong = toPositiveInt(item.soLuong);
+                  const donGia = Number(product?.donGiaBan ?? 0);
+                  const thanhTien = soLuong * donGia;
+
+                  return (
+                    <Fragment key={item.keyId}>
+                    <TableRow className="table-row-hover border-b border-border/60">
+                      <TableCell className="py-3.5 px-4 text-center font-bold text-sm text-muted-foreground">{index + 1}</TableCell>
+                      <TableCell className="py-3.5 px-4">
+                        <Combobox
+                          value={item.maSanPham || ""}
+                          onValueChange={(value) => updateItem(index, { maSanPham: value })}
+                          options={products.map((productOption) => ({
+                            value: productOption.maSanPham,
+                            label: `${productOption.maSanPham} - ${productOption.tenSanPham}`,
+                          }))}
+                          className="h-9"
+                          placeholder="Chọn sản phẩm..."
+                        />
+                      </TableCell>
+                      <TableCell className="py-3.5 px-4 text-sm font-medium text-muted-foreground">{product?.loaiSanPham?.tenLoaiSanPham ?? "-"}</TableCell>
+                      <TableCell className="py-3.5 px-4 text-sm font-medium text-muted-foreground">{formatNumber(product?.tonKho ?? 0)}</TableCell>
+                      <TableCell className="py-3.5 px-4">
+                        <div className="flex items-center w-28 h-9 border rounded-lg bg-background overflow-hidden focus-within:border-gold focus-within:ring-2 focus-within:ring-gold/25 focus-within:shadow-[0_0_8px_rgba(212,163,89,0.12)]">
+                          <button
+                            type="button"
+                            className="h-full w-8 border-r border-border text-muted-foreground hover:text-foreground hover:bg-muted/50 flex items-center justify-center font-bold text-sm select-none cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                            onClick={() => {
+                              const val = toPositiveInt(item.soLuong) || 1;
+                              updateItem(index, { soLuong: String(Math.max(1, val - 1)) });
+                            }}
+                            disabled={toPositiveInt(item.soLuong) <= 1}
+                          >
+                            -
+                          </button>
+                          <input
+                            value={item.soLuong}
+                            type="number"
+                            min="1"
+                            onChange={(e) => updateItem(index, { soLuong: e.target.value })}
+                            className="h-full w-full min-w-0 border-0 bg-transparent text-center focus:outline-none focus:ring-0 text-sm font-semibold px-1"
+                          />
+                          <button
+                            type="button"
+                            className="h-full w-8 border-l border-border text-muted-foreground hover:text-foreground hover:bg-muted/50 flex items-center justify-center font-bold text-sm select-none cursor-pointer"
+                            onClick={() => {
+                              const val = toPositiveInt(item.soLuong) || 1;
+                              updateItem(index, { soLuong: String(val + 1) });
+                            }}
+                          >
+                            +
+                          </button>
+                        </div>
+                      </TableCell>
+                      <TableCell className="py-3.5 px-4 text-sm font-medium text-muted-foreground">{formatCurrency(donGia)}</TableCell>
+                      <TableCell className="py-3.5 px-4 text-sm font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(thanhTien)}</TableCell>
+                      <TableCell className="py-3.5 px-4 text-right">
+                        <Button variant="destructive" size="icon-sm" className="h-8 w-8" onClick={() => removeRow(index)} disabled={items.length <= 1}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                    {getItemError(item) && (
+                      <TableRow className="border-b border-border/60 hover:bg-transparent">
+                        <TableCell colSpan={8} className="px-4 py-0">
+                          <LineError>Dòng {index + 1}: {getItemError(item)}</LineError>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    </Fragment>
+                  );
+                })}
               </TableBody>
             </Table>
+          </div>
+          </VoucherSection>
+
+          <StickySummaryBar
+            action={(
+              <div className="flex flex-wrap items-center justify-end gap-3">
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 px-4 py-1.5 dark:border-emerald-800 dark:bg-emerald-950/20 shadow-xs flex items-center gap-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                    {t("salesOrders.estimatedTotal")}:
+                  </span>
+                  <div className="text-base font-black text-emerald-700 dark:text-emerald-300">
+                    {formatCurrency(estimatedTotal)}
+                  </div>
+                </div>
+                <Button size="default" className="h-10 text-sm font-semibold px-6 cursor-pointer" onClick={submit} disabled={submitting || loading}>
+                  {submitting ? t("common.creating") : t("salesOrders.createButton")}
+                </Button>
+              </div>
+            )}
+          >
+            <Button variant="outline" size="sm" className="h-9 text-sm px-4" onClick={addRow}>
+              <Plus className="mr-1.5 h-4 w-4" />
+              {t("common.addRow")}
+            </Button>
+          </StickySummaryBar>
+
+          {formError && <p className="text-sm text-destructive bg-destructive/5 border border-destructive/20 rounded-md p-3">{formError}</p>}
+          {error && <p className="text-sm text-destructive bg-destructive/5 border border-destructive/20 rounded-md p-3">{error}</p>}
+
+        </CardContent>
+      </Card>
+
+      {/* KHỐI LỊCH SỬ PHIẾU BÁN HÀNG - Ở DƯỚI */}
+      <Card className="glass-card hover-elevate shadow-sm">
+        <TableToolbar
+          title={t("salesOrders.historyTitle")}
+          description={t("salesOrders.historyDesc")}
+          search={<Input value={historyQuery} onChange={(e) => setHistoryQuery(e.target.value)} placeholder="Tìm mã phiếu hoặc khách hàng" className="h-9" />}
+        />
+        <CardContent className="p-6">
+          {loading ? (
+            <p className="py-4 text-sm text-muted-foreground">{t("common.loading")}</p>
+          ) : filteredSalesList.length === 0 ? (
+            <EmptyState title={t("salesOrders.emptyTitle")} description={t("salesOrders.emptyDesc")} />
+          ) : (
+            <div className="rounded-md border border-border/80 overflow-hidden">
+              <Table>
+                <TableHeader className="bg-muted/30">
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="w-14 text-center py-3 px-4 h-10 text-xs font-bold uppercase tracking-wider">{t("common.stt")}</TableHead>
+                    <TableHead className="py-3 px-4 h-10 text-xs font-bold uppercase tracking-wider">{t("common.voucherNumber")}</TableHead>
+                    <TableHead className="py-3 px-4 h-10 text-xs font-bold uppercase tracking-wider">{t("common.dateCreated")}</TableHead>
+                    <TableHead className="py-3 px-4 h-10 text-xs font-bold uppercase tracking-wider">{t("common.customer")}</TableHead>
+                    <TableHead className="py-3 px-4 h-10 text-xs font-bold uppercase tracking-wider text-center">{t("salesOrders.lineCount")}</TableHead>
+                    <TableHead className="py-3 px-4 h-10 text-xs font-bold uppercase tracking-wider text-right">{t("common.total")}</TableHead>
+                    <TableHead className="py-3 px-4 h-10 text-xs font-bold uppercase tracking-wider text-right w-20">Thao tác</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredSalesList.map((item, idx) => (
+                    <TableRow key={item.soPhieuBan} className="table-row-hover border-b border-border/60">
+                      <TableCell className="py-3.5 px-4 text-center font-bold text-sm text-muted-foreground">{idx + 1}</TableCell>
+                      <TableCell className="py-3.5 px-4 text-sm font-semibold">{item.soPhieuBan}</TableCell>
+                      <TableCell className="py-3.5 px-4 text-sm text-muted-foreground">{item.ngayLapPhieuBan}</TableCell>
+                      <TableCell className="py-3.5 px-4 text-sm">{item.khachHang?.tenKhachHang ?? item.maKhachHang}</TableCell>
+                      <TableCell className="py-3.5 px-4 text-sm text-center font-medium text-muted-foreground">{formatNumber(item.items.length)}</TableCell>
+                      <TableCell className="py-3.5 px-4 text-sm font-bold text-emerald-600 dark:text-emerald-400 text-right">{formatCurrency(item.tongTien)}</TableCell>
+                      <TableCell className="py-3.5 px-4 text-right">
+                        <Button variant="outline" size="sm" className="h-8 w-8 p-0 cursor-pointer" title="Xem chi tiết" onClick={() => setSelectedSale(item)}>
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>
+      <DetailModal
+        open={Boolean(selectedSale)}
+        title={`Phiếu bán ${selectedSale?.soPhieuBan ?? ""}`}
+        subtitle="Chi tiết bán hàng và tổng thanh toán"
+        onClose={() => setSelectedSale(null)}
+        onPrint={() => window.print()}
+      >
+        {selectedSale && (
+          <div className="space-y-4">
+            <DetailGrid
+              items={[
+                { label: "Ngày lập", value: selectedSale.ngayLapPhieuBan },
+                { label: "Khách hàng", value: selectedSale.khachHang?.tenKhachHang ?? selectedSale.maKhachHang },
+                { label: "SĐT", value: selectedSale.khachHang?.soDienThoai },
+                { label: "Tổng tiền", value: formatCurrency(selectedSale.tongTien) },
+              ]}
+            />
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Sản phẩm</TableHead>
+                    <TableHead>Đơn vị</TableHead>
+                    <TableHead className="text-right">SL</TableHead>
+                    <TableHead className="text-right">Đơn giá</TableHead>
+                    <TableHead className="text-right">Thành tiền</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {selectedSale.items.map((item) => (
+                    <TableRow key={item.maSanPham}>
+                      <TableCell>{item.tenSanPham}</TableCell>
+                      <TableCell>{item.tenDonViTinh}</TableCell>
+                      <TableCell className="text-right">{item.soLuong}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(item.donGia)}</TableCell>
+                      <TableCell className="text-right font-semibold">{formatCurrency(item.thanhTien)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        )}
+      </DetailModal>
     </div>
   );
 }

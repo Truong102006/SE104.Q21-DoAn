@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { STATUS_DOT_CLASS, STATUS_TONE_CLASS } from "@/lib/status-styles";
 import { cn } from "@/lib/utils";
+import { useToastStore } from "@/stores/toast-store";
 import {
   AppNotification,
   NotificationType,
@@ -100,6 +101,7 @@ export default function NotificationsPage() {
   const [scopeFilter, setScopeFilter] = useState<NotificationScopeFilter>("ALL");
   const [typeFilter, setTypeFilter] = useState<NotificationTypeFilter>("ALL");
   const [keyword, setKeyword] = useState("");
+  const toast = useToastStore();
 
   const sortedNotifications = useMemo(() => {
     return [...notifications].sort(
@@ -184,10 +186,12 @@ export default function NotificationsPage() {
         unread: false,
       })),
     );
+    toast.success("Đã đánh dấu tất cả thông báo là đã đọc.");
   }
 
   function handleMarkVisibleRead() {
-    const visibleIds = new Set(filteredNotifications.map((notification) => notification.id));
+    const unreadVisible = filteredNotifications.filter(n => n.unread);
+    const visibleIds = new Set(unreadVisible.map((notification) => notification.id));
 
     setNotifications((previous) =>
       previous.map((notification) =>
@@ -199,19 +203,27 @@ export default function NotificationsPage() {
           : notification,
       ),
     );
+    toast.success(`Đã đánh dấu ${unreadVisible.length} thông báo đang hiển thị là đã đọc.`);
   }
 
   function handleToggleRead(id: string) {
+    let isNowRead = false;
     setNotifications((previous) =>
-      previous.map((notification) =>
-        notification.id === id
-          ? {
-              ...notification,
-              unread: !notification.unread,
-            }
-          : notification,
-      ),
+      previous.map((notification) => {
+        if (notification.id === id) {
+          isNowRead = !notification.unread;
+          return {
+            ...notification,
+            unread: !notification.unread,
+          };
+        }
+        return notification;
+      }),
     );
+
+    if (isNowRead) {
+      // Small feedback for individual toggle
+    }
   }
 
   function handleResetFilters() {
@@ -362,8 +374,8 @@ export default function NotificationsPage() {
                         <li
                           key={notification.id}
                           className={cn(
-                            "grid gap-2 px-3 py-2.5 md:grid-cols-[auto_1fr_auto] md:items-start",
-                            notification.unread ? "bg-primary/5" : "bg-card",
+                            "grid gap-2 px-3 py-2.5 md:grid-cols-[auto_1fr_auto] md:items-start transition-colors duration-200",
+                            notification.unread ? "bg-primary/10" : "bg-card hover:bg-muted/30",
                           )}
                         >
                           <div
