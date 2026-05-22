@@ -76,7 +76,9 @@
         "noActivity": "No transaction activities recorded today.",
         "minutesAgo": "{n} mins ago",
         "hoursAgo": "{n} hours ago",
-        "yesterday": "Yesterday"
+        "yesterday": "Yesterday",
+        "million": "M",
+        "thousand": "k"
     },
     "auth": {
         "title": "Sign In",
@@ -117,7 +119,8 @@
         "entryScreen": "Data Entry",
         "lookupScreen": "Search & Lookup",
         "notificationScreen": "Notifications",
-        "reportsScreen": "Reports & Analytics"
+        "reportsScreen": "Reports & Analytics",
+        "systemManagement": "System & Admin"
     },
     "dashboard": {
         "title": "Operations Dashboard",
@@ -153,7 +156,10 @@
         "growthProduct": "+1.2% from last month",
         "growthStock": "+3 items recently stocked",
         "growthRevenue": "+14.8% of monthly target",
-        "growthUrgent": "Needs urgent crafting"
+        "growthUrgent": "Needs urgent crafting",
+        "thisWeek": "This Week",
+        "lastWeek": "Last Week",
+        "last30Days": "Last 30 Days"
     },
     "suppliers": {
         "title": "Suppliers",

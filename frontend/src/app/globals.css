@@ -198,6 +198,10 @@
     background-clip: text;
   }
 
+  .bg-gold-gradient {
+    background: linear-gradient(140deg, oklch(0.74 0.13 76), oklch(0.62 0.14 58));
+  }
+
   .data-grid {
     @apply rounded-lg border border-border/70 bg-card;
   }

@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/auth-store";
 import { requestLogout } from "@/services/auth-service";
 import { Button } from "@/components/ui/button";
-import { Menu, LogOut } from "lucide-react";
+import { Menu, LogOut, ChevronRight, Home } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Sidebar } from "./sidebar";
 import { useTranslation } from "@/i18n/i18n-context";
@@ -74,8 +74,12 @@ export function Header() {
           </SheetContent>
         </Sheet>
 
-        <div>
-          <h1 className="text-sm font-semibold lg:text-base">{title}</h1>
+        <div className="flex items-center gap-2 text-sm">
+          <div className="flex items-center gap-1.5 text-muted-foreground/80">
+            <Home className="h-3.5 w-3.5" />
+            <ChevronRight className="h-3 w-3" />
+          </div>
+          <h1 className="font-semibold lg:text-base">{title}</h1>
         </div>
 
         <div className="ml-auto flex items-center gap-3 text-sm">

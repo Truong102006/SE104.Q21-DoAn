@@ -76,7 +76,9 @@
         "noActivity": "Chưa ghi nhận hoạt động giao dịch nào hôm nay.",
         "minutesAgo": "{n} phút trước",
         "hoursAgo": "{n} giờ trước",
-        "yesterday": "Hôm qua"
+        "yesterday": "Hôm qua",
+        "million": "Tr",
+        "thousand": "k"
     },
     "auth": {
         "title": "Đăng nhập",
@@ -117,7 +119,8 @@
         "entryScreen": "Màn hình nhập liệu",
         "lookupScreen": "Màn hình tra cứu",
         "notificationScreen": "Màn hình thông báo",
-        "reportsScreen": "Báo biểu"
+        "reportsScreen": "Báo biểu",
+        "systemManagement": "Quản trị & Thiết lập"
     },
     "dashboard": {
         "title": "Tổng quan vận hành",
@@ -153,7 +156,10 @@
         "growthProduct": "+1.2% so với tháng trước",
         "growthStock": "+3 chiếc vừa nhập kho",
         "growthRevenue": "+14.8% chỉ tiêu tháng",
-        "growthUrgent": "Cần chế tác gấp"
+        "growthUrgent": "Cần chế tác gấp",
+        "thisWeek": "Tuần này",
+        "lastWeek": "Tuần trước",
+        "last30Days": "30 ngày qua"
     },
     "suppliers": {
         "title": "Nhà cung cấp",
