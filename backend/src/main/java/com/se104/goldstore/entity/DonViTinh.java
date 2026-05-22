@@ -26,6 +26,9 @@ public class DonViTinh {
     @Column(name = "ghi_chu", columnDefinition = "TEXT")
     private String ghiChu;
 
+    @Column(name = "is_active", nullable = false)
+    private Boolean isActive = true;
+
     public String getMaDonViTinh() {
         return maDonViTinh;
     }
@@ -64,5 +67,13 @@ public class DonViTinh {
 
     public void setGhiChu(String ghiChu) {
         this.ghiChu = ghiChu;
+    }
+
+    public Boolean getIsActive() {
+        return isActive;
+    }
+
+    public void setIsActive(Boolean isActive) {
+        this.isActive = isActive;
     }
 }

@@ -3,6 +3,8 @@ package com.se104.goldstore.repository;
 import com.se104.goldstore.entity.KhachHang;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface KhachHangRepository extends JpaRepository<KhachHang, String> {
@@ -22,6 +24,10 @@ public interface KhachHangRepository extends JpaRepository<KhachHang, String> {
     boolean existsBySoDienThoaiKhachHangAndMaKhachHangNot(String soDienThoaiKhachHang, String maKhachHang);
 
     List<KhachHang> findByTenKhachHangContainingIgnoreCase(String tenKhachHang);
+
+    List<KhachHang> findByTenKhachHangContainingIgnoreCaseOrSoDienThoaiKhachHangContaining(String tenKhachHang, String soDienThoaiKhachHang);
+
+    Page<KhachHang> findByTenKhachHangContainingIgnoreCaseOrSoDienThoaiKhachHangContaining(String tenKhachHang, String soDienThoaiKhachHang, Pageable pageable);
 
     Optional<KhachHang> findTopByMaKhachHangStartingWithOrderByMaKhachHangDesc(String prefix);
 }

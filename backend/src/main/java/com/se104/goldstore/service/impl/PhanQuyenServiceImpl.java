@@ -57,7 +57,7 @@ public class PhanQuyenServiceImpl implements PhanQuyenService {
         validateReferences(maNhom, maChucNang);
 
         if (phanQuyenRepository.existsByMaNhomAndMaChucNang(maNhom, maChucNang)) {
-            throw new BusinessException("Phan quyen da ton tai");
+            throw new BusinessException("Phân quyền đã tồn tại");
         }
 
         PhanQuyen entity = new PhanQuyen();
@@ -74,22 +74,22 @@ public class PhanQuyenServiceImpl implements PhanQuyenService {
         try {
             phanQuyenRepository.delete(entity);
         } catch (DataIntegrityViolationException ex) {
-            throw new BusinessException("Khong the xoa phan quyen da co du lieu lien quan");
+            throw new BusinessException("Không thể xóa phân quyền đã có dữ liệu liên quan");
         }
     }
 
     private PhanQuyen findByIdOrThrow(String maNhom, String maChucNang) {
         PhanQuyen.PhanQuyenId id = new PhanQuyen.PhanQuyenId(maNhom, maChucNang);
         return phanQuyenRepository.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException("Khong tim thay phan quyen: " + maNhom + " - " + maChucNang));
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phân quyền: " + maNhom + " - " + maChucNang));
     }
 
     private void validateReferences(String maNhom, String maChucNang) {
         if (!nhomNguoiDungRepository.existsById(maNhom)) {
-            throw new BusinessException("Ma nhom khong ton tai");
+            throw new BusinessException("Mã nhóm không tồn tại");
         }
         if (!chucNangRepository.existsById(maChucNang)) {
-            throw new BusinessException("Ma chuc nang khong ton tai");
+            throw new BusinessException("Mã chức năng không tồn tại");
         }
     }
 

@@ -74,7 +74,7 @@ public class BaoCaoTonKhoServiceImpl implements BaoCaoTonKhoService {
         validateThangNam(thang, nam);
         BaoCaoTonKho report = baoCaoTonKhoRepository.findByThangAndNam(thang, nam)
             .orElseThrow(
-                () -> new ResourceNotFoundException("Khong tim thay bao cao ton kho thang " + thang + "/" + nam)
+                () -> new ResourceNotFoundException("Không tìm thấy báo cáo tồn kho tháng " + thang + "/" + nam)
             );
         return toFullResponse(report);
     }
@@ -153,7 +153,7 @@ public class BaoCaoTonKhoServiceImpl implements BaoCaoTonKhoService {
     public BaoCaoTonKhoResponse create(BaoCaoTonKhoRequest request) {
         validateThangNam(request.getThang(), request.getNam());
         if (baoCaoTonKhoRepository.existsByThangAndNam(request.getThang(), request.getNam())) {
-            throw new BusinessException("Bao cao ton kho thang nam da ton tai");
+            throw new BusinessException("Báo cáo tồn kho tháng năm đã tồn tại");
         }
 
         String maBaoCaoTonKho = request.getMaBaoCaoTonKho();
@@ -166,7 +166,7 @@ public class BaoCaoTonKhoServiceImpl implements BaoCaoTonKhoService {
         }
 
         if (baoCaoTonKhoRepository.existsById(maBaoCaoTonKho)) {
-            throw new BusinessException("Ma bao cao ton kho da ton tai");
+            throw new BusinessException("Mã báo cáo tồn kho đã tồn tại");
         }
 
         BaoCaoTonKho entity = new BaoCaoTonKho();
@@ -184,7 +184,7 @@ public class BaoCaoTonKhoServiceImpl implements BaoCaoTonKhoService {
 
         validateThangNam(request.getThang(), request.getNam());
         if (baoCaoTonKhoRepository.existsByThangAndNamAndMaBaoCaoTonKhoNot(request.getThang(), request.getNam(), maBaoCaoTonKho)) {
-            throw new BusinessException("Bao cao ton kho thang nam da ton tai");
+            throw new BusinessException("Báo cáo tồn kho tháng năm đã tồn tại");
         }
 
         entity.setThang(request.getThang());
@@ -200,21 +200,21 @@ public class BaoCaoTonKhoServiceImpl implements BaoCaoTonKhoService {
         try {
             baoCaoTonKhoRepository.delete(entity);
         } catch (DataIntegrityViolationException ex) {
-            throw new BusinessException("Khong the xoa bao cao ton kho da co du lieu lien quan");
+            throw new BusinessException("Không thể xóa báo cáo tồn kho đã có dữ liệu liên quan");
         }
     }
 
     private BaoCaoTonKho findByIdOrThrow(String maBaoCaoTonKho) {
         return baoCaoTonKhoRepository.findById(maBaoCaoTonKho)
-            .orElseThrow(() -> new ResourceNotFoundException("Khong tim thay bao cao ton kho: " + maBaoCaoTonKho));
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy báo cáo tồn kho: " + maBaoCaoTonKho));
     }
 
     private void validateThangNam(Integer thang, Integer nam) {
         if (thang == null || thang < 1 || thang > 12) {
-            throw new BusinessException("Thang phai trong khoang 1 den 12");
+            throw new BusinessException("Tháng phải trong khoảng 1 đến 12");
         }
         if (nam == null || nam <= 0) {
-            throw new BusinessException("Nam phai lon hon 0");
+            throw new BusinessException("Năm phải lớn hơn 0");
         }
     }
 

@@ -12,6 +12,17 @@ import org.springframework.data.repository.query.Param;
 
 public interface PhieuDichVuRepository extends JpaRepository<PhieuDichVu, String> {
 
+    @Query(
+        """
+        SELECT pdv FROM PhieuDichVu pdv
+        LEFT JOIN pdv.khachHang kh
+        WHERE (:keyword = '' OR LOWER(pdv.soPhieuDichVu) LIKE CONCAT('%', LOWER(:keyword), '%')
+            OR LOWER(kh.tenKhachHang) LIKE CONCAT('%', LOWER(:keyword), '%')
+            OR LOWER(kh.soDienThoaiKhachHang) LIKE CONCAT('%', LOWER(:keyword), '%'))
+        """
+    )
+    List<PhieuDichVu> findByKeyword(@Param("keyword") String keyword);
+
     boolean existsByMaKhachHang(String maKhachHang);
 
     List<PhieuDichVu> findBySoPhieuDichVuContainingIgnoreCase(String soPhieuDichVu);

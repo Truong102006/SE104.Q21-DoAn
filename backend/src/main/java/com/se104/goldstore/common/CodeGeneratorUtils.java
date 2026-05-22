@@ -12,7 +12,7 @@ public final class CodeGeneratorUtils {
 
     public static String generateNextCode(String prefix, String currentMaxCode) {
         if (prefix == null || prefix.isBlank()) {
-            throw new IllegalArgumentException("Prefix khong duoc de trong");
+            throw new IllegalArgumentException("Prefix không được để trống");
         }
 
         if (currentMaxCode == null || currentMaxCode.isBlank()) {

@@ -38,12 +38,19 @@ public class KhachHangServiceImpl implements KhachHangService {
     }
 
     @Override
-    public List<KhachHangResponse> getAll(String keyword) {
+    public List<KhachHangResponse> getAll(String keyword, Integer page, Integer size) {
         String normalized = SearchUtils.normalizeKeyword(keyword);
-        List<KhachHang> entities = normalized.isEmpty()
-            ? khachHangRepository.findAll()
-            : khachHangRepository.findByTenKhachHangContainingIgnoreCase(normalized);
-
+        List<KhachHang> entities;
+        if (page != null && size != null) {
+            org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size);
+            entities = normalized.isEmpty()
+                ? khachHangRepository.findAll(pageable).getContent()
+                : khachHangRepository.findByTenKhachHangContainingIgnoreCaseOrSoDienThoaiKhachHangContaining(normalized, normalized, pageable).getContent();
+        } else {
+            entities = normalized.isEmpty()
+                ? khachHangRepository.findAll()
+                : khachHangRepository.findByTenKhachHangContainingIgnoreCaseOrSoDienThoaiKhachHangContaining(normalized, normalized);
+        }
         return entities.stream().map(this::toResponse).toList();
     }
 
@@ -58,14 +65,14 @@ public class KhachHangServiceImpl implements KhachHangService {
         String tenKhachHang = request.getTenKhachHang().trim();
         String soDienThoaiKhachHang = request.getSoDienThoaiKhachHang().trim();
 
-        PhoneValidator.validateOrThrow(soDienThoaiKhachHang, "So dien thoai khach hang");
+        PhoneValidator.validateOrThrow(soDienThoaiKhachHang, "Số điện thoại khách hàng");
 
         if (khachHangRepository.existsByTenKhachHangIgnoreCaseAndSoDienThoaiKhachHang(tenKhachHang, soDienThoaiKhachHang)) {
-            throw new BusinessException("Khach hang da ton tai voi cung ten va so dien thoai");
+            throw new BusinessException("Khách hàng đã tồn tại với cùng tên và số điện thoại");
         }
 
         if (khachHangRepository.existsBySoDienThoaiKhachHang(soDienThoaiKhachHang)) {
-            throw new BusinessException("So dien thoai khach hang da ton tai");
+            throw new BusinessException("Số điện thoại khách hàng đã tồn tại");
         }
 
         String maKhachHang = request.getMaKhachHang();
@@ -78,7 +85,7 @@ public class KhachHangServiceImpl implements KhachHangService {
         }
 
         if (khachHangRepository.existsById(maKhachHang)) {
-            throw new BusinessException("Ma khach hang da ton tai");
+            throw new BusinessException("Mã khách hàng đã tồn tại");
         }
 
         KhachHang entity = new KhachHang();
@@ -98,18 +105,18 @@ public class KhachHangServiceImpl implements KhachHangService {
         String tenKhachHang = request.getTenKhachHang().trim();
         String soDienThoaiKhachHang = request.getSoDienThoaiKhachHang().trim();
 
-        PhoneValidator.validateOrThrow(soDienThoaiKhachHang, "So dien thoai khach hang");
+        PhoneValidator.validateOrThrow(soDienThoaiKhachHang, "Số điện thoại khách hàng");
 
         if (khachHangRepository.existsByTenKhachHangIgnoreCaseAndSoDienThoaiKhachHangAndMaKhachHangNot(
             tenKhachHang,
             soDienThoaiKhachHang,
             maKhachHang
         )) {
-            throw new BusinessException("Khach hang da ton tai voi cung ten va so dien thoai");
+            throw new BusinessException("Khách hàng đã tồn tại với cùng tên và số điện thoại");
         }
 
         if (khachHangRepository.existsBySoDienThoaiKhachHangAndMaKhachHangNot(soDienThoaiKhachHang, maKhachHang)) {
-            throw new BusinessException("So dien thoai khach hang da ton tai");
+            throw new BusinessException("Số điện thoại khách hàng đã tồn tại");
         }
 
         entity.setTenKhachHang(tenKhachHang);
@@ -125,18 +132,18 @@ public class KhachHangServiceImpl implements KhachHangService {
     public void delete(String maKhachHang) {
         KhachHang entity = findByIdOrThrow(maKhachHang);
         if (phieuBanHangRepository.existsByMaKhachHang(maKhachHang) || phieuDichVuRepository.existsByMaKhachHang(maKhachHang)) {
-            throw new BusinessException("Khong the xoa khach hang da phat sinh phieu ban hoac phieu dich vu");
+            throw new BusinessException("Không thể xóa khách hàng đã phát sinh phiếu bán hoặc phiếu dịch vụ");
         }
         try {
             khachHangRepository.delete(entity);
         } catch (DataIntegrityViolationException ex) {
-            throw new BusinessException("Khong the xoa khach hang da co du lieu lien quan");
+            throw new BusinessException("Không thể xóa khách hàng đã có dữ liệu liên quan");
         }
     }
 
     private KhachHang findByIdOrThrow(String maKhachHang) {
         return khachHangRepository.findById(maKhachHang)
-            .orElseThrow(() -> new ResourceNotFoundException("Khong tim thay khach hang: " + maKhachHang));
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy khách hàng: " + maKhachHang));
     }
 
     private String emptyToNull(String value) {

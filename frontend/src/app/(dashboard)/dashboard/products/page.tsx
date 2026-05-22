@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ConfirmDialog, EmptyState, PageHeader, TableToolbar } from "@/components/dashboard/management";
+import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
@@ -24,7 +25,7 @@ import { useAuthStore } from "@/stores/auth-store";
 import { useToastStore } from "@/stores/toast-store";
 import { useTranslation } from "@/i18n/i18n-context";
 import { Pencil, Plus, Search, Trash2, X, Loader2 } from "lucide-react";
-import { useForm } from "react-hook-form";
+import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useVirtualizer } from "@tanstack/react-virtual";
@@ -34,9 +35,9 @@ const productSchema = z.object({
   tenSanPham: z.string().min(1, "Tên sản phẩm là bắt buộc"),
   maLoaiSanPham: z.string().min(1, "Loại sản phẩm là bắt buộc"),
   maDonViTinh: z.string().min(1, "Đơn vị tính là bắt buộc"),
-  donGiaMua: z.coerce.number().min(0, "Đơn giá mua phải >= 0"),
-  tonKho: z.coerce.number().int().min(0, "Tồn kho phải >= 0"),
-  isActive: z.boolean().default(true),
+  donGiaMua: z.number().min(0, "Đơn giá mua phải >= 0"),
+  tonKho: z.number().int().min(0, "Tồn kho phải >= 0"),
+  isActive: z.boolean(),
 });
 
 type ProductFormValues = z.infer<typeof productSchema>;
@@ -211,7 +212,7 @@ export default function ProductsPage() {
     }
   }
 
-  async function onSubmit(data: ProductFormValues) {
+  const onSubmit: SubmitHandler<ProductFormValues> = async (data) => {
     setSubmitting(true);
     try {
       const payload: ProductRequest = {
@@ -234,7 +235,7 @@ export default function ProductsPage() {
     } finally {
       setSubmitting(false);
     }
-  }
+  };
 
   async function doDelete() {
     if (!deleting) {
@@ -455,7 +456,7 @@ export default function ProductsPage() {
                     className={form.formState.errors.tenSanPham ? "border-destructive ring-destructive/20" : ""}
                   />
                   {form.formState.errors.tenSanPham && (
-                    <p className="text-[10px] font-bold text-destructive uppercase tracking-tight">{form.formState.errors.tenSanPham.message}</p>
+                    <p className="text-[10px] font-bold text-destructive uppercase tracking-tight">{String(form.formState.errors.tenSanPham.message)}</p>
                   )}
                 </div>
 
@@ -487,11 +488,11 @@ export default function ProductsPage() {
                   <Label>{t("products.purchasePrice")}</Label>
                   <Input
                     type="number"
-                    {...form.register("donGiaMua")}
+                    {...form.register("donGiaMua", { valueAsNumber: true })}
                     className={form.formState.errors.donGiaMua ? "border-destructive ring-destructive/20" : ""}
                   />
                    {form.formState.errors.donGiaMua && (
-                    <p className="text-[10px] font-bold text-destructive uppercase tracking-tight">{form.formState.errors.donGiaMua.message}</p>
+                    <p className="text-[10px] font-bold text-destructive uppercase tracking-tight">{String(form.formState.errors.donGiaMua.message)}</p>
                   )}
                 </div>
 
@@ -499,11 +500,11 @@ export default function ProductsPage() {
                   <Label>{t("products.initialStock")}</Label>
                   <Input
                     type="number"
-                    {...form.register("tonKho")}
+                    {...form.register("tonKho", { valueAsNumber: true })}
                     className={form.formState.errors.tonKho ? "border-destructive ring-destructive/20" : ""}
                   />
                   {form.formState.errors.tonKho && (
-                    <p className="text-[10px] font-bold text-destructive uppercase tracking-tight">{form.formState.errors.tonKho.message}</p>
+                    <p className="text-[10px] font-bold text-destructive uppercase tracking-tight">{String(form.formState.errors.tonKho.message)}</p>
                   )}
                 </div>
 

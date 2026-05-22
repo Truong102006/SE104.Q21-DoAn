@@ -6,7 +6,7 @@ import java.util.List;
 
 public interface KhachHangService {
 
-    List<KhachHangResponse> getAll(String keyword);
+    List<KhachHangResponse> getAll(String keyword, Integer page, Integer size);
 
     KhachHangResponse getById(String maKhachHang);
 

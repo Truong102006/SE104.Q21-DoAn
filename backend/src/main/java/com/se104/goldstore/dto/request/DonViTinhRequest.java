@@ -18,6 +18,8 @@ public class DonViTinhRequest {
 
     private String ghiChu;
 
+    private Boolean isActive;
+
     public String getMaDonViTinh() {
         return maDonViTinh;
     }
@@ -56,5 +58,13 @@ public class DonViTinhRequest {
 
     public void setGhiChu(String ghiChu) {
         this.ghiChu = ghiChu;
+    }
+
+    public Boolean getIsActive() {
+        return isActive;
+    }
+
+    public void setIsActive(Boolean isActive) {
+        this.isActive = isActive;
     }
 }

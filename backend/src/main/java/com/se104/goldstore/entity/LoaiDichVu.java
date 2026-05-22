@@ -20,6 +20,9 @@ public class LoaiDichVu {
     @Column(name = "don_gia_dich_vu", nullable = false, precision = 18, scale = 2)
     private BigDecimal donGiaDichVu;
 
+    @Column(name = "is_active", nullable = false)
+    private Boolean isActive = true;
+
     public String getMaLoaiDichVu() {
         return maLoaiDichVu;
     }
@@ -42,5 +45,13 @@ public class LoaiDichVu {
 
     public void setDonGiaDichVu(BigDecimal donGiaDichVu) {
         this.donGiaDichVu = donGiaDichVu;
+    }
+
+    public Boolean getIsActive() {
+        return isActive;
+    }
+
+    public void setIsActive(Boolean isActive) {
+        this.isActive = isActive;
     }
 }

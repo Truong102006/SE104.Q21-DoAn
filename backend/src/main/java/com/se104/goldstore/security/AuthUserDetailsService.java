@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -33,7 +34,11 @@ public class AuthUserDetailsService implements UserDetailsService {
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         String normalizedUsername = normalizeUsername(username);
         NguoiDung nguoiDung = nguoiDungRepository.findByTenDangNhap(normalizedUsername)
-            .orElseThrow(() -> new UsernameNotFoundException("Khong tim thay nguoi dung"));
+            .orElseThrow(() -> new UsernameNotFoundException("Không tìm thấy người dùng"));
+
+        if (nguoiDung.getIsActive() != null && !nguoiDung.getIsActive()) {
+            throw new DisabledException("Tài khoản đã bị vô hiệu hóa");
+        }
 
         String roleCode = normalizeRoleCode(nguoiDung.getMaNhom());
         List<String> roles = List.of(roleCode);
@@ -63,14 +68,14 @@ public class AuthUserDetailsService implements UserDetailsService {
 
     private String normalizeUsername(String username) {
         if (username == null || username.isBlank()) {
-            throw new UsernameNotFoundException("Ten dang nhap khong hop le");
+            throw new UsernameNotFoundException("Tên đăng nhập không hợp lệ");
         }
         return username.trim();
     }
 
     private String normalizeRoleCode(String groupCode) {
         if (groupCode == null || groupCode.isBlank()) {
-            throw new UsernameNotFoundException("Nguoi dung chua duoc gan nhom quyen");
+            throw new UsernameNotFoundException("Người dùng chưa được gán nhóm quyền");
         }
         String normalized = groupCode.trim().toUpperCase(Locale.ROOT);
         if (normalized.startsWith("ROLE_")) {

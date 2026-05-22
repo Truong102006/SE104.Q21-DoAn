@@ -74,7 +74,7 @@ public class BaoCaoDoanhThuDichVuServiceImpl implements BaoCaoDoanhThuDichVuServ
         BaoCaoDoanhThuDichVu report = baoCaoDoanhThuDichVuRepository.findByThangAndNam(thang, nam)
             .orElseThrow(
                 () -> new ResourceNotFoundException(
-                    "Khong tim thay bao cao doanh thu dich vu thang " + thang + "/" + nam
+                    "Không tìm thấy báo cáo doanh thu dịch vụ tháng " + thang + "/" + nam
                 )
             );
         return toFullResponse(report);
@@ -153,7 +153,7 @@ public class BaoCaoDoanhThuDichVuServiceImpl implements BaoCaoDoanhThuDichVuServ
     public BaoCaoDoanhThuDichVuResponse create(BaoCaoDoanhThuDichVuRequest request) {
         validateThangNam(request.getThang(), request.getNam());
         if (baoCaoDoanhThuDichVuRepository.existsByThangAndNam(request.getThang(), request.getNam())) {
-            throw new BusinessException("Bao cao doanh thu dich vu thang nam da ton tai");
+            throw new BusinessException("Báo cáo doanh thu dịch vụ tháng năm đã tồn tại");
         }
 
         String maBaoCaoDoanhThuDv = request.getMaBaoCaoDoanhThuDv();
@@ -166,7 +166,7 @@ public class BaoCaoDoanhThuDichVuServiceImpl implements BaoCaoDoanhThuDichVuServ
         }
 
         if (baoCaoDoanhThuDichVuRepository.existsById(maBaoCaoDoanhThuDv)) {
-            throw new BusinessException("Ma bao cao doanh thu dich vu da ton tai");
+            throw new BusinessException("Mã báo cáo doanh thu dịch vụ đã tồn tại");
         }
 
         BaoCaoDoanhThuDichVu entity = new BaoCaoDoanhThuDichVu();
@@ -185,7 +185,7 @@ public class BaoCaoDoanhThuDichVuServiceImpl implements BaoCaoDoanhThuDichVuServ
 
         validateThangNam(request.getThang(), request.getNam());
         if (baoCaoDoanhThuDichVuRepository.existsByThangAndNamAndMaBaoCaoDoanhThuDvNot(request.getThang(), request.getNam(), maBaoCaoDoanhThuDv)) {
-            throw new BusinessException("Bao cao doanh thu dich vu thang nam da ton tai");
+            throw new BusinessException("Báo cáo doanh thu dịch vụ tháng năm đã tồn tại");
         }
 
         entity.setThang(request.getThang());
@@ -202,27 +202,27 @@ public class BaoCaoDoanhThuDichVuServiceImpl implements BaoCaoDoanhThuDichVuServ
         try {
             baoCaoDoanhThuDichVuRepository.delete(entity);
         } catch (DataIntegrityViolationException ex) {
-            throw new BusinessException("Khong the xoa bao cao doanh thu dich vu da co du lieu lien quan");
+            throw new BusinessException("Không thể xóa báo cáo doanh thu dịch vụ đã có dữ liệu liên quan");
         }
     }
 
     private BaoCaoDoanhThuDichVu findByIdOrThrow(String maBaoCaoDoanhThuDv) {
         return baoCaoDoanhThuDichVuRepository.findById(maBaoCaoDoanhThuDv)
-            .orElseThrow(() -> new ResourceNotFoundException("Khong tim thay bao cao doanh thu dich vu: " + maBaoCaoDoanhThuDv));
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy báo cáo doanh thu dịch vụ: " + maBaoCaoDoanhThuDv));
     }
 
     private void validateThangNam(Integer thang, Integer nam) {
         if (thang == null || thang < 1 || thang > 12) {
-            throw new BusinessException("Thang phai trong khoang 1 den 12");
+            throw new BusinessException("Tháng phải trong khoảng 1 đến 12");
         }
         if (nam == null || nam <= 0) {
-            throw new BusinessException("Nam phai lon hon 0");
+            throw new BusinessException("Năm phải lớn hơn 0");
         }
     }
 
     private BigDecimal normalizeMoney(BigDecimal value) {
         if (value == null || value.compareTo(BigDecimal.ZERO) < 0) {
-            throw new BusinessException("Tong doanh thu dich vu phai >= 0");
+            throw new BusinessException("Tổng doanh thu dịch vụ phải >= 0");
         }
         return value.setScale(2, RoundingMode.HALF_UP);
     }

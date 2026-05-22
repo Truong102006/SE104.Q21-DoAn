@@ -6,10 +6,10 @@ public class NguoiDungRequest {
 
     private String tenDangNhap;
 
-    @NotBlank(message = "Mat khau khong duoc de trong")
     private String matKhau;
 
     private String maNhom;
+    private Boolean isActive;
 
     public String getTenDangNhap() {
         return tenDangNhap;
@@ -33,5 +33,13 @@ public class NguoiDungRequest {
 
     public void setMaNhom(String maNhom) {
         this.maNhom = maNhom;
+    }
+
+    public Boolean getIsActive() {
+        return isActive;
+    }
+
+    public void setIsActive(Boolean isActive) {
+        this.isActive = isActive;
     }
 }

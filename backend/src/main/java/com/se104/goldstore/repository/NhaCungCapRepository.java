@@ -15,7 +15,7 @@ public interface NhaCungCapRepository extends JpaRepository<NhaCungCap, String> 
 
     boolean existsBySoDienThoaiAndMaNhaCungCapNot(String soDienThoai, String maNhaCungCap);
 
-    List<NhaCungCap> findByTenNhaCungCapContainingIgnoreCase(String tenNhaCungCap);
+    List<NhaCungCap> findByTenNhaCungCapContainingIgnoreCaseOrSoDienThoaiContaining(String tenNhaCungCap, String soDienThoai);
 
     Optional<NhaCungCap> findTopByMaNhaCungCapStartingWithOrderByMaNhaCungCapDesc(String prefix);
 }

@@ -7,6 +7,7 @@ public class LoaiDichVuResponse {
     private String maLoaiDichVu;
     private String tenLoaiDichVu;
     private BigDecimal donGiaDichVu;
+    private Boolean isActive;
 
     public String getMaLoaiDichVu() {
         return maLoaiDichVu;
@@ -30,5 +31,13 @@ public class LoaiDichVuResponse {
 
     public void setDonGiaDichVu(BigDecimal donGiaDichVu) {
         this.donGiaDichVu = donGiaDichVu;
+    }
+
+    public Boolean getIsActive() {
+        return isActive;
+    }
+
+    public void setIsActive(Boolean isActive) {
+        this.isActive = isActive;
     }
 }

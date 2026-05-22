@@ -25,6 +25,9 @@ public class NhaCungCap {
     @Column(name = "ghi_chu", columnDefinition = "TEXT")
     private String ghiChu;
 
+    @Column(name = "is_active", nullable = false)
+    private Boolean isActive = true;
+
     public String getMaNhaCungCap() {
         return maNhaCungCap;
     }
@@ -63,5 +66,13 @@ public class NhaCungCap {
 
     public void setGhiChu(String ghiChu) {
         this.ghiChu = ghiChu;
+    }
+
+    public Boolean getIsActive() {
+        return isActive;
+    }
+
+    public void setIsActive(Boolean isActive) {
+        this.isActive = isActive;
     }
 }

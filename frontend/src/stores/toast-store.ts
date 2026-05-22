@@ -7,17 +7,12 @@ export interface ToastAction {
   onClick: () => void;
 }
 
-interface ToastOptions {
-  duration?: number;
-  action?: ToastAction;
-}
-
 /**
- * Compatibility wrapper around sonner toast system.
- * Keeps existing store-like interface for legacy code while using modern sonner under the hood.
+ * Compatibility hook around sonner toast system.
+ * Keeps existing interface for components while using modern sonner under the hood.
  */
-export const useToastStore = {
-  getState: () => ({
+export const useToastStore = () => {
+  return {
     success: (message: string, action?: ToastAction) => {
       sonnerToast.success(message, {
         action: action ? { label: action.label, onClick: action.onClick } : undefined,
@@ -34,24 +29,15 @@ export const useToastStore = {
       sonnerToast.info(message);
     },
     dismiss: (id?: string) => {
-        if (id) sonnerToast.dismiss(id);
-        else sonnerToast.dismiss();
+      if (id) sonnerToast.dismiss(id);
+      else sonnerToast.dismiss();
     }
-  }),
-  // For hooks
-  success: (message: string, action?: ToastAction) => {
-    sonnerToast.success(message, {
-      action: action ? { label: action.label, onClick: action.onClick } : undefined,
-      duration: 6000,
-    });
-  },
-  error: (message: string) => {
-    sonnerToast.error(message);
-  },
-  warning: (message: string) => {
-    sonnerToast.warning(message);
-  },
-  info: (message: string) => {
-    sonnerToast.info(message);
-  },
+  };
+};
+
+// Also export as a static object for non-hook usage (getState pattern)
+// @ts-ignore
+useToastStore.getState = () => {
+    const hook = useToastStore();
+    return hook;
 };

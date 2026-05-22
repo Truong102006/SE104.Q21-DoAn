@@ -13,6 +13,7 @@ public class SanPhamResponse {
     private BigDecimal donGiaMua;
     private BigDecimal donGiaBan;
     private Integer tonKho;
+    private Boolean isActive;
 
     public String getMaSanPham() {
         return maSanPham;
@@ -84,6 +85,14 @@ public class SanPhamResponse {
 
     public void setTonKho(Integer tonKho) {
         this.tonKho = tonKho;
+    }
+
+    public Boolean getIsActive() {
+        return isActive;
+    }
+
+    public void setIsActive(Boolean isActive) {
+        this.isActive = isActive;
     }
 
     public static class LoaiSanPhamInfo {

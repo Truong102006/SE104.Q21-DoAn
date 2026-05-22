@@ -36,9 +36,7 @@ public class NguoiDungServiceImpl implements NguoiDungService {
     @Override
     public List<NguoiDungResponse> getAll(String keyword) {
         String normalized = SearchUtils.normalizeKeyword(keyword);
-        List<NguoiDung> entities = normalized.isEmpty()
-            ? nguoiDungRepository.findAll()
-            : nguoiDungRepository.findByTenDangNhapContainingIgnoreCase(normalized);
+        List<NguoiDung> entities = nguoiDungRepository.findByKeyword(normalized);
 
         return entities.stream().map(this::toResponse).toList();
     }
@@ -53,20 +51,24 @@ public class NguoiDungServiceImpl implements NguoiDungService {
     public NguoiDungResponse create(NguoiDungRequest request) {
         String tenDangNhap = request.getTenDangNhap();
         if (tenDangNhap == null || tenDangNhap.isBlank()) {
-            throw new BusinessException("Ten dang nhap khong duoc de trong");
+            throw new BusinessException("Tên đăng nhập không được để trống");
         }
         tenDangNhap = tenDangNhap.trim();
 
         if (nguoiDungRepository.existsById(tenDangNhap)) {
-            throw new BusinessException("Ten dang nhap da ton tai");
+            throw new BusinessException("Tên đăng nhập đã tồn tại");
         }
 
         String maNhom = normalizeAndValidateNhom(request.getMaNhom());
+        if (request.getMatKhau() == null || request.getMatKhau().isBlank()) {
+            throw new BusinessException("Mật khẩu không được để trống");
+        }
 
         NguoiDung entity = new NguoiDung();
         entity.setTenDangNhap(tenDangNhap);
         entity.setMatKhau(passwordEncoder.encode(request.getMatKhau().trim()));
         entity.setMaNhom(maNhom);
+        entity.setIsActive(request.getIsActive() != null ? request.getIsActive() : true);
 
         return toResponse(nguoiDungRepository.save(entity));
     }
@@ -78,8 +80,13 @@ public class NguoiDungServiceImpl implements NguoiDungService {
 
         String maNhom = normalizeAndValidateNhom(request.getMaNhom());
 
-        entity.setMatKhau(passwordEncoder.encode(request.getMatKhau().trim()));
+        if (request.getMatKhau() != null && !request.getMatKhau().isBlank()) {
+            entity.setMatKhau(passwordEncoder.encode(request.getMatKhau().trim()));
+        }
         entity.setMaNhom(maNhom);
+        if (request.getIsActive() != null) {
+            entity.setIsActive(request.getIsActive());
+        }
 
         return toResponse(nguoiDungRepository.save(entity));
     }
@@ -91,13 +98,13 @@ public class NguoiDungServiceImpl implements NguoiDungService {
         try {
             nguoiDungRepository.delete(entity);
         } catch (DataIntegrityViolationException ex) {
-            throw new BusinessException("Khong the xoa nguoi dung da co du lieu lien quan");
+            throw new BusinessException("Không thể xóa người dùng đã có dữ liệu liên quan (giao dịch hoặc báo cáo)");
         }
     }
 
     private NguoiDung findByIdOrThrow(String tenDangNhap) {
         return nguoiDungRepository.findById(tenDangNhap)
-            .orElseThrow(() -> new ResourceNotFoundException("Khong tim thay nguoi dung: " + tenDangNhap));
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng: " + tenDangNhap));
     }
 
     private String normalizeAndValidateNhom(String maNhom) {
@@ -106,7 +113,7 @@ public class NguoiDungServiceImpl implements NguoiDungService {
         }
         String normalized = maNhom.trim();
         if (!nhomNguoiDungRepository.existsById(normalized)) {
-            throw new BusinessException("Ma nhom khong ton tai");
+            throw new BusinessException("Mã nhóm không tồn tại");
         }
         return normalized;
     }
@@ -115,6 +122,7 @@ public class NguoiDungServiceImpl implements NguoiDungService {
         NguoiDungResponse response = new NguoiDungResponse();
         response.setTenDangNhap(entity.getTenDangNhap());
         response.setMaNhom(entity.getMaNhom());
+        response.setIsActive(entity.getIsActive());
         return response;
     }
 }

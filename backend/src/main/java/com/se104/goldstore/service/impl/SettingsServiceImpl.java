@@ -94,10 +94,10 @@ public class SettingsServiceImpl implements SettingsService {
 
     private BigDecimal normalizeRate(BigDecimal value) {
         if (value == null) {
-            throw new BusinessException("Gia tri ti le tra truoc khong duoc de trong");
+            throw new BusinessException("Giá trị tỉ lệ trả trước không được để trống");
         }
         if (value.compareTo(MIN_RATE) < 0 || value.compareTo(MAX_RATE) > 0) {
-            throw new BusinessException("Gia tri ti le tra truoc phai nam trong khoang [0, 100]");
+            throw new BusinessException("Giá trị tỉ lệ trả trước phải nằm trong khoảng [0, 100]");
         }
         return value.setScale(2, RoundingMode.HALF_UP);
     }

@@ -46,7 +46,7 @@ public class ChucNangServiceImpl implements ChucNangService {
     public ChucNangResponse create(ChucNangRequest request) {
         String tenChucNang = request.getTenChucNang().trim();
         if (chucNangRepository.existsByTenChucNangIgnoreCase(tenChucNang)) {
-            throw new BusinessException("Ten chuc nang da ton tai");
+            throw new BusinessException("Tên chức năng đã tồn tại");
         }
 
         String maChucNang = request.getMaChucNang();
@@ -59,7 +59,7 @@ public class ChucNangServiceImpl implements ChucNangService {
         }
 
         if (chucNangRepository.existsById(maChucNang)) {
-            throw new BusinessException("Ma chuc nang da ton tai");
+            throw new BusinessException("Mã chức năng đã tồn tại");
         }
 
         ChucNang entity = new ChucNang();
@@ -77,7 +77,7 @@ public class ChucNangServiceImpl implements ChucNangService {
 
         String tenChucNang = request.getTenChucNang().trim();
         if (chucNangRepository.existsByTenChucNangIgnoreCaseAndMaChucNangNot(tenChucNang, maChucNang)) {
-            throw new BusinessException("Ten chuc nang da ton tai");
+            throw new BusinessException("Tên chức năng đã tồn tại");
         }
 
         entity.setTenChucNang(tenChucNang);
@@ -93,13 +93,13 @@ public class ChucNangServiceImpl implements ChucNangService {
         try {
             chucNangRepository.delete(entity);
         } catch (DataIntegrityViolationException ex) {
-            throw new BusinessException("Khong the xoa chuc nang da co du lieu lien quan");
+            throw new BusinessException("Không thể xóa chức năng đã có dữ liệu liên quan");
         }
     }
 
     private ChucNang findByIdOrThrow(String maChucNang) {
         return chucNangRepository.findById(maChucNang)
-            .orElseThrow(() -> new ResourceNotFoundException("Khong tim thay chuc nang: " + maChucNang));
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy chức năng: " + maChucNang));
     }
 
     private String emptyToNull(String value) {

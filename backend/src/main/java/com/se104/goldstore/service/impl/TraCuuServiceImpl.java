@@ -78,7 +78,7 @@ public class TraCuuServiceImpl implements TraCuuService {
 
     private void validateDateRange(LocalDate fromDate, LocalDate toDate) {
         if (fromDate != null && toDate != null && fromDate.isAfter(toDate)) {
-            throw new BusinessException("Khoang ngay lap khong hop le: fromDate phai <= toDate");
+            throw new BusinessException("Khoảng ngày lập không hợp lệ: từ ngày phải nhỏ hơn hoặc bằng đến ngày");
         }
     }
 
@@ -93,7 +93,7 @@ public class TraCuuServiceImpl implements TraCuuService {
         if ("hoan thanh".equals(normalized)) {
             return TINH_TRANG_HOAN_THANH;
         }
-        throw new BusinessException("Tinh trang dich vu khong hop le. Ho tro: Hoan thanh, Chua hoan thanh");
+        throw new BusinessException("Tình trạng dịch vụ không hợp lệ. Hỗ trợ: Hoàn thành, Chưa hoàn thành");
     }
 
     private String removeAccent(String input) {

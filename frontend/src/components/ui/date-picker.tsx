@@ -209,7 +209,17 @@ function PickerInput({
             <div className="flex items-center justify-between p-3 border-b border-border/50">
               <button
                 type="button"
-                onClick={() => isSelectingYear ? setViewYear(viewYear - 12) : setViewYear(viewYear - (type === 'month' ? 1 : 0) || shiftMonth(-1))}
+                onClick={() => {
+                  if (isSelectingYear) {
+                    setViewYear(viewYear - 12);
+                  } else {
+                    if (type === 'month') {
+                        setViewYear(viewYear - 1);
+                    } else {
+                        shiftMonth(-1);
+                    }
+                  }
+                }}
                 className="rounded-md p-1 hover:bg-muted text-muted-foreground transition-colors"
                 title="Trước"
               >
@@ -226,7 +236,17 @@ function PickerInput({
 
               <button
                 type="button"
-                onClick={() => isSelectingYear ? setViewYear(viewYear + 12) : setViewYear(viewYear + (type === 'month' ? 1 : 0) || shiftMonth(1))}
+                onClick={() => {
+                  if (isSelectingYear) {
+                    setViewYear(viewYear + 12);
+                  } else {
+                    if (type === 'month') {
+                        setViewYear(viewYear + 1);
+                    } else {
+                        shiftMonth(1);
+                    }
+                  }
+                }}
                 className="rounded-md p-1 hover:bg-muted text-muted-foreground transition-colors"
                 title="Sau"
               >
@@ -265,7 +285,7 @@ function PickerInput({
                       const isCurrentMonth = date.getMonth() === viewMonth;
                       const isSelected = selectedDateValue && formatDateValue(date) === formatDateValue(selectedDateValue);
                       const isToday = formatDateValue(date) === formatDateValue(new Date());
-                      const isDisabled = min && formatDateValue(date) < min || max && formatDateValue(date) > max;
+                      const isDisabled = !!((min && formatDateValue(date) < min) || (max && formatDateValue(date) > max));
 
                       return (
                         <button

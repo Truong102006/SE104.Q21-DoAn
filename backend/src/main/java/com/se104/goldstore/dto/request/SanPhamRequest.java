@@ -29,6 +29,8 @@ public class SanPhamRequest {
     @Min(value = 0, message = "Ton kho phai >= 0")
     private Integer tonKho;
 
+    private Boolean isActive;
+
     public String getMaSanPham() {
         return maSanPham;
     }
@@ -83,5 +85,13 @@ public class SanPhamRequest {
 
     public void setTonKho(Integer tonKho) {
         this.tonKho = tonKho;
+    }
+
+    public Boolean getIsActive() {
+        return isActive;
+    }
+
+    public void setIsActive(Boolean isActive) {
+        this.isActive = isActive;
     }
 }

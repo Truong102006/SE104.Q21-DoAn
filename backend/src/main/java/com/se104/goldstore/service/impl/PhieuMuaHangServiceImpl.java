@@ -64,9 +64,7 @@ public class PhieuMuaHangServiceImpl implements PhieuMuaHangService {
     @Override
     public List<PhieuMuaHangResponse> getAll(String keyword) {
         String normalized = SearchUtils.normalizeKeyword(keyword);
-        List<PhieuMuaHang> entities = normalized.isEmpty()
-            ? phieuMuaHangRepository.findAll()
-            : phieuMuaHangRepository.findBySoPhieuMuaContainingIgnoreCase(normalized);
+        List<PhieuMuaHang> entities = phieuMuaHangRepository.findByKeyword(normalized);
 
         return entities.stream().map(entity -> buildResponse(entity, loadDetails(entity.getSoPhieuMua()))).toList();
     }
@@ -87,15 +85,15 @@ public class PhieuMuaHangServiceImpl implements PhieuMuaHangService {
     public PhieuMuaHangResponse create(PhieuMuaHangRequest request) {
         String maNhaCungCap = request.getMaNhaCungCap().trim();
         NhaCungCap nhaCungCap = nhaCungCapRepository.findById(maNhaCungCap)
-            .orElseThrow(() -> new BusinessException("Ma nha cung cap khong ton tai"));
+            .orElseThrow(() -> new BusinessException("Mã nhà cung cấp không tồn tại"));
 
         if (request.getItems() == null || request.getItems().isEmpty()) {
-            throw new BusinessException("Danh sach san pham mua khong duoc de trong");
+            throw new BusinessException("Danh sách sản phẩm mua không được để trống");
         }
 
         String soPhieuMua = normalizeVoucherCode(request.getSoPhieuMua());
         if (phieuMuaHangRepository.existsById(soPhieuMua)) {
-            throw new BusinessException("So phieu mua da ton tai");
+            throw new BusinessException("Số phiếu mua đã tồn tại");
         }
 
         List<ChiTietPhieuMua> detailsToSave = new ArrayList<>();
@@ -108,16 +106,16 @@ public class PhieuMuaHangServiceImpl implements PhieuMuaHangService {
             String maDonViTinh = item.getMaDonViTinh().trim();
 
             if (!seenProducts.add(maSanPham)) {
-                throw new BusinessException("San pham bi trung trong cung mot phieu mua: " + maSanPham);
+                throw new BusinessException("Sản phẩm bị trùng trong cùng một phiếu mua: " + maSanPham);
             }
 
             SanPham sanPham = sanPhamRepository.findById(maSanPham)
-                .orElseThrow(() -> new BusinessException("Ma san pham khong ton tai: " + maSanPham));
+                .orElseThrow(() -> new BusinessException("Mã sản phẩm không tồn tại: " + maSanPham));
             DonViTinh donViTinh = donViTinhRepository.findById(maDonViTinh)
-                .orElseThrow(() -> new BusinessException("Ma don vi tinh khong ton tai: " + maDonViTinh));
+                .orElseThrow(() -> new BusinessException("Mã đơn vị tính không tồn tại: " + maDonViTinh));
 
             Integer soLuongMua = item.getSoLuongMua();
-            BigDecimal donGia = normalizeMoney(item.getDonGia(), "Don gia mua phai >= 0");
+            BigDecimal donGia = normalizeMoney(item.getDonGia(), "Đơn giá mua phải >= 0");
             BigDecimal thanhTien = donGia
                 .multiply(BigDecimal.valueOf(soLuongMua.longValue()))
                 .setScale(2, RoundingMode.HALF_UP);
@@ -132,7 +130,7 @@ public class PhieuMuaHangServiceImpl implements PhieuMuaHangService {
             detailsToSave.add(detail);
 
             LoaiSanPham loaiSanPham = loaiSanPhamRepository.findById(sanPham.getMaLoaiSanPham())
-                .orElseThrow(() -> new BusinessException("Loai san pham khong ton tai cho san pham: " + maSanPham));
+                .orElseThrow(() -> new BusinessException("Loại sản phẩm không tồn tại cho sản phẩm: " + maSanPham));
 
             int tonKhoHienTai = sanPham.getTonKho() == null ? 0 : sanPham.getTonKho();
             sanPham.setTonKho(tonKhoHienTai + soLuongMua);
@@ -158,7 +156,7 @@ public class PhieuMuaHangServiceImpl implements PhieuMuaHangService {
 
     private PhieuMuaHang findByIdOrThrow(String soPhieuMua) {
         return phieuMuaHangRepository.findById(soPhieuMua)
-            .orElseThrow(() -> new ResourceNotFoundException("Khong tim thay phieu mua hang: " + soPhieuMua));
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phiếu mua hàng: " + soPhieuMua));
     }
 
     private String normalizeVoucherCode(String requestedCode) {

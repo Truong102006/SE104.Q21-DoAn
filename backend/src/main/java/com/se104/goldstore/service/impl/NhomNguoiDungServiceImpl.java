@@ -46,7 +46,7 @@ public class NhomNguoiDungServiceImpl implements NhomNguoiDungService {
     public NhomNguoiDungResponse create(NhomNguoiDungRequest request) {
         String tenNhom = request.getTenNhom().trim();
         if (nhomNguoiDungRepository.existsByTenNhomIgnoreCase(tenNhom)) {
-            throw new BusinessException("Ten nhom da ton tai");
+            throw new BusinessException("Tên nhóm đã tồn tại");
         }
 
         String maNhom = request.getMaNhom();
@@ -59,7 +59,7 @@ public class NhomNguoiDungServiceImpl implements NhomNguoiDungService {
         }
 
         if (nhomNguoiDungRepository.existsById(maNhom)) {
-            throw new BusinessException("Ma nhom da ton tai");
+            throw new BusinessException("Mã nhóm đã tồn tại");
         }
 
         NhomNguoiDung entity = new NhomNguoiDung();
@@ -76,7 +76,7 @@ public class NhomNguoiDungServiceImpl implements NhomNguoiDungService {
 
         String tenNhom = request.getTenNhom().trim();
         if (nhomNguoiDungRepository.existsByTenNhomIgnoreCaseAndMaNhomNot(tenNhom, maNhom)) {
-            throw new BusinessException("Ten nhom da ton tai");
+            throw new BusinessException("Tên nhóm đã tồn tại");
         }
 
         entity.setTenNhom(tenNhom);
@@ -91,13 +91,13 @@ public class NhomNguoiDungServiceImpl implements NhomNguoiDungService {
         try {
             nhomNguoiDungRepository.delete(entity);
         } catch (DataIntegrityViolationException ex) {
-            throw new BusinessException("Khong the xoa nhom nguoi dung da co du lieu lien quan");
+            throw new BusinessException("Không thể xóa nhóm người dùng đã có dữ liệu liên quan");
         }
     }
 
     private NhomNguoiDung findByIdOrThrow(String maNhom) {
         return nhomNguoiDungRepository.findById(maNhom)
-            .orElseThrow(() -> new ResourceNotFoundException("Khong tim thay nhom nguoi dung: " + maNhom));
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy nhóm người dùng: " + maNhom));
     }
 
     private NhomNguoiDungResponse toResponse(NhomNguoiDung entity) {
