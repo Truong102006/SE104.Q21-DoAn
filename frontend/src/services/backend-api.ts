@@ -176,6 +176,15 @@ export const backendApi = {
           size: params.size ?? 20,
         },
       }),
+    drillDown: (params: { type: string; id: string; month: number; year: number }) =>
+      apiRequest<any[]>("/api/search/drill-down", {
+        query: {
+          type: params.type,
+          id: params.id,
+          month: params.month,
+          year: params.year,
+        },
+      }),
   },
 
   reports: {

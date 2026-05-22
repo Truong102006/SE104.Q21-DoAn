@@ -17,6 +17,7 @@ import {
 import { Gem, Eye, EyeOff, Loader2 } from "lucide-react";
 import { useTranslation } from "@/i18n/i18n-context";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -75,8 +76,9 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-dvh relative">
-      {/* Premium top-right Language Switcher */}
-      <div className="absolute top-4 right-4 z-50 animate-fade-in" style={{ animationDelay: "150ms" }}>
+      {/* Premium top-right Language Switcher & Theme Toggle */}
+      <div className="absolute top-4 right-4 z-50 flex items-center gap-2 animate-fade-in" style={{ animationDelay: "150ms" }}>
+        <ThemeToggle />
         <LanguageSwitcher />
       </div>
 
