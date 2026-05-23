@@ -29,7 +29,9 @@ import {
   Settings,
   ChevronDown,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  Search,
+  X
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -47,7 +49,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
-import type { SaleResponse, ServiceTicketResponse } from "@/types/backend";
+import type { SaleResponse, ServiceTicketResponse, PurchaseResponse } from "@/types/backend";
 import { useTranslation } from "@/i18n/i18n-context";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
@@ -81,6 +83,29 @@ function formatServiceStatus(status: string, t: any): string {
   const s = status.toLowerCase();
   if (s.includes("hoàn thành") || s.includes("hoan thanh")) return t("serviceLookup.completed") || "Hoàn thành";
   return t("serviceLookup.incomplete") || "Chưa hoàn thành";
+}
+
+function formatDateTime(dateStr: string | undefined | null): string {
+  if (!dateStr) return "";
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    const day = String(d.getDate()).padStart(2, "0");
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const year = d.getFullYear();
+    
+    // Check if it has time part
+    const hasTime = dateStr.includes(":") || dateStr.includes("T");
+    if (!hasTime) {
+      return `${day}/${month}/${year}`;
+    }
+    
+    const hours = String(d.getHours()).padStart(2, "0");
+    const minutes = String(d.getMinutes()).padStart(2, "0");
+    return `${day}/${month}/${year} ${hours}:${minutes}`;
+  } catch {
+    return dateStr;
+  }
 }
 
 function DashboardSkeleton() {
@@ -134,6 +159,10 @@ export default function DashboardPage() {
 
   const [salesList, setSalesList] = useState<SaleResponse[]>([]);
   const [servicesList, setServicesList] = useState<ServiceTicketResponse[]>([]);
+  const [purchasesList, setPurchasesList] = useState<PurchaseResponse[]>([]);
+  const [isOpenAllActivities, setIsOpenAllActivities] = useState(false);
+  const [activitySearchQuery, setActivitySearchQuery] = useState("");
+  const [activityTypeFilter, setActivityTypeFilter] = useState<"all" | "sale" | "service" | "purchase" | "system">("all");
 
   // Gold Price Ticker State
   const [goldPrices, setGoldPrices] = useState<GoldPrice[]>([
@@ -200,10 +229,11 @@ export default function DashboardPage() {
       setLoading(true);
       setError(null);
       try {
-        const [productsPage, sales, serviceTickets] = await Promise.all([
+        const [productsPage, sales, serviceTickets, purchases] = await Promise.all([
           backendApi.products.list({ page: 0, size: 100 }),
           backendApi.sales.list(),
           backendApi.serviceTickets.list(),
+          backendApi.purchases.list(),
         ]);
 
         if (!mounted) return;
@@ -211,6 +241,7 @@ export default function DashboardPage() {
         const products = productsPage.content;
         setSalesList(sales);
         setServicesList(serviceTickets);
+        setPurchasesList(purchases);
         setProductCount(products.length);
         setTotalStock(products.reduce((sum, item) => sum + Number(item.tonKho ?? 0), 0));
         setCurrentMonthRevenue(calcCurrentMonthRevenue(sales));
@@ -387,70 +418,116 @@ export default function DashboardPage() {
   };
 
   // Recent activity list
-  const activities = useMemo(() => {
+  const allActivities = useMemo(() => {
     const list: Array<{
-      type: "sale" | "service" | "system";
+      type: "sale" | "service" | "purchase" | "system";
       id: string;
       title: string;
       desc: string;
       time: string;
+      rawDate: string;
       tagColor: string;
       label: string;
     }> = [];
 
     // Map real sales to timeline
-    salesList.slice(0, 3).forEach((s, idx) => {
+    salesList.forEach((s) => {
       list.push({
         type: "sale",
         id: s.soPhieuBan,
-        title: `${t("common.retailInvoice")} #${s.soPhieuBan}`,
-        desc: `${t("common.customer")}: ${s.khachHang?.tenKhachHang || t("common.guest")} • ${t("common.total")}: ${formatCurrency(s.tongTien)}`,
-        time: t("common.minutesAgo").replace("{n}", String(idx * 15 + 8)),
+        title: `${t("common.retailInvoice") || "Lập hóa đơn bán lẻ"} #${s.soPhieuBan}`,
+        desc: `${t("common.customer") || "Khách hàng"}: ${s.khachHang?.tenKhachHang || t("common.guest") || "Khách vãng lai"} • ${t("common.total") || "Tổng tiền"}: ${formatCurrency(s.tongTien)}`,
+        time: formatDateTime(s.ngayLapPhieuBan),
+        rawDate: s.ngayLapPhieuBan,
         tagColor: "bg-amber-500/10 text-amber-600 border-amber-500/20",
-        label: t("common.sale"),
+        label: t("common.sale") || "Bán hàng",
       });
     });
 
     // Map real service orders to timeline
-    servicesList.slice(0, 2).forEach((s, idx) => {
+    servicesList.forEach((s) => {
       list.push({
         type: "service",
         id: s.soPhieuDichVu,
-        title: `${t("common.serviceOrder")} #${s.soPhieuDichVu}`,
-        desc: `${t("common.customer")}: ${s.khachHang?.tenKhachHang || t("common.guest")} • ${t("common.status")}: ${formatServiceStatus(s.tinhTrangDichVu, t)}`,
-        time: t("common.minutesAgo").replace("{n}", String(idx * 25 + 22)),
+        title: `${t("common.serviceOrder") || "Nhận gia công"} #${s.soPhieuDichVu}`,
+        desc: `${t("common.customer") || "Khách hàng"}: ${s.khachHang?.tenKhachHang || t("common.guest") || "Khách vãng lai"} • ${t("common.total") || "Tổng tiền"}: ${formatCurrency(s.tongTien)} • ${t("common.status") || "Trạng thái"}: ${formatServiceStatus(s.tinhTrangDichVu, t)}`,
+        time: formatDateTime(s.ngayLapPhieuDichVu),
+        rawDate: s.ngayLapPhieuDichVu,
         tagColor: "bg-primary/10 text-primary border-primary/20",
-        label: t("common.service"),
+        label: t("common.service") || "Dịch vụ",
       });
     });
 
-    // Fallbacks to guarantee rich timeline
-    if (list.length < 5) {
+    // Map real purchase orders to timeline
+    purchasesList.forEach((p) => {
+      list.push({
+        type: "purchase",
+        id: p.soPhieuMua,
+        title: `${t("purchaseOrders.justCreated") || "Phiếu mua hàng"} #${p.soPhieuMua}`,
+        desc: `${t("common.supplier") || "Nhà cung cấp"}: ${p.nhaCungCap?.tenNhaCungCap || t("common.unknown") || "Không xác định"} • ${t("common.total") || "Tổng tiền"}: ${formatCurrency(p.tongTien)}`,
+        time: formatDateTime(p.ngayLapPhieuMua),
+        rawDate: p.ngayLapPhieuMua,
+        tagColor: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
+        label: t("nav.purchaseOrders") || "Nhập mua",
+      });
+    });
+
+    // Sort combined activities by rawDate in descending order (newest first)
+    const sorted = list.sort((a, b) => {
+      const timeA = new Date(a.rawDate).getTime();
+      const timeB = new Date(b.rawDate).getTime();
+      return timeB - timeA;
+    });
+
+    // Fallbacks to guarantee rich timeline if there are not enough real activities
+    if (sorted.length < 5) {
       const systemLogs = [
         {
           type: "system" as const,
           id: "SYS-01",
-          title: t("common.autoGoldSync"),
-          desc: t("common.autoGoldSyncDesc"),
-          time: t("common.hoursAgo").replace("{n}", "2"),
-          tagColor: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
-          label: t("common.system"),
+          title: t("common.autoGoldSync") || "Đồng bộ giá vàng tự động",
+          desc: t("common.autoGoldSyncDesc") || "Đã đồng bộ giá thế giới qua cổng Kitco lúc 08:30 sáng.",
+          time: t("common.hoursAgo").replace("{n}", "2") || "2 giờ trước",
+          rawDate: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+          tagColor: "bg-blue-500/10 text-blue-600 border-blue-500/20",
+          label: t("common.system") || "Hệ thống",
         },
         {
           type: "system" as const,
           id: "SYS-02",
-          title: t("common.inventoryCheck"),
-          desc: t("common.inventoryCheckDesc"),
-          time: t("common.yesterday"),
+          title: t("common.inventoryCheck") || "Kiểm tra kho hệ thống",
+          desc: t("common.inventoryCheckDesc") || "Hệ thống tự động kiểm kho chi nhánh, ghi nhận 100% tệp dữ liệu khớp.",
+          time: t("common.yesterday") || "Hôm qua",
+          rawDate: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
           tagColor: "bg-blue-500/10 text-blue-600 border-blue-500/20",
-          label: t("common.system"),
+          label: t("common.system") || "Hệ thống",
         },
       ];
-      systemLogs.forEach((log) => list.push(log));
+      systemLogs.forEach((log) => sorted.push(log));
     }
 
-    return list.slice(0, 5);
-  }, [salesList, servicesList]);
+    return sorted;
+  }, [salesList, servicesList, purchasesList, t]);
+
+  const activities = useMemo(() => {
+    return allActivities.slice(0, 5);
+  }, [allActivities]);
+
+  const filteredAllActivities = useMemo(() => {
+    return allActivities.filter((act) => {
+      if (activityTypeFilter !== "all" && act.type !== activityTypeFilter) {
+        return false;
+      }
+      const query = activitySearchQuery.trim().toLowerCase();
+      if (!query) return true;
+      return (
+        act.id.toLowerCase().includes(query) ||
+        act.title.toLowerCase().includes(query) ||
+        act.desc.toLowerCase().includes(query) ||
+        act.label.toLowerCase().includes(query)
+      );
+    });
+  }, [allActivities, activitySearchQuery, activityTypeFilter]);
 
   const summaryMetrics = useMemo(
     () => [
@@ -755,12 +832,22 @@ export default function DashboardPage() {
           <div className="grid gap-4 lg:grid-cols-12">
             {/* Recent Transactions & Operations Timeline */}
             <Card className="col-span-12 lg:col-span-8 shadow-xs border-border/70">
-              <CardHeader className="pb-3 border-b bg-muted/10">
-                <CardTitle className="text-base font-bold flex items-center gap-2">
-                  <Activity className="h-4 w-4 text-amber-500" />
-                  {t("dashboard.activityLog")}
-                </CardTitle>
-                <p className="text-xs text-muted-foreground">{t("dashboard.activityDesc")}</p>
+              <CardHeader className="pb-3 border-b bg-muted/10 flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="text-base font-bold flex items-center gap-2">
+                    <Activity className="h-4 w-4 text-amber-500" />
+                    {t("dashboard.activityLog")}
+                  </CardTitle>
+                  <p className="text-xs text-muted-foreground">{t("dashboard.activityDesc")}</p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs font-bold text-amber-600 hover:text-amber-700 hover:bg-amber-500/10 cursor-pointer h-8 px-3"
+                  onClick={() => setIsOpenAllActivities(true)}
+                >
+                  Xem tất cả
+                </Button>
               </CardHeader>
               <CardContent className="pt-4 pb-2">
                 {activities.length === 0 ? (
@@ -921,6 +1008,159 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+
+      {/* View All Activities Premium Dialog */}
+      <AnimatePresence>
+        {isOpenAllActivities && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsOpenAllActivities(false)}
+              className="absolute inset-0 bg-background/80 backdrop-blur-md"
+            />
+
+            {/* Modal Box */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              transition={{ duration: 0.25, ease: "easeOut" }}
+              className="relative z-10 w-full max-w-3xl overflow-hidden rounded-2xl border border-border/80 bg-card/95 shadow-2xl glass-card flex flex-col max-h-[85vh]"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between border-b border-border/60 bg-muted/20 px-6 py-4.5">
+                <div className="flex items-center gap-2.5">
+                  <div className="rounded-lg bg-amber-500/10 p-2 border border-amber-500/25">
+                    <Activity className="h-5 w-5 text-amber-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-foreground">
+                      {t("dashboard.activityLog") || "Nhật ký hoạt động & vận hành"}
+                    </h3>
+                    <p className="text-xs text-muted-foreground">
+                      {t("dashboard.activityDesc") || "Các chứng từ giao dịch phát sinh gần đây của nhân viên."}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsOpenAllActivities(false)}
+                  className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer transition-colors border"
+                >
+                  <X className="h-4.5 w-4.5" />
+                </button>
+              </div>
+
+              {/* Toolbar: Search and Tabs */}
+              <div className="border-b border-border/60 p-4 bg-muted/5 flex flex-col sm:flex-row gap-3 items-center justify-between">
+                {/* Tabs */}
+                <div className="flex flex-wrap gap-1 bg-muted/40 p-1 rounded-xl border w-full sm:w-auto">
+                  {(["all", "sale", "service", "purchase", "system"] as const).map((type) => {
+                    const label = 
+                      type === "all" ? "Tất cả" :
+                      type === "sale" ? t("common.sale") || "Bán lẻ" :
+                      type === "service" ? t("common.service") || "Dịch vụ" :
+                      type === "purchase" ? t("nav.purchaseOrders") || "Mua vào" : "Hệ thống";
+                    
+                    const count = allActivities.filter(a => type === "all" ? true : a.type === type).length;
+                    const isActive = activityTypeFilter === type;
+
+                    return (
+                      <button
+                        key={type}
+                        onClick={() => setActivityTypeFilter(type)}
+                        className={`px-3 py-1.5 text-xs font-bold rounded-lg cursor-pointer transition-all ${
+                          isActive 
+                            ? "bg-amber-500 text-white shadow-sm" 
+                            : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                        }`}
+                      >
+                        {label} <span className={`text-[10px] ml-1 opacity-70 ${isActive ? "text-white" : "text-muted-foreground"}`}>({count})</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Search Bar */}
+                <div className="relative w-full sm:w-64">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <input
+                    type="text"
+                    placeholder="Tìm mã phiếu, khách hàng..."
+                    value={activitySearchQuery}
+                    onChange={(e) => setActivitySearchQuery(e.target.value)}
+                    className="w-full pl-9 pr-4 py-1.5 text-xs rounded-xl border bg-background/50 focus:outline-none focus:ring-2 focus:ring-amber-500/25 focus:border-amber-500/50"
+                  />
+                  {activitySearchQuery && (
+                    <button
+                      onClick={() => setActivitySearchQuery("")}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Scrollable List */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-4 max-h-[50vh]">
+                {filteredAllActivities.length === 0 ? (
+                  <div className="py-12 text-center text-sm text-muted-foreground flex flex-col items-center justify-center gap-2">
+                    <Activity className="h-8 w-8 opacity-25 text-amber-500" />
+                    <p className="font-semibold">Không tìm thấy hoạt động nào</p>
+                    <p className="text-xs">Thử nhập từ khóa khác hoặc chuyển danh mục bộ lọc.</p>
+                  </div>
+                ) : (
+                  <div className="relative border-l border-border/60 pl-5 ml-2.5 space-y-6">
+                    {filteredAllActivities.map((act) => (
+                      <div key={act.id} className="relative group">
+                        {/* Bullet marker */}
+                        <span className="absolute -left-[26px] top-1.5 flex h-3 w-3 items-center justify-center rounded-full bg-background border border-border group-hover:border-amber-500/50 transition-colors">
+                          <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                        </span>
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                          <div className="space-y-0.5 min-w-0">
+                            <span className="block text-xs font-bold text-foreground leading-tight">
+                              {act.title}
+                            </span>
+                            <span className="block text-xs text-muted-foreground leading-relaxed">
+                              {act.desc}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className={`rounded px-1.5 py-0.5 text-[9px] font-bold uppercase border ${act.tagColor}`}>
+                              {act.label}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground flex items-center gap-1 font-medium">
+                              <Clock className="h-3 w-3" />
+                              {act.time}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="border-t border-border/60 bg-muted/20 px-6 py-3.5 flex items-center justify-between text-xs text-muted-foreground">
+                <span>Hiển thị {filteredAllActivities.length} trên tổng số {allActivities.length} hoạt động</span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setIsOpenAllActivities(false)}
+                  className="cursor-pointer text-xs font-semibold rounded-lg hover:bg-muted border h-8 px-4"
+                >
+                  Đóng
+                </Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

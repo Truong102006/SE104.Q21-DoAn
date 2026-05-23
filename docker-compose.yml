@@ -35,9 +35,9 @@ services:
     env_file:
       - .env
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-gold_store}
-      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-gold_store}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-gold_store}
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
 
 volumes:
   postgres-data:
