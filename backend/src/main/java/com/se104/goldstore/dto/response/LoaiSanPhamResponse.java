@@ -7,6 +7,7 @@ public class LoaiSanPhamResponse {
     private String maLoaiSanPham;
     private String tenLoaiSanPham;
     private BigDecimal tiLeLoiNhuan;
+    private Boolean isActive;
 
     public String getMaLoaiSanPham() {
         return maLoaiSanPham;
@@ -30,5 +31,13 @@ public class LoaiSanPhamResponse {
 
     public void setTiLeLoiNhuan(BigDecimal tiLeLoiNhuan) {
         this.tiLeLoiNhuan = tiLeLoiNhuan;
+    }
+
+    public Boolean getIsActive() {
+        return isActive;
+    }
+
+    public void setIsActive(Boolean isActive) {
+        this.isActive = isActive;
     }
 }

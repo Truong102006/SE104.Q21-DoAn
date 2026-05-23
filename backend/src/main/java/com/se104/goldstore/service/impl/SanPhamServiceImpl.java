@@ -116,7 +116,7 @@ public class SanPhamServiceImpl implements SanPhamService {
         }
 
         if (sanPhamRepository.existsById(maSanPham)) {
-            throw new BusinessException("Ma san pham da ton tai");
+            throw new BusinessException("Mã sản phẩm đã tồn tại");
         }
 
         SanPham entity = new SanPham();
@@ -127,6 +127,7 @@ public class SanPhamServiceImpl implements SanPhamService {
         entity.setDonGiaMua(normalizePrice(request.getDonGiaMua()));
         entity.setDonGiaBan(calculateSellingPrice(entity.getDonGiaMua(), loaiSanPham.getTiLeLoiNhuan()));
         entity.setTonKho(0);
+        entity.setIsActive(request.getIsActive() != null ? request.getIsActive() : true);
 
         return toResponse(sanPhamRepository.save(entity));
     }
@@ -147,6 +148,9 @@ public class SanPhamServiceImpl implements SanPhamService {
         entity.setMaDonViTinh(maDonViTinh);
         entity.setDonGiaMua(normalizePrice(request.getDonGiaMua()));
         entity.setDonGiaBan(calculateSellingPrice(entity.getDonGiaMua(), loaiSanPham.getTiLeLoiNhuan()));
+        if (request.getIsActive() != null) {
+            entity.setIsActive(request.getIsActive());
+        }
 
         return toResponse(sanPhamRepository.save(entity));
     }
@@ -156,28 +160,28 @@ public class SanPhamServiceImpl implements SanPhamService {
     public void delete(String maSanPham) {
         SanPham entity = findByIdOrThrow(maSanPham);
         if (hasRelatedTransactionsOrReports(maSanPham)) {
-            throw new BusinessException("Khong the xoa san pham da phat sinh phieu mua/ban hoac bao cao");
+            throw new BusinessException("Không thể xóa sản phẩm đã có giao dịch hoặc báo cáo liên quan");
         }
         try {
             sanPhamRepository.delete(entity);
         } catch (DataIntegrityViolationException ex) {
-            throw new BusinessException("Khong the xoa san pham da co du lieu lien quan");
+            throw new BusinessException("Không thể xóa sản phẩm đã có dữ liệu liên quan");
         }
     }
 
     private SanPham findByIdOrThrow(String maSanPham) {
         return sanPhamRepository.findById(maSanPham)
-            .orElseThrow(() -> new ResourceNotFoundException("Khong tim thay san pham: " + maSanPham));
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sản phẩm: " + maSanPham));
     }
 
     private LoaiSanPham findLoaiSanPhamOrThrow(String maLoaiSanPham) {
         return loaiSanPhamRepository.findById(maLoaiSanPham)
-            .orElseThrow(() -> new BusinessException("Ma loai san pham khong ton tai"));
+            .orElseThrow(() -> new BusinessException("Mã loại sản phẩm không tồn tại"));
     }
 
     private DonViTinh findDonViTinhOrThrow(String maDonViTinh) {
         return donViTinhRepository.findById(maDonViTinh)
-            .orElseThrow(() -> new BusinessException("Ma don vi tinh khong ton tai"));
+            .orElseThrow(() -> new BusinessException("Mã đơn vị tính không tồn tại"));
     }
 
     private void validateUnitCompatibility(String currentProductId, String maLoaiSanPham, DonViTinh selectedDonViTinh) {
@@ -197,22 +201,22 @@ public class SanPhamServiceImpl implements SanPhamService {
         String selectedCategory = normalizeNullable(selectedDonViTinh.getLoaiDonVi());
 
         if (referenceCategory != null && selectedCategory != null && !referenceCategory.equalsIgnoreCase(selectedCategory)) {
-            throw new BusinessException("Don vi tinh khong phu hop voi loai san pham nay");
+            throw new BusinessException("Đơn vị tính không phù hợp với loại sản phẩm này");
         }
     }
 
     private void validateTonKhoOnCreate(Integer tonKhoRequest) {
         if (tonKhoRequest != null && tonKhoRequest != 0) {
-            throw new BusinessException("Ton kho ban dau phai mac dinh la 0 va chi cap nhat qua phieu mua/ban");
+            throw new BusinessException("Tồn kho ban đầu phải mặc định là 0 và chỉ cập nhật qua phiếu mua/bán");
         }
     }
 
     private void validateTonKhoOnUpdate(Integer currentTonKho, Integer tonKhoRequest) {
         if (currentTonKho != null && currentTonKho < 0) {
-            throw new BusinessException("Ton kho khong hop le");
+            throw new BusinessException("Tồn kho không hợp lệ");
         }
         if (tonKhoRequest != null && !tonKhoRequest.equals(currentTonKho)) {
-            throw new BusinessException("Ton kho chi duoc cap nhat qua phieu mua/ban");
+            throw new BusinessException("Tồn kho chỉ được cập nhật qua phiếu mua/bán");
         }
     }
 
@@ -239,10 +243,10 @@ public class SanPhamServiceImpl implements SanPhamService {
 
     private BigDecimal normalizePrice(BigDecimal value) {
         if (value == null) {
-            throw new BusinessException("Don gia mua khong duoc de trong");
+            throw new BusinessException("Đơn giá mua không được để trống");
         }
         if (value.compareTo(BigDecimal.ZERO) < 0) {
-            throw new BusinessException("Don gia mua phai >= 0");
+            throw new BusinessException("Đơn giá mua phải >= 0");
         }
         return value.setScale(2, RoundingMode.HALF_UP);
     }
@@ -260,6 +264,7 @@ public class SanPhamServiceImpl implements SanPhamService {
         response.setDonGiaMua(entity.getDonGiaMua());
         response.setDonGiaBan(entity.getDonGiaBan());
         response.setTonKho(entity.getTonKho());
+        response.setIsActive(entity.getIsActive());
 
         if (entity.getLoaiSanPham() != null) {
             SanPhamResponse.LoaiSanPhamInfo loaiSanPhamInfo = new SanPhamResponse.LoaiSanPhamInfo();

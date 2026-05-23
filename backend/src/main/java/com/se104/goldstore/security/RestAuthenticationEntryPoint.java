@@ -31,7 +31,7 @@ public class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         ApiResponse<Object> body = ApiResponse.failure(
             "Unauthorized",
-            List.of(new ApiError("auth", "Ban chua dang nhap hoac token khong hop le"))
+            List.of(new ApiError("auth", "Bạn chưa đăng nhập hoặc phiên làm việc đã hết hạn"))
         );
         objectMapper.writeValue(response.getWriter(), body);
     }

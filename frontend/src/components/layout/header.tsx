@@ -10,6 +10,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Sidebar } from "./sidebar";
 import { useTranslation } from "@/i18n/i18n-context";
 import { LanguageSwitcher } from "../language-switcher";
+import { ThemeToggle } from "../theme-toggle";
 
 const PAGE_TITLES: Record<string, string> = {
   "/dashboard": "nav.dashboard",
@@ -83,6 +84,9 @@ export function Header() {
         </div>
 
         <div className="ml-auto flex items-center gap-3 text-sm">
+          {/* Theme Toggle */}
+          <ThemeToggle />
+
           {/* Responsive pill Language Switcher */}
           <LanguageSwitcher className="mr-1 shadow-sm" />
 

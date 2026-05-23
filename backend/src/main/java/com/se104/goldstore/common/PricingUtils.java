@@ -12,7 +12,7 @@ public final class PricingUtils {
 
     public static BigDecimal calculateSellingPrice(BigDecimal donGiaMua, BigDecimal tiLeLoiNhuan) {
         if (donGiaMua == null || tiLeLoiNhuan == null) {
-            throw new IllegalArgumentException("Don gia mua va ti le loi nhuan khong duoc null");
+            throw new IllegalArgumentException("Đơn giá mua và tỉ lệ lợi nhuận không được null");
         }
 
         BigDecimal profitAmount = donGiaMua

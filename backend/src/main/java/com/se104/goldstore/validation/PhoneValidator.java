@@ -18,7 +18,7 @@ public final class PhoneValidator {
 
     public static void validateOrThrow(String phone, String fieldName) {
         if (!isValid(phone)) {
-            throw new IllegalArgumentException(fieldName + " phai gom dung 10 chu so");
+            throw new IllegalArgumentException(fieldName + " phải gồm đúng 10 chữ số");
         }
     }
 }

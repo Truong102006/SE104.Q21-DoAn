@@ -15,6 +15,7 @@ public class LoaiDichVuRequest {
     @NotNull(message = "Don gia dich vu khong duoc de trong")
     @DecimalMin(value = "0", inclusive = true, message = "Don gia dich vu phai >= 0")
     private BigDecimal donGiaDichVu;
+    private Boolean isActive;
 
     public String getMaLoaiDichVu() {
         return maLoaiDichVu;
@@ -38,5 +39,13 @@ public class LoaiDichVuRequest {
 
     public void setDonGiaDichVu(BigDecimal donGiaDichVu) {
         this.donGiaDichVu = donGiaDichVu;
+    }
+
+    public Boolean getIsActive() {
+        return isActive;
+    }
+
+    public void setIsActive(Boolean isActive) {
+        this.isActive = isActive;
     }
 }

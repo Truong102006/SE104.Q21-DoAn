@@ -53,7 +53,7 @@ public class LoaiSanPhamServiceImpl implements LoaiSanPhamService {
     @Transactional
     public LoaiSanPhamResponse create(LoaiSanPhamRequest request) {
         if (loaiSanPhamRepository.existsByTenLoaiSanPhamIgnoreCase(request.getTenLoaiSanPham().trim())) {
-            throw new BusinessException("Ten loai san pham da ton tai");
+            throw new BusinessException("Tên loại sản phẩm đã tồn tại");
         }
 
         String maLoaiSanPham = request.getMaLoaiSanPham();
@@ -66,13 +66,14 @@ public class LoaiSanPhamServiceImpl implements LoaiSanPhamService {
         }
 
         if (loaiSanPhamRepository.existsById(maLoaiSanPham)) {
-            throw new BusinessException("Ma loai san pham da ton tai");
+            throw new BusinessException("Mã loại sản phẩm đã tồn tại");
         }
 
         LoaiSanPham entity = new LoaiSanPham();
         entity.setMaLoaiSanPham(maLoaiSanPham);
         entity.setTenLoaiSanPham(request.getTenLoaiSanPham().trim());
         entity.setTiLeLoiNhuan(request.getTiLeLoiNhuan());
+        entity.setIsActive(request.getIsActive() != null ? request.getIsActive() : true);
 
         return toResponse(loaiSanPhamRepository.save(entity));
     }
@@ -84,11 +85,14 @@ public class LoaiSanPhamServiceImpl implements LoaiSanPhamService {
         boolean changedProfitRate = entity.getTiLeLoiNhuan().compareTo(request.getTiLeLoiNhuan()) != 0;
 
         if (loaiSanPhamRepository.existsByTenLoaiSanPhamIgnoreCaseAndMaLoaiSanPhamNot(request.getTenLoaiSanPham().trim(), maLoaiSanPham)) {
-            throw new BusinessException("Ten loai san pham da ton tai");
+            throw new BusinessException("Tên loại sản phẩm đã tồn tại");
         }
 
         entity.setTenLoaiSanPham(request.getTenLoaiSanPham().trim());
         entity.setTiLeLoiNhuan(request.getTiLeLoiNhuan());
+        if (request.getIsActive() != null) {
+            entity.setIsActive(request.getIsActive());
+        }
         LoaiSanPham saved = loaiSanPhamRepository.save(entity);
 
         if (changedProfitRate) {
@@ -109,18 +113,18 @@ public class LoaiSanPhamServiceImpl implements LoaiSanPhamService {
     public void delete(String maLoaiSanPham) {
         LoaiSanPham entity = findByIdOrThrow(maLoaiSanPham);
         if (sanPhamRepository.existsByMaLoaiSanPham(maLoaiSanPham)) {
-            throw new BusinessException("Khong the xoa loai san pham da co san pham thuoc loai nay");
+            throw new BusinessException("Không thể xóa loại sản phẩm đã có sản phẩm liên quan");
         }
         try {
             loaiSanPhamRepository.delete(entity);
         } catch (DataIntegrityViolationException ex) {
-            throw new BusinessException("Khong the xoa loai san pham da co du lieu lien quan");
+            throw new BusinessException("Không thể xóa loại sản phẩm đã có dữ liệu liên quan");
         }
     }
 
     private LoaiSanPham findByIdOrThrow(String maLoaiSanPham) {
         return loaiSanPhamRepository.findById(maLoaiSanPham)
-            .orElseThrow(() -> new ResourceNotFoundException("Khong tim thay loai san pham: " + maLoaiSanPham));
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy loại sản phẩm: " + maLoaiSanPham));
     }
 
     private LoaiSanPhamResponse toResponse(LoaiSanPham entity) {
@@ -128,6 +132,7 @@ public class LoaiSanPhamServiceImpl implements LoaiSanPhamService {
         response.setMaLoaiSanPham(entity.getMaLoaiSanPham());
         response.setTenLoaiSanPham(entity.getTenLoaiSanPham());
         response.setTiLeLoiNhuan(entity.getTiLeLoiNhuan());
+        response.setIsActive(entity.getIsActive());
         return response;
     }
 }

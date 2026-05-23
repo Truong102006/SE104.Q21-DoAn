@@ -5,7 +5,9 @@ import { useSearchParams } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ConfirmDialog, EmptyState, PageHeader, TableToolbar } from "@/components/dashboard/management";
+import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
@@ -20,10 +22,50 @@ import type {
 import { getApiErrorMessage } from "@/lib/api-error";
 import { formatCurrency, formatNumber, toPositiveInt, toPositiveNumber } from "@/lib/format";
 import { useAuthStore } from "@/stores/auth-store";
+import { useToastStore } from "@/stores/toast-store";
 import { useTranslation } from "@/i18n/i18n-context";
-import { Pencil, Plus, Search, Trash2, X } from "lucide-react";
+import { Pencil, Plus, Search, Trash2, X, Loader2 } from "lucide-react";
+import { useForm, SubmitHandler } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import { useRef } from "react";
+
+const productSchema = z.object({
+  tenSanPham: z.string().min(1, "Tên sản phẩm là bắt buộc"),
+  maLoaiSanPham: z.string().min(1, "Loại sản phẩm là bắt buộc"),
+  maDonViTinh: z.string().min(1, "Đơn vị tính là bắt buộc"),
+  donGiaMua: z.number().min(0, "Đơn giá mua phải >= 0"),
+  tonKho: z.number().int().min(0, "Tồn kho phải >= 0"),
+  isActive: z.boolean(),
+});
+
+type ProductFormValues = z.infer<typeof productSchema>;
 
 const PAGE_SIZE = 20;
+
+function ProductSkeleton() {
+  return (
+    <div className="space-y-4">
+      <div className="rounded-md border border-border/80 overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              {[1, 2, 3, 4, 5, 6, 7].map(i => <TableHead key={i}><Skeleton className="h-4 w-20" /></TableHead>)}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {[1, 2, 3, 4, 5].map(i => (
+              <TableRow key={i}>
+                {[1, 2, 3, 4, 5, 6, 7].map(j => <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>)}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
+}
 
 const EMPTY_FORM: ProductRequest = {
   tenSanPham: "",
@@ -39,7 +81,6 @@ export default function ProductsPage() {
   const { t } = useTranslation();
 
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [items, setItems] = useState<ProductResponse[]>([]);
   const [totalPages, setTotalPages] = useState(1);
   const [page, setPage] = useState(0);
@@ -52,13 +93,30 @@ export default function ProductsPage() {
 
   const [openForm, setOpenForm] = useState(false);
   const [editing, setEditing] = useState<ProductResponse | null>(null);
-  const [form, setForm] = useState<ProductRequest>(EMPTY_FORM);
-  const [donGiaMuaText, setDonGiaMuaText] = useState("0");
-  const [tonKhoText, setTonKhoText] = useState("0");
-  const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const [deleting, setDeleting] = useState<ProductResponse | null>(null);
+
+  const parentRef = useRef<HTMLDivElement>(null);
+
+  const form = useForm<ProductFormValues>({
+    resolver: zodResolver(productSchema),
+    defaultValues: {
+      tenSanPham: "",
+      maLoaiSanPham: "",
+      maDonViTinh: "",
+      donGiaMua: 0,
+      tonKho: 0,
+      isActive: true,
+    },
+  });
+
+  const virtualizer = useVirtualizer({
+    count: items.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 64, // Approximate row height
+    overscan: 5,
+  });
 
   async function loadOptions() {
     try {
@@ -66,13 +124,12 @@ export default function ProductsPage() {
       setProductTypes(types);
       setUnits(unitList);
     } catch (err) {
-      setError(getApiErrorMessage(err, t("products.loadOptionsError")));
+      useToastStore.getState().error(getApiErrorMessage(err, t("products.loadOptionsError")));
     }
   }
 
   async function loadData(nextPage = page, nextKeyword = keyword, nextType = selectedType) {
     setLoading(true);
-    setError(null);
     try {
       const data = await backendApi.products.list({
         keyword: nextKeyword.trim() || undefined,
@@ -84,7 +141,7 @@ export default function ProductsPage() {
       setTotalPages(Math.max(1, data.totalPages || 1));
       setPage(data.number ?? nextPage);
     } catch (err) {
-      setError(getApiErrorMessage(err, t("products.loadError")));
+      useToastStore.getState().error(getApiErrorMessage(err, t("products.loadError")));
     } finally {
       setLoading(false);
     }
@@ -92,73 +149,76 @@ export default function ProductsPage() {
 
   useEffect(() => {
     loadOptions();
-    loadData(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Debounced reactive search when keyword or product type changes
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      loadData(0, keyword, selectedType);
+    }, 300);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [keyword, selectedType]);
+
   function openCreate() {
     setEditing(null);
-    setForm({
-      ...EMPTY_FORM,
+    form.reset({
+      tenSanPham: "",
       maLoaiSanPham: productTypes[0]?.maLoaiSanPham ?? "",
-      maDonViTinh: units[0]?.maDonViTinh ?? "",
+      maDonViTinh: units.filter(u => u.isActive !== false)[0]?.maDonViTinh ?? units[0]?.maDonViTinh ?? "",
+      donGiaMua: 0,
+      tonKho: 0,
+      isActive: true,
     });
-    setDonGiaMuaText("0");
-    setTonKhoText("0");
-    setFormError(null);
     setOpenForm(true);
   }
 
   function openEdit(item: ProductResponse) {
     setEditing(item);
-    setForm({
-      maSanPham: item.maSanPham,
+    form.reset({
       tenSanPham: item.tenSanPham,
       maLoaiSanPham: item.maLoaiSanPham,
       maDonViTinh: item.maDonViTinh,
       donGiaMua: Number(item.donGiaMua ?? 0),
       tonKho: Number(item.tonKho ?? 0),
+      isActive: item.isActive !== false,
     });
-    setDonGiaMuaText(String(item.donGiaMua ?? 0));
-    setTonKhoText(String(item.tonKho ?? 0));
-    setFormError(null);
     setOpenForm(true);
   }
 
-  function updateField<K extends keyof ProductRequest>(key: K, value: ProductRequest[K]) {
-    setForm((prev) => ({ ...prev, [key]: value }));
-    setFormError(null);
+  async function toggleActive(item: ProductResponse) {
+    try {
+      const newActive = item.isActive === false ? true : false;
+      const payload: ProductRequest = {
+        maSanPham: item.maSanPham,
+        tenSanPham: item.tenSanPham,
+        maLoaiSanPham: item.maLoaiSanPham,
+        maDonViTinh: item.maDonViTinh,
+        donGiaMua: Number(item.donGiaMua ?? 0),
+        tonKho: Number(item.tonKho ?? 0),
+        isActive: newActive,
+      };
+
+      await backendApi.products.update(item.maSanPham, payload);
+      setItems((prev) =>
+        prev.map((p) => (p.maSanPham === item.maSanPham ? { ...p, isActive: newActive } : p))
+      );
+      useToastStore.getState().success(
+        newActive ? "Đã kích hoạt sản phẩm!" : "Đã ngưng kích hoạt sản phẩm!"
+      );
+    } catch (err) {
+      useToastStore.getState().error(getApiErrorMessage(err, "Không thể cập nhật trạng thái sản phẩm"));
+    }
   }
 
-  async function onSubmit(event: React.FormEvent) {
-    event.preventDefault();
-
-    if (!form.tenSanPham?.trim()) {
-      setFormError(t("products.nameRequired"));
-      return;
-    }
-
-    if (!form.maLoaiSanPham) {
-      setFormError(t("products.typeRequired"));
-      return;
-    }
-
-    if (!form.maDonViTinh) {
-      setFormError(t("products.unitRequired"));
-      return;
-    }
-
-    const donGiaMua = toPositiveNumber(donGiaMuaText);
-    const tonKho = toPositiveInt(tonKhoText);
-
+  const onSubmit: SubmitHandler<ProductFormValues> = async (data) => {
     setSubmitting(true);
-    setFormError(null);
     try {
       const payload: ProductRequest = {
-        ...form,
-        tenSanPham: form.tenSanPham.trim(),
-        donGiaMua,
-        tonKho,
+        ...data,
+        tenSanPham: data.tenSanPham.trim(),
+        maSanPham: editing?.maSanPham,
       };
 
       if (editing) {
@@ -167,14 +227,15 @@ export default function ProductsPage() {
         await backendApi.products.create(payload);
       }
 
+      useToastStore.getState().success(editing ? "Đã cập nhật sản phẩm!" : "Đã thêm sản phẩm mới!");
       setOpenForm(false);
       await loadData();
     } catch (err) {
-      setFormError(getApiErrorMessage(err, t("products.saveError")));
+      useToastStore.getState().error(getApiErrorMessage(err, t("products.saveError")));
     } finally {
       setSubmitting(false);
     }
-  }
+  };
 
   async function doDelete() {
     if (!deleting) {
@@ -186,7 +247,7 @@ export default function ProductsPage() {
       setDeleting(null);
       await loadData();
     } catch (err) {
-      setError(getApiErrorMessage(err, t("products.deleteError")));
+      useToastStore.getState().error(getApiErrorMessage(err, t("products.deleteError")));
       setDeleting(null);
     }
   }
@@ -199,8 +260,12 @@ export default function ProductsPage() {
         description={t("products.description")}
         badges={<Badge variant="outline">{t("common.page")} {page + 1}/{totalPages}</Badge>}
         actions={
-          <Button size="sm" onClick={openCreate}>
-            <Plus className="mr-1.5 h-3.5 w-3.5" />
+          <Button
+            size="default"
+            className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-extrabold hover:from-blue-500 hover:to-indigo-500 hover:shadow-blue-500/35 active:scale-95 shadow-lg shadow-blue-500/20 gap-2 h-11 px-6 rounded-xl cursor-pointer transition-all text-sm sm:text-base border-none"
+            onClick={openCreate}
+          >
+            <Plus className="h-5 w-5 stroke-[3]" />
             {t("common.add")}
           </Button>
         }
@@ -214,7 +279,26 @@ export default function ProductsPage() {
             <div className="grid gap-2 sm:grid-cols-3">
               <div className="relative sm:col-span-2">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder={t("common.searchPlaceholder")} className="pl-9" />
+                <Input
+                  value={keyword}
+                  onChange={(e) => setKeyword(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      loadData(0, keyword, selectedType);
+                    }
+                  }}
+                  placeholder={t("common.searchPlaceholder")}
+                  className="pl-9 pr-8"
+                />
+                {keyword && (
+                  <button
+                    type="button"
+                    onClick={() => setKeyword("")}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
               </div>
               <Select
                 value={selectedType || "all"}
@@ -246,53 +330,108 @@ export default function ProductsPage() {
           }
         />
         <CardContent className="px-0">
-          {error && <p className="px-4 pb-2 text-sm text-destructive">{error}</p>}
           {loading ? (
-            <p className="px-4 py-6 text-sm text-muted-foreground">{t("common.loading")}</p>
+            <div className="px-4 py-6">
+              <ProductSkeleton />
+            </div>
           ) : items.length === 0 ? (
             <div className="p-4">
               <EmptyState title={t("common.emptyTitle")} description={t("common.emptyFilterDesc")} />
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-12">{t("common.stt")}</TableHead>
-                  <TableHead>{t("products.productCode")}</TableHead>
-                  <TableHead>{t("products.name")}</TableHead>
-                  <TableHead>{t("products.productType")}</TableHead>
-                  <TableHead>{t("products.sellingPrice")}</TableHead>
-                  <TableHead>{t("products.stock")}</TableHead>
-                  <TableHead>{t("common.unit")}</TableHead>
-                  <TableHead className="text-right">{t("common.actions")}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {items.map((item, index) => (
-                  <TableRow key={item.maSanPham}>
-                    <TableCell className="font-semibold text-muted-foreground">{page * PAGE_SIZE + index + 1}</TableCell>
-                    <TableCell>{item.maSanPham}</TableCell>
-                    <TableCell>{item.tenSanPham}</TableCell>
-                    <TableCell>{item.loaiSanPham?.tenLoaiSanPham ?? item.maLoaiSanPham}</TableCell>
-                    <TableCell>{formatCurrency(item.donGiaBan)}</TableCell>
-                    <TableCell>{formatNumber(item.tonKho)}</TableCell>
-                    <TableCell>{item.donViTinh?.tenDonViTinh ?? item.maDonViTinh}</TableCell>
-                    <TableCell>
-                      <div className="flex justify-end gap-1">
-                        <Button variant="outline" size="icon-sm" onClick={() => openEdit(item)}>
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        {role === "ADMIN" && (
-                          <Button variant="destructive" size="icon-sm" onClick={() => setDeleting(item)}>
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <div
+                ref={parentRef}
+                className="max-h-[600px] overflow-auto app-scrollbar"
+                style={{
+                    contain: 'strict',
+                }}
+            >
+                <div
+                    style={{
+                        height: `${virtualizer.getTotalSize()}px`,
+                        width: '100%',
+                        position: 'relative',
+                    }}
+                >
+                    <Table>
+                        <TableHeader className="sticky top-0 z-10 bg-background shadow-sm">
+                            <TableRow>
+                            <TableHead className="w-16 pl-5">{t("common.stt")}</TableHead>
+                            <TableHead className="w-28">{t("products.productCode")}</TableHead>
+                            <TableHead className="w-60 min-w-[200px]">{t("products.name")}</TableHead>
+                            <TableHead className="w-40">{t("products.productType")}</TableHead>
+                            <TableHead className="w-36">{t("products.sellingPrice")}</TableHead>
+                            <TableHead className="w-28">{t("products.stock")}</TableHead>
+                            <TableHead className="w-32">{t("common.unit")}</TableHead>
+                            <TableHead className="w-64 pl-4">{t("common.status") || "Trạng thái"}</TableHead>
+                            <TableHead className="w-28 pr-5 text-right">{t("common.actions")}</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {virtualizer.getVirtualItems().map((virtualRow) => {
+                                const item = items[virtualRow.index];
+                                return (
+                                    <TableRow
+                                        key={item.maSanPham}
+                                        className={cn(
+                                            "absolute top-0 left-0 w-full hover:bg-muted/30 transition-colors",
+                                            item.isActive === false ? "opacity-60 bg-slate-50/40 dark:bg-slate-900/10" : ""
+                                        )}
+                                        style={{
+                                            height: `${virtualRow.size}px`,
+                                            transform: `translateY(${virtualRow.start}px)`,
+                                        }}
+                                    >
+                                        <TableCell className="font-semibold text-muted-foreground pl-5">{page * PAGE_SIZE + virtualRow.index + 1}</TableCell>
+                                        <TableCell>{item.maSanPham}</TableCell>
+                                        <TableCell className="font-semibold text-foreground truncate max-w-[240px]">{item.tenSanPham}</TableCell>
+                                        <TableCell>{item.loaiSanPham?.tenLoaiSanPham ?? item.maLoaiSanPham}</TableCell>
+                                        <TableCell>{formatCurrency(item.donGiaBan)}</TableCell>
+                                        <TableCell>{formatNumber(item.tonKho)}</TableCell>
+                                        <TableCell>{item.donViTinh?.tenDonViTinh ?? item.maDonViTinh}</TableCell>
+                                        <TableCell className="pl-4">
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                type="button"
+                                                onClick={() => toggleActive(item)}
+                                                className={cn(
+                                                    "relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2",
+                                                    item.isActive !== false ? "bg-emerald-500" : "bg-slate-300 dark:bg-slate-700"
+                                                )}
+                                                aria-label="Toggle active status"
+                                                >
+                                                <span
+                                                    aria-hidden="true"
+                                                    className={cn(
+                                                        "pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out",
+                                                        item.isActive !== false ? "translate-x-5" : "translate-x-0"
+                                                    )}
+                                                />
+                                                </button>
+                                                <span className={`text-[10px] font-bold uppercase tracking-tight select-none ${item.isActive !== false ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"}`}>
+                                                {item.isActive !== false ? "Active" : "Paused"}
+                                                </span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="pr-5">
+                                            <div className="flex justify-end gap-1.5">
+                                                <Button variant="outline" size="icon-xs" className="h-7 w-7" onClick={() => openEdit(item)}>
+                                                <Pencil className="h-3 w-3" />
+                                                </Button>
+                                                {role === "ADMIN" && (
+                                                <Button variant="destructive" size="icon-xs" className="h-7 w-7" onClick={() => setDeleting(item)}>
+                                                    <Trash2 className="h-3 w-3" />
+                                                </Button>
+                                                )}
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                );
+                            })}
+                        </TableBody>
+                    </Table>
+                </div>
+            </div>
           )}
         </CardContent>
       </Card>
@@ -306,50 +445,98 @@ export default function ProductsPage() {
                 <X className="h-4 w-4" />
               </Button>
             </div>
-            <form className="space-y-3 px-5 py-4" onSubmit={onSubmit}>
-              <div className="grid gap-3 sm:grid-cols-2">
+            <form className="space-y-4 px-5 py-4" onSubmit={form.handleSubmit(onSubmit)}>
+              <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2 sm:col-span-2">
-                  <Label>{t("products.name")}</Label>
-                  <Input value={form.tenSanPham} onChange={(e) => updateField("tenSanPham", e.target.value)} />
+                  <Label>
+                    {t("products.name")} <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    {...form.register("tenSanPham")}
+                    className={form.formState.errors.tenSanPham ? "border-destructive ring-destructive/20" : ""}
+                  />
+                  {form.formState.errors.tenSanPham && (
+                    <p className="text-[10px] font-bold text-destructive uppercase tracking-tight">{String(form.formState.errors.tenSanPham.message)}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
-                  <Label>{t("products.productType")}</Label>
+                  <Label>
+                    {t("products.productType")} <span className="text-destructive">*</span>
+                  </Label>
                   <Select
-                    value={form.maLoaiSanPham || ""}
-                    onValueChange={(value) => updateField("maLoaiSanPham", value)}
-                    options={productTypes.map((type) => ({ value: type.maLoaiSanPham, label: type.tenLoaiSanPham }))}
+                    value={form.watch("maLoaiSanPham")}
+                    onValueChange={(value) => form.setValue("maLoaiSanPham", value)}
+                    options={productTypes
+                      .filter((type) => type.isActive !== false || type.maLoaiSanPham === form.getValues("maLoaiSanPham"))
+                      .map((type) => ({ value: type.maLoaiSanPham, label: type.tenLoaiSanPham }))}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label>{t("common.unit")}</Label>
+                  <Label>
+                    {t("common.unit")} <span className="text-destructive">*</span>
+                  </Label>
                   <Select
-                    value={form.maDonViTinh || ""}
-                    onValueChange={(value) => updateField("maDonViTinh", value)}
-                    options={units.map((unit) => ({ value: unit.maDonViTinh, label: unit.tenDonViTinh }))}
+                    value={form.watch("maDonViTinh")}
+                    onValueChange={(value) => form.setValue("maDonViTinh", value)}
+                    options={units.filter((unit) => unit.isActive !== false || unit.maDonViTinh === form.getValues("maDonViTinh")).map((unit) => ({ value: unit.maDonViTinh, label: unit.tenDonViTinh }))}
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label>{t("products.purchasePrice")}</Label>
-                  <Input value={donGiaMuaText} onChange={(e) => setDonGiaMuaText(e.target.value)} />
+                  <Input
+                    type="number"
+                    {...form.register("donGiaMua", { valueAsNumber: true })}
+                    className={form.formState.errors.donGiaMua ? "border-destructive ring-destructive/20" : ""}
+                  />
+                   {form.formState.errors.donGiaMua && (
+                    <p className="text-[10px] font-bold text-destructive uppercase tracking-tight">{String(form.formState.errors.donGiaMua.message)}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
                   <Label>{t("products.initialStock")}</Label>
-                  <Input value={tonKhoText} onChange={(e) => setTonKhoText(e.target.value)} />
+                  <Input
+                    type="number"
+                    {...form.register("tonKho", { valueAsNumber: true })}
+                    className={form.formState.errors.tonKho ? "border-destructive ring-destructive/20" : ""}
+                  />
+                  {form.formState.errors.tonKho && (
+                    <p className="text-[10px] font-bold text-destructive uppercase tracking-tight">{String(form.formState.errors.tonKho.message)}</p>
+                  )}
+                </div>
+
+                <div className="flex items-center space-x-2 pt-2 sm:col-span-2">
+                  <input
+                    type="checkbox"
+                    id="isActive"
+                    {...form.register("isActive")}
+                    checked={form.watch("isActive")}
+                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                  />
+                  <Label htmlFor="isActive" className="cursor-pointer font-semibold text-slate-700 dark:text-slate-300">
+                    Kích hoạt hoạt động
+                  </Label>
                 </div>
               </div>
 
-              {formError && <p className="text-sm text-destructive">{formError}</p>}
-
-              <div className="flex justify-end gap-2 border-t pt-3">
-                <Button type="button" variant="outline" onClick={() => setOpenForm(false)}>
+              <div className="flex justify-end gap-2.5 border-t pt-4">
+                <Button type="button" variant="outline" onClick={() => setOpenForm(false)} className="px-6 rounded-xl font-bold">
                   {t("common.cancel")}
                 </Button>
-                <Button type="submit" disabled={submitting}>
-                  {submitting ? t("common.saving") : t("common.save")}
+                <Button
+                    type="submit"
+                    disabled={submitting}
+                    className="bg-gold-gradient text-gold-foreground font-extrabold px-8 rounded-xl shadow-md shadow-gold/20 border-none"
+                >
+                  {submitting ? (
+                    <div className="flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        {t("common.saving")}
+                    </div>
+                  ) : t("common.save")}
                 </Button>
               </div>
             </form>

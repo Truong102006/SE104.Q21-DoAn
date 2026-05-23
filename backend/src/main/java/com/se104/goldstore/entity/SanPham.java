@@ -35,6 +35,9 @@ public class SanPham {
     @Column(name = "ton_kho", nullable = false)
     private Integer tonKho;
 
+    @Column(name = "is_active", nullable = false)
+    private Boolean isActive = true;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "ma_loai_san_pham", referencedColumnName = "ma_loai_san_pham", insertable = false, updatable = false)
     private LoaiSanPham loaiSanPham;
@@ -113,5 +116,13 @@ public class SanPham {
 
     public void setDonViTinh(DonViTinh donViTinh) {
         this.donViTinh = donViTinh;
+    }
+
+    public Boolean getIsActive() {
+        return isActive;
+    }
+
+    public void setIsActive(Boolean isActive) {
+        this.isActive = isActive;
     }
 }

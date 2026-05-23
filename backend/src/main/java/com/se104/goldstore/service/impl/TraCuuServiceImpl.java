@@ -7,6 +7,8 @@ import com.se104.goldstore.entity.ChiTietPhieuDichVu;
 import com.se104.goldstore.entity.PhieuDichVu;
 import com.se104.goldstore.entity.SanPham;
 import com.se104.goldstore.exception.BusinessException;
+import com.se104.goldstore.repository.ChiTietPhieuBanRepository;
+import com.se104.goldstore.repository.ChiTietPhieuMuaRepository;
 import com.se104.goldstore.repository.ChiTietPhieuDichVuRepository;
 import com.se104.goldstore.repository.PhieuDichVuRepository;
 import com.se104.goldstore.repository.SanPhamRepository;
@@ -14,6 +16,7 @@ import com.se104.goldstore.service.TraCuuService;
 import java.text.Normalizer;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -33,15 +36,21 @@ public class TraCuuServiceImpl implements TraCuuService {
     private final SanPhamRepository sanPhamRepository;
     private final PhieuDichVuRepository phieuDichVuRepository;
     private final ChiTietPhieuDichVuRepository chiTietPhieuDichVuRepository;
+    private final ChiTietPhieuBanRepository chiTietPhieuBanRepository;
+    private final ChiTietPhieuMuaRepository chiTietPhieuMuaRepository;
 
     public TraCuuServiceImpl(
         SanPhamRepository sanPhamRepository,
         PhieuDichVuRepository phieuDichVuRepository,
-        ChiTietPhieuDichVuRepository chiTietPhieuDichVuRepository
+        ChiTietPhieuDichVuRepository chiTietPhieuDichVuRepository,
+        ChiTietPhieuBanRepository chiTietPhieuBanRepository,
+        ChiTietPhieuMuaRepository chiTietPhieuMuaRepository
     ) {
         this.sanPhamRepository = sanPhamRepository;
         this.phieuDichVuRepository = phieuDichVuRepository;
         this.chiTietPhieuDichVuRepository = chiTietPhieuDichVuRepository;
+        this.chiTietPhieuBanRepository = chiTietPhieuBanRepository;
+        this.chiTietPhieuMuaRepository = chiTietPhieuMuaRepository;
     }
 
     @Override
@@ -76,9 +85,45 @@ public class TraCuuServiceImpl implements TraCuuService {
             .map(this::toServiceTicketResponse);
     }
 
+    @Override
+    public Object getDrillDown(String type, String id, Integer month, Integer year) {
+        if ("product-sale".equalsIgnoreCase(type)) {
+            return chiTietPhieuBanRepository.findDrillDown(id, month, year).stream().map(ct -> Map.of(
+                "soPhieu", ct.getSoPhieuBan(),
+                "ngayLap", ct.getPhieuBanHang().getNgayLapPhieuBan(),
+                "khachHang", ct.getPhieuBanHang().getKhachHang() != null ? ct.getPhieuBanHang().getKhachHang().getTenKhachHang() : "Khách lẻ",
+                "soLuong", ct.getSoLuong(),
+                "donGia", ct.getDonGia(),
+                "thanhTien", ct.getThanhTien()
+            )).toList();
+        }
+        if ("product-purchase".equalsIgnoreCase(type)) {
+            return chiTietPhieuMuaRepository.findDrillDown(id, month, year).stream().map(ct -> Map.of(
+                "soPhieu", ct.getSoPhieuMua(),
+                "ngayLap", ct.getPhieuMuaHang().getNgayLapPhieuMua(),
+                "nhaCungCap", ct.getPhieuMuaHang().getNhaCungCap() != null ? ct.getPhieuMuaHang().getNhaCungCap().getTenNhaCungCap() : "N/A",
+                "soLuong", ct.getSoLuongMua(),
+                "donGia", ct.getDonGia(),
+                "thanhTien", ct.getThanhTien()
+            )).toList();
+        }
+        if ("service".equalsIgnoreCase(type)) {
+            return chiTietPhieuDichVuRepository.findDrillDown(id, month, year).stream().map(ct -> Map.of(
+                "soPhieu", ct.getSoPhieuDichVu(),
+                "ngayLap", ct.getPhieuDichVu().getNgayLapPhieuDichVu(),
+                "khachHang", ct.getPhieuDichVu().getKhachHang() != null ? ct.getPhieuDichVu().getKhachHang().getTenKhachHang() : "Khách lẻ",
+                "soLuong", ct.getSoLuongDichVu(),
+                "donGia", ct.getDonGiaDuocTinh(),
+                "thanhTien", ct.getThanhTien(),
+                "tinhTrang", ct.getTinhTrang()
+            )).toList();
+        }
+        throw new BusinessException("Loại drill-down không hợp lệ: " + type);
+    }
+
     private void validateDateRange(LocalDate fromDate, LocalDate toDate) {
         if (fromDate != null && toDate != null && fromDate.isAfter(toDate)) {
-            throw new BusinessException("Khoang ngay lap khong hop le: fromDate phai <= toDate");
+            throw new BusinessException("Khoảng ngày lập không hợp lệ: từ ngày phải nhỏ hơn hoặc bằng đến ngày");
         }
     }
 
@@ -93,7 +138,7 @@ public class TraCuuServiceImpl implements TraCuuService {
         if ("hoan thanh".equals(normalized)) {
             return TINH_TRANG_HOAN_THANH;
         }
-        throw new BusinessException("Tinh trang dich vu khong hop le. Ho tro: Hoan thanh, Chua hoan thanh");
+        throw new BusinessException("Tình trạng dịch vụ không hợp lệ. Hỗ trợ: Hoàn thành, Chưa hoàn thành");
     }
 
     private String removeAccent(String input) {

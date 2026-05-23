@@ -46,7 +46,7 @@ public class ThamSoServiceImpl implements ThamSoService {
     public ThamSoResponse create(ThamSoRequest request) {
         String tenThamSo = request.getTenThamSo().trim();
         if (thamSoRepository.existsByTenThamSoIgnoreCase(tenThamSo)) {
-            throw new BusinessException("Ten tham so da ton tai");
+            throw new BusinessException("Tên tham số đã tồn tại");
         }
 
         String maThamSo = request.getMaThamSo();
@@ -59,7 +59,7 @@ public class ThamSoServiceImpl implements ThamSoService {
         }
 
         if (thamSoRepository.existsById(maThamSo)) {
-            throw new BusinessException("Ma tham so da ton tai");
+            throw new BusinessException("Mã tham số đã tồn tại");
         }
 
         ThamSo entity = new ThamSo();
@@ -77,7 +77,7 @@ public class ThamSoServiceImpl implements ThamSoService {
 
         String tenThamSo = request.getTenThamSo().trim();
         if (thamSoRepository.existsByTenThamSoIgnoreCaseAndMaThamSoNot(tenThamSo, maThamSo)) {
-            throw new BusinessException("Ten tham so da ton tai");
+            throw new BusinessException("Tên tham số đã tồn tại");
         }
 
         entity.setTenThamSo(tenThamSo);
@@ -93,13 +93,13 @@ public class ThamSoServiceImpl implements ThamSoService {
         try {
             thamSoRepository.delete(entity);
         } catch (DataIntegrityViolationException ex) {
-            throw new BusinessException("Khong the xoa tham so da co du lieu lien quan");
+            throw new BusinessException("Không thể xóa tham số đã có dữ liệu liên quan");
         }
     }
 
     private ThamSo findByIdOrThrow(String maThamSo) {
         return thamSoRepository.findById(maThamSo)
-            .orElseThrow(() -> new ResourceNotFoundException("Khong tim thay tham so: " + maThamSo));
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy tham số: " + maThamSo));
     }
 
     private ThamSoResponse toResponse(ThamSo entity) {

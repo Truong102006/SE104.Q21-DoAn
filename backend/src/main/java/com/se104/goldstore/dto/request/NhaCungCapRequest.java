@@ -16,6 +16,7 @@ public class NhaCungCapRequest {
 
     private String diaChi;
     private String ghiChu;
+    private Boolean isActive;
 
     public String getMaNhaCungCap() {
         return maNhaCungCap;
@@ -55,5 +56,13 @@ public class NhaCungCapRequest {
 
     public void setGhiChu(String ghiChu) {
         this.ghiChu = ghiChu;
+    }
+
+    public Boolean getIsActive() {
+        return isActive;
+    }
+
+    public void setIsActive(Boolean isActive) {
+        this.isActive = isActive;
     }
 }

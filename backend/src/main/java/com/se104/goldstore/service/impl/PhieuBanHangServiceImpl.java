@@ -64,9 +64,7 @@ public class PhieuBanHangServiceImpl implements PhieuBanHangService {
     @Override
     public List<PhieuBanHangResponse> getAll(String keyword) {
         String normalized = SearchUtils.normalizeKeyword(keyword);
-        List<PhieuBanHang> entities = normalized.isEmpty()
-            ? phieuBanHangRepository.findAll()
-            : phieuBanHangRepository.findBySoPhieuBanContainingIgnoreCase(normalized);
+        List<PhieuBanHang> entities = phieuBanHangRepository.findByKeyword(normalized);
 
         return entities.stream().map(entity -> buildResponse(entity, loadDetails(entity.getSoPhieuBan()))).toList();
     }
@@ -82,15 +80,15 @@ public class PhieuBanHangServiceImpl implements PhieuBanHangService {
     public PhieuBanHangResponse create(PhieuBanHangRequest request) {
         String maKhachHang = request.getMaKhachHang().trim();
         KhachHang khachHang = khachHangRepository.findById(maKhachHang)
-            .orElseThrow(() -> new BusinessException("Ma khach hang khong ton tai"));
+            .orElseThrow(() -> new BusinessException("Mã khách hàng không tồn tại"));
 
         if (request.getItems() == null || request.getItems().isEmpty()) {
-            throw new BusinessException("Danh sach san pham ban khong duoc de trong");
+            throw new BusinessException("Danh sách sản phẩm bán không được để trống");
         }
 
         String soPhieuBan = normalizeVoucherCode(request.getSoPhieuBan());
         if (phieuBanHangRepository.existsById(soPhieuBan)) {
-            throw new BusinessException("So phieu ban da ton tai");
+            throw new BusinessException("Số phiếu bán đã tồn tại");
         }
 
         List<ChiTietPhieuBan> detailsToSave = new ArrayList<>();
@@ -103,23 +101,23 @@ public class PhieuBanHangServiceImpl implements PhieuBanHangService {
             Integer soLuong = item.getSoLuong();
 
             if (!seenProducts.add(maSanPham)) {
-                throw new BusinessException("San pham bi trung trong cung mot phieu ban: " + maSanPham);
+                throw new BusinessException("Sản phẩm bị trùng trong cùng một phiếu bán: " + maSanPham);
             }
 
             SanPham sanPham = sanPhamRepository.findByIdForUpdate(maSanPham)
-                .orElseThrow(() -> new BusinessException("Ma san pham khong ton tai: " + maSanPham));
+                .orElseThrow(() -> new BusinessException("Mã sản phẩm không tồn tại: " + maSanPham));
 
             int tonKhoHienTai = sanPham.getTonKho() == null ? 0 : sanPham.getTonKho();
             if (soLuong > tonKhoHienTai) {
-                throw new BusinessException("So luong ban vuot ton kho hien tai cho san pham: " + maSanPham);
+                throw new BusinessException("Số lượng bán vượt tồn kho hiện tại cho sản phẩm: " + maSanPham);
             }
 
             if (sanPham.getDonGiaMua() == null || sanPham.getDonGiaMua().compareTo(BigDecimal.ZERO) < 0) {
-                throw new BusinessException("Don gia mua cua san pham khong hop le: " + maSanPham);
+                throw new BusinessException("Đơn giá mua của sản phẩm không hợp lệ: " + maSanPham);
             }
 
             LoaiSanPham loaiSanPham = loaiSanPhamRepository.findById(sanPham.getMaLoaiSanPham())
-                .orElseThrow(() -> new BusinessException("Loai san pham khong ton tai cho san pham: " + maSanPham));
+                .orElseThrow(() -> new BusinessException("Loại sản phẩm không tồn tại cho sản phẩm: " + maSanPham));
 
             BigDecimal donGiaBan = PricingUtils.calculateSellingPrice(sanPham.getDonGiaMua(), loaiSanPham.getTiLeLoiNhuan());
             BigDecimal thanhTien = donGiaBan
@@ -156,7 +154,7 @@ public class PhieuBanHangServiceImpl implements PhieuBanHangService {
 
     private PhieuBanHang findByIdOrThrow(String soPhieuBan) {
         return phieuBanHangRepository.findById(soPhieuBan)
-            .orElseThrow(() -> new ResourceNotFoundException("Khong tim thay phieu ban hang: " + soPhieuBan));
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phiếu bán hàng: " + soPhieuBan));
     }
 
     private String normalizeVoucherCode(String requestedCode) {

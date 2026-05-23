@@ -53,4 +53,16 @@ public class TraCuuController {
             )
         );
     }
+
+    @GetMapping("/drill-down")
+    public ResponseEntity<ApiResponse<Object>> getDrillDown(
+        @RequestParam(name = "type") String type,
+        @RequestParam(name = "id") String id,
+        @RequestParam(name = "month") Integer month,
+        @RequestParam(name = "year") Integer year
+    ) {
+        return ResponseEntity.ok(
+            ApiResponse.success("Lay thong tin chi tiet thanh cong", traCuuService.getDrillDown(type, id, month, year))
+        );
+    }
 }

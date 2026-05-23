@@ -16,6 +16,23 @@ public interface ChiTietPhieuMuaRepository extends JpaRepository<ChiTietPhieuMua
 
     @Query(
         """
+        SELECT ct
+        FROM ChiTietPhieuMua ct
+        JOIN FETCH ct.phieuMuaHang pmh
+        LEFT JOIN FETCH pmh.nhaCungCap
+        WHERE ct.maSanPham = :maSanPham
+          AND MONTH(pmh.ngayLapPhieuMua) = :thang
+          AND YEAR(pmh.ngayLapPhieuMua) = :nam
+        """
+    )
+    List<ChiTietPhieuMua> findDrillDown(
+        @Param("maSanPham") String maSanPham,
+        @Param("thang") Integer thang,
+        @Param("nam") Integer nam
+    );
+
+    @Query(
+        """
         SELECT ct.maSanPham, COALESCE(SUM(ct.soLuongMua), 0)
         FROM ChiTietPhieuMua ct
         JOIN ct.phieuMuaHang pmh

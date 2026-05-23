@@ -26,6 +26,9 @@ public class NguoiDung {
     @JoinColumn(name = "ma_nhom", referencedColumnName = "ma_nhom", insertable = false, updatable = false)
     private NhomNguoiDung nhomNguoiDung;
 
+    @Column(name = "is_active", nullable = false)
+    private Boolean isActive = true;
+
     public String getTenDangNhap() {
         return tenDangNhap;
     }
@@ -56,5 +59,13 @@ public class NguoiDung {
 
     public void setNhomNguoiDung(NhomNguoiDung nhomNguoiDung) {
         this.nhomNguoiDung = nhomNguoiDung;
+    }
+
+    public Boolean getIsActive() {
+        return isActive;
+    }
+
+    public void setIsActive(Boolean isActive) {
+        this.isActive = isActive;
     }
 }

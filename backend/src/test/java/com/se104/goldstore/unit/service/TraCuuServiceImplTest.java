@@ -24,6 +24,8 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
+import com.se104.goldstore.repository.ChiTietPhieuBanRepository;
+import com.se104.goldstore.repository.ChiTietPhieuMuaRepository;
 import org.mockito.MockitoAnnotations;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -40,12 +42,24 @@ class TraCuuServiceImplTest {
     @Mock
     private ChiTietPhieuDichVuRepository chiTietPhieuDichVuRepository;
 
+    @Mock
+    private ChiTietPhieuBanRepository chiTietPhieuBanRepository;
+
+    @Mock
+    private ChiTietPhieuMuaRepository chiTietPhieuMuaRepository;
+
     private TraCuuServiceImpl service;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        service = new TraCuuServiceImpl(sanPhamRepository, phieuDichVuRepository, chiTietPhieuDichVuRepository);
+        service = new TraCuuServiceImpl(
+            sanPhamRepository,
+            phieuDichVuRepository,
+            chiTietPhieuDichVuRepository,
+            chiTietPhieuBanRepository,
+            chiTietPhieuMuaRepository
+        );
     }
 
     @Test

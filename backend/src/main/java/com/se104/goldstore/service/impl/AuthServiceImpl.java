@@ -54,8 +54,10 @@ public class AuthServiceImpl implements AuthService {
             response.setRoles(principal.getRoles());
             response.setPermissions(principal.getPermissions());
             return response;
+        } catch (org.springframework.security.authentication.DisabledException ex) {
+            throw new UnauthorizedException("Tài khoản đã bị vô hiệu hóa");
         } catch (AuthenticationException ex) {
-            throw new UnauthorizedException("Ten dang nhap hoac mat khau khong dung");
+            throw new UnauthorizedException("Tên đăng nhập hoặc mật khẩu không đúng");
         }
     }
 
@@ -80,7 +82,7 @@ public class AuthServiceImpl implements AuthService {
 
     private String normalizeUsername(String username) {
         if (username == null || username.isBlank()) {
-            throw new UnauthorizedException("Ten dang nhap khong hop le");
+            throw new UnauthorizedException("Tên đăng nhập không hợp lệ");
         }
         return username.trim();
     }
@@ -93,6 +95,6 @@ public class AuthServiceImpl implements AuthService {
         if (userDetails instanceof AuthUserPrincipal principal) {
             return principal;
         }
-        throw new UnauthorizedException("Khong the xac dinh thong tin nguoi dung");
+        throw new UnauthorizedException("Không thể xác định thông tin người dùng");
     }
 }

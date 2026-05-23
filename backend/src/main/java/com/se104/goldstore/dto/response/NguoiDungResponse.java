@@ -4,6 +4,7 @@ public class NguoiDungResponse {
 
     private String tenDangNhap;
     private String maNhom;
+    private Boolean isActive;
 
     public String getTenDangNhap() {
         return tenDangNhap;
@@ -19,5 +20,13 @@ public class NguoiDungResponse {
 
     public void setMaNhom(String maNhom) {
         this.maNhom = maNhom;
+    }
+
+    public Boolean getIsActive() {
+        return isActive;
+    }
+
+    public void setIsActive(Boolean isActive) {
+        this.isActive = isActive;
     }
 }

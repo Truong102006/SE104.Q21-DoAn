@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState, PageHeader } from "@/components/dashboard/management";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { MonthPickerInput } from "@/components/ui/date-picker";
 import { backendApi } from "@/services/backend-api";
 import type {
   InventoryReportResponse,
@@ -17,42 +17,207 @@ import type {
 import { getApiErrorMessage } from "@/lib/api-error";
 import { currentMonthYear, formatCurrency, formatNumber } from "@/lib/format";
 import { useTranslation } from "@/i18n/i18n-context";
-import { 
-  BarChart3, 
-  Boxes, 
-  Sparkles, 
-  TrendingUp, 
-  Calendar, 
-  AlertTriangle, 
-  Package, 
-  Wrench, 
-  PieChart, 
+import {
+  BarChart3,
+  Boxes,
+  Sparkles,
+  Calendar,
+  Wrench,
+  PieChart,
   Info,
   Layers,
   ArrowDownToLine,
-  ArrowUpFromLine
+  ArrowUpFromLine,
+  FileDown
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer,
+  PieChart as RechartsPieChart,
+  Pie,
+  Cell,
+} from "recharts";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 function safeRatio(value: number): string {
   return `${Number(value ?? 0).toFixed(2)}%`;
 }
 
-// Visual Skeleton screen card loader
+// Professional & Clean Tooltip
+const ChartTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="rounded-lg border bg-background p-2 shadow-md text-xs">
+        <p className="font-bold border-b pb-1 mb-1">{label}</p>
+        <div className="flex items-center justify-between gap-4">
+          <span className="text-muted-foreground">Doanh thu:</span>
+          <span className="font-bold text-primary">{formatCurrency(payload[0].value)}</span>
+        </div>
+        {payload[0].payload.tiLe && (
+          <div className="flex items-center justify-between gap-4 mt-0.5">
+            <span className="text-muted-foreground">Tỷ lệ:</span>
+            <span className="font-medium">{safeRatio(payload[0].payload.tiLe)}</span>
+          </div>
+        )}
+      </div>
+    );
+  }
+  return null;
+};
+
+function exportToCsv(filename: string, rows: any[]) {
+  if (!rows || !rows.length) return;
+  const separator = ",";
+  const keys = Object.keys(rows[0]);
+  const csvContent =
+    keys.join(separator) +
+    "\n" +
+    rows
+      .map((row) => {
+        return keys
+          .map((k) => {
+            let cell = row[k] === null || row[k] === undefined ? "" : row[k];
+            cell = cell instanceof Date ? cell.toLocaleString() : cell.toString().replace(/"/g, '""');
+            if (cell.search(/("|,|\n)/g) >= 0) cell = `"${cell}"`;
+            return cell;
+          })
+          .join(separator);
+      })
+      .join("\n");
+
+  const blob = new Blob(["\ufeff" + csvContent], { type: "text/csv;charset=utf-8;" });
+  const link = document.createElement("a");
+  if (link.download !== undefined) {
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", filename);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+}
+
+interface DrillDownProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  type: string;
+  id: string;
+  name: string;
+  month: number;
+  year: number;
+}
+
+function DrillDownModal({ open, onOpenChange, type, id, name, month, year }: DrillDownProps) {
+  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (open && id) {
+      setLoading(true);
+      backendApi.search
+        .drillDown({ type, id, month, year })
+        .then(setData)
+        .finally(() => setLoading(false));
+    }
+  }, [open, type, id, month, year]);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col p-0 border-none shadow-2xl">
+        <DialogHeader className="p-6 pb-2">
+          <DialogTitle className="flex items-center gap-2 text-xl font-black">
+            <Layers className="h-5 w-5 text-emerald-600" />
+            Chi tiết giao dịch: <span className="text-emerald-700">{name}</span>
+          </DialogTitle>
+          <p className="text-sm text-muted-foreground font-medium">Kỳ báo cáo: Tháng {month}/{year}</p>
+        </DialogHeader>
+        <div className="flex-1 overflow-auto px-6 py-2">
+          <div className="rounded-xl border shadow-sm bg-card overflow-hidden">
+            {loading ? (
+              <div className="p-12 text-center text-muted-foreground animate-pulse font-bold">Đang truy xuất dữ liệu...</div>
+            ) : data.length === 0 ? (
+              <div className="p-12 text-center text-muted-foreground italic">Không có dữ liệu giao dịch trong khoảng thời gian này.</div>
+            ) : (
+              <Table>
+                <TableHeader className="bg-muted/50 sticky top-0 backdrop-blur-sm">
+                  <TableRow>
+                    <TableHead className="font-bold">Số Phiếu</TableHead>
+                    <TableHead className="font-bold">Ngày Lập</TableHead>
+                    <TableHead className="font-bold">{type.includes("purchase") ? "Nhà Cung Cấp" : "Khách Hàng"}</TableHead>
+                    <TableHead className="text-right font-bold">Số Lượng</TableHead>
+                    <TableHead className="text-right font-bold">Đơn Giá</TableHead>
+                    <TableHead className="text-right font-bold">Thành Tiền</TableHead>
+                    {type === "service" && <TableHead className="font-bold">Tình Trạng</TableHead>}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {data.map((item, idx) => (
+                    <TableRow key={idx} className="hover:bg-muted/30 transition-colors">
+                      <TableCell className="font-bold text-blue-600">{item.soPhieu}</TableCell>
+                      <TableCell className="text-muted-foreground text-xs">{item.ngayLap}</TableCell>
+                      <TableCell className="font-medium">{item.khachHang || item.nhaCungCap}</TableCell>
+                      <TableCell className="text-right font-bold">{formatNumber(item.soLuong)}</TableCell>
+                      <TableCell className="text-right text-xs text-muted-foreground">{formatCurrency(item.donGia)}</TableCell>
+                      <TableCell className="text-right font-black text-emerald-600">{formatCurrency(item.thanhTien)}</TableCell>
+                      {type === "service" && (
+                        <TableCell>
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "text-[9px] font-black uppercase border",
+                              item.tinhTrang === "Da giao"
+                                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                                : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
+                            )}
+                          >
+                            {item.tinhTrang === "Da giao" ? "Đã xong" : "Đang chờ"}
+                          </Badge>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </div>
+        </div>
+        <div className="p-6 flex justify-end gap-3 border-t bg-muted/20">
+          <Button
+            className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black shadow-lg shadow-emerald-600/20 rounded-xl px-6 h-11"
+            onClick={() => exportToCsv(`chi_tiet_${id}_${month}_${year}.csv`, data)}
+          >
+            <FileDown className="h-5 w-5" />
+            TẢI FILE EXCEL (CSV)
+          </Button>
+          <Button variant="outline" className="px-8 rounded-xl font-bold h-11" onClick={() => onOpenChange(false)}>Đóng</Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function SkeletonLoader() {
   return (
     <div className="space-y-4 animate-pulse p-4 rounded-xl border bg-card">
-      <div className="flex justify-between items-center pb-2 border-b">
-        <div className="h-4 w-1/3 bg-muted rounded" />
-        <div className="h-6 w-20 bg-muted rounded" />
-      </div>
+      <div className="h-4 w-1/3 bg-muted rounded" />
       <div className="grid grid-cols-3 gap-3">
-        <div className="h-16 bg-muted/65 rounded-lg" />
-        <div className="h-16 bg-muted/65 rounded-lg" />
-        <div className="h-16 bg-muted/65 rounded-lg" />
+        <div className="h-16 bg-muted/50 rounded-lg" />
+        <div className="h-16 bg-muted/50 rounded-lg" />
+        <div className="h-16 bg-muted/50 rounded-lg" />
       </div>
-      <div className="space-y-2.5 pt-2">
-        <div className="h-8 w-full bg-muted/50 rounded" />
+      <div className="space-y-2 pt-2">
         <div className="h-8 w-full bg-muted/30 rounded" />
         <div className="h-8 w-full bg-muted/30 rounded" />
       </div>
@@ -63,8 +228,8 @@ function SkeletonLoader() {
 export default function ReportsPage() {
   const { t } = useTranslation();
   const now = currentMonthYear();
-  const [month, setMonth] = useState(String(now.month));
-  const [year, setYear] = useState(String(now.year));
+  const [selectedMonth, setSelectedMonth] = useState(now.month);
+  const [selectedYear, setSelectedYear] = useState(now.year);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -73,655 +238,314 @@ export default function ReportsPage() {
   const [productRevenue, setProductRevenue] = useState<ProductRevenueReportResponse | null>(null);
   const [serviceRevenue, setServiceRevenue] = useState<ServiceRevenueReportResponse | null>(null);
 
-  // Hover states for SVG charts
-  const [hoveredBar, setHoveredBar] = useState<number | null>(null);
-  const [hoveredSegment, setHoveredSegment] = useState<number | null>(null);
+  const [drillDown, setDrillDown] = useState<{
+    open: boolean;
+    type: string;
+    id: string;
+    name: string;
+  }>({
+    open: false,
+    type: "",
+    id: "",
+    name: "",
+  });
 
-  function parseMonthYear() {
-    return {
-      m: Math.max(1, Math.min(12, Number.parseInt(month, 10) || now.month)),
-      y: Math.max(1, Number.parseInt(year, 10) || now.year),
+  useEffect(() => {
+    const loadAllReports = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const [inv, prod, serv] = await Promise.all([
+          backendApi.reports.inventoryGet(selectedMonth, selectedYear).catch(() => null),
+          backendApi.reports.revenueProductsGet(selectedMonth, selectedYear).catch(() => null),
+          backendApi.reports.revenueServicesGet(selectedMonth, selectedYear).catch(() => null),
+        ]);
+        setInventory(inv);
+        setProductRevenue(prod);
+        setServiceRevenue(serv);
+      } catch (err) {
+        setError(getApiErrorMessage(err, "Không thể nạp dữ liệu kỳ này"));
+      } finally {
+        setLoading(false);
+      }
     };
-  }
+    loadAllReports();
+  }, [selectedMonth, selectedYear]);
 
-  async function runReport(action: "inventory" | "product-revenue" | "service-revenue", mode: "generate" | "get") {
+  async function runGenerate(action: "inventory" | "product-revenue" | "service-revenue") {
     setLoading(true);
-    setError(null);
-    const { m, y } = parseMonthYear();
-
     try {
       if (action === "inventory") {
-        const data = mode === "generate" ? await backendApi.reports.inventoryGenerate(m, y) : await backendApi.reports.inventoryGet(m, y);
-        setInventory(data);
-      }
-
-      if (action === "product-revenue") {
-        const data =
-          mode === "generate"
-            ? await backendApi.reports.revenueProductsGenerate(m, y)
-            : await backendApi.reports.revenueProductsGet(m, y);
-        setProductRevenue(data);
-      }
-
-      if (action === "service-revenue") {
-        const data =
-          mode === "generate"
-            ? await backendApi.reports.revenueServicesGenerate(m, y)
-            : await backendApi.reports.revenueServicesGet(m, y);
-        setServiceRevenue(data);
+        setInventory(await backendApi.reports.inventoryGenerate(selectedMonth, selectedYear));
+      } else if (action === "product-revenue") {
+        setProductRevenue(await backendApi.reports.revenueProductsGenerate(selectedMonth, selectedYear));
+      } else if (action === "service-revenue") {
+        setServiceRevenue(await backendApi.reports.revenueServicesGenerate(selectedMonth, selectedYear));
       }
     } catch (err) {
-      setError(getApiErrorMessage(err, t("reports.reportError")));
+      setError(getApiErrorMessage(err, "Thao tác không thành công"));
     } finally {
       setLoading(false);
     }
   }
 
-  // Pre-calculate summary stats for reports
-  const inventorySummary = useMemo(() => {
-    if (!inventory) return null;
-    const totalOpening = inventory.chiTiet.reduce((sum, item) => sum + Number(item.tonDau ?? 0), 0);
-    const totalIn = inventory.chiTiet.reduce((sum, item) => sum + Number(item.soLuongMuaVao ?? 0), 0);
-    const totalOut = inventory.chiTiet.reduce((sum, item) => sum + Number(item.soLuongBanRa ?? 0), 0);
-    const totalClosing = inventory.chiTiet.reduce((sum, item) => sum + Number(item.tonCuoi ?? 0), 0);
-    const lowStockCount = inventory.chiTiet.filter((item) => Number(item.tonCuoi ?? 0) < 10).length;
-
-    return { totalOpening, totalIn, totalOut, totalClosing, lowStockCount };
-  }, [inventory]);
-
-  const productSummary = useMemo(() => {
-    if (!productRevenue) return null;
-    const totalSales = productRevenue.chiTiet.reduce((sum, item) => sum + Number(item.soLuongBan ?? 0), 0);
-    const topProduct = productRevenue.chiTiet.reduce(
-      (max, item) => (Number(item.doanhThu ?? 0) > Number(max.doanhThu ?? 0) ? item : max),
-      productRevenue.chiTiet[0]
-    );
-
-    return { totalSales, topProduct };
-  }, [productRevenue]);
-
-  const serviceSummary = useMemo(() => {
-    if (!serviceRevenue) return null;
-    const totalServices = serviceRevenue.chiTiet.length;
-    const topService = serviceRevenue.chiTiet.reduce(
-      (max, item) => (Number(item.doanhThu ?? 0) > Number(max.doanhThu ?? 0) ? item : max),
-      serviceRevenue.chiTiet[0]
-    );
-
-    return { totalServices, topService };
-  }, [serviceRevenue]);
-
-  // Color schemes for charts segments
-  const donutColors = ["#f59e0b", "#6366f1", "#10b981", "#3b82f6", "#ec4899", "#8b5cf6", "#14b8a6"];
-
-  // Custom SVG Donut calculations
-  const donutSegments = useMemo(() => {
-    if (!serviceRevenue) return [];
-    let cumulativePercent = 0;
-    const r = 50;
-    const circumference = 2 * Math.PI * r; // ~314.16
-
-    return serviceRevenue.chiTiet.map((item, idx) => {
-      const percentage = Number(item.tiLe ?? 0);
-      const strokeLength = (percentage / 100) * circumference;
-      const strokeOffset = circumference - (cumulativePercent / 100) * circumference;
-      cumulativePercent += percentage;
-
-      return {
-        ...item,
-        color: donutColors[idx % donutColors.length],
-        strokeDash: `${strokeLength} ${circumference - strokeLength}`,
-        strokeOffset,
-      };
-    });
-  }, [serviceRevenue]);
-
   return (
-    <div className="space-y-5">
+    <div className="max-w-7xl mx-auto space-y-6 pb-20">
       <PageHeader
-        eyebrow="BM10 - BM12 Operations Audit"
-        title={t("reports.title") || "Báo Biểu Vận Hành & Doanh Số"}
-        description={t("reports.description") || "Kiểm toán tồn kho sản phẩm, doanh số bán hàng trang sức và hiệu quả dịch vụ gia công."}
-        badges={
-          <div className="flex items-center gap-1 bg-amber-500/10 text-amber-600 border border-amber-500/20 rounded-full px-2 py-0.5 text-[10px] font-semibold">
-            <Sparkles className="h-3 w-3" />
-            ADMIN PRIVILEGE
+        title={t("reports.title") || "Báo Cáo & Kết Toán"}
+        description="Tổng hợp số liệu tồn kho, doanh số bán hàng và dịch vụ theo từng kỳ."
+        badges={<Badge variant="outline" className="font-bold border-primary/30 text-primary bg-primary/5">Phòng Kế Toán</Badge>}
+        actions={
+          <div className="flex gap-2">
+            <Button
+               className="bg-emerald-600 hover:bg-emerald-700 text-white font-black shadow-lg shadow-emerald-600/20 rounded-xl"
+               onClick={() => {
+                 if (inventory) exportToCsv(`baocao_tonghop_${selectedMonth}_${selectedYear}.csv`, inventory.chiTiet);
+               }}
+            >
+              <FileDown className="mr-2 h-4 w-4" />
+              XUẤT TỔNG HỢP
+            </Button>
           </div>
         }
       />
 
-      {/* Audit Period Filter Card */}
-      <Card className="shadow-xs border-border/70 overflow-hidden">
-        <CardContent className="grid gap-4 p-4 sm:grid-cols-12 items-center bg-muted/10">
-          <div className="sm:col-span-3 space-y-1.5">
-            <Label className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-1.5">
-              <Calendar className="h-3.5 w-3.5 text-amber-500" />
-              {t("reports.month") || "Tháng Lập"}
-            </Label>
-            <Input 
-              value={month} 
-              onChange={(e) => setMonth(e.target.value)}
-              className="bg-background focus-visible:ring-amber-500/35 h-9" 
-              placeholder="e.g. 5"
-            />
+      {/* Date Filter Card */}
+      <Card className="border-none shadow-sm">
+        <CardContent className="flex flex-wrap items-center gap-4 p-4 bg-muted/10 rounded-2xl border">
+          <div className="flex items-center gap-2 pr-4 border-r border-border/50">
+            <Calendar className="h-5 w-5 text-primary" />
+            <span className="text-sm font-black text-foreground uppercase tracking-wider">Kỳ báo cáo:</span>
           </div>
-          <div className="sm:col-span-3 space-y-1.5">
-            <Label className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-1.5">
-              <Calendar className="h-3.5 w-3.5 text-amber-500" />
-              {t("reports.year") || "Năm Lập"}
-            </Label>
-            <Input 
-              value={year} 
-              onChange={(e) => setYear(e.target.value)}
-              className="bg-background focus-visible:ring-amber-500/35 h-9" 
-              placeholder="e.g. 2026"
+          <div className="w-48">
+            <MonthPickerInput
+              value={`${selectedYear}-${String(selectedMonth).padStart(2, "0")}`}
+              onValueChange={(val) => {
+                if (val) {
+                  const [year, month] = val.split("-").map(Number);
+                  setSelectedYear(year);
+                  setSelectedMonth(month);
+                }
+              }}
             />
-          </div>
-          <div className="sm:col-span-6 flex items-end h-full text-xs font-medium text-muted-foreground py-1">
-            <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 flex gap-2 w-full">
-              <Info className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-              <p>Nhập Tháng/Năm và bấm <b>Lấy Dữ Liệu</b> để xem dữ liệu hiện tại, hoặc bấm <b>Lập Báo Cáo</b> để thiết lập kỳ kết toán sổ sách mới.</p>
-            </div>
           </div>
         </CardContent>
       </Card>
 
-      {error && (
-        <Card className="border-destructive/30 bg-destructive/5">
-          <CardContent className="p-4 text-sm font-medium text-destructive">{error}</CardContent>
-        </Card>
-      )}
-
-      {/* Skeleton screen layer when loading */}
-      <AnimatePresence>
-        {loading && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="grid gap-5 md:grid-cols-2 lg:grid-cols-3"
-          >
-            <SkeletonLoader />
-            <SkeletonLoader />
-            <SkeletonLoader />
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {error && <div className="bg-destructive/10 text-destructive p-4 rounded-xl border border-destructive/20 text-sm font-bold flex items-center gap-2"><Info className="h-4 w-4" />{error}</div>}
 
       {!loading && (
-        <div className="space-y-6">
-          {/* SECTION 1: BM10 Inventory Audit Report */}
-          <Card className="shadow-xs border-border/70 overflow-hidden hover-elevate">
-            <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b bg-muted/15 py-3.5 px-4 gap-3">
-              <div>
-                <CardTitle className="text-base font-bold flex items-center gap-2">
-                  <Boxes className="h-4.5 w-4.5 text-amber-500" />
-                  {t("reports.inventoryTitle") || "Báo Cáo Tồn Kho Sản Phẩm (BM10)"}
-                </CardTitle>
-                <p className="text-xs text-muted-foreground">Theo dõi chênh lệch xuất-nhập-tồn định kỳ hàng tháng.</p>
-              </div>
+        <div className="space-y-8">
+          {/* SECTION 1: BM10 Inventory */}
+          <Card className="border-none shadow-lg overflow-hidden border rounded-2xl">
+            <CardHeader className="flex flex-row items-center justify-between border-b px-6 py-5 bg-muted/5">
+              <CardTitle className="text-lg font-black flex items-center gap-2 uppercase tracking-tight">
+                <Boxes className="h-5 w-5 text-primary" />
+                Tồn Kho Sản Phẩm (BM10)
+              </CardTitle>
               <div className="flex gap-2">
-                <Button size="sm" variant="outline" disabled={loading} onClick={() => runReport("inventory", "get")} className="text-xs">
-                  {t("common.getData") || "Lấy Dữ Liệu"}
+                <Button
+                  size="sm"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl h-9 px-4 gap-2"
+                  onClick={() => inventory && exportToCsv(`kho_${selectedMonth}_${selectedYear}.csv`, inventory.chiTiet)}
+                >
+                  <FileDown className="h-4 w-4" /> Xuất Excel
                 </Button>
-                <Button size="sm" disabled={loading} onClick={() => runReport("inventory", "generate")} className="text-xs bg-gold-gradient text-gold-foreground font-semibold">
-                  {t("common.generate") || "Lập Báo Cáo"}
-                </Button>
+                <Button size="sm" variant="outline" onClick={() => runGenerate("inventory")} className="font-bold rounded-xl h-9 border-primary/50 text-primary">Chốt Kho</Button>
               </div>
             </CardHeader>
             <CardContent className="p-0">
               {!inventory ? (
-                <div className="p-5">
-                  <EmptyState title={t("reports.inventoryEmpty") || "Chưa có dữ liệu tồn kho"} description={t("reports.inventoryEmptyDesc") || "Vui lòng bấm lấy dữ liệu hoặc lập báo cáo kết toán."} />
-                </div>
+                <div className="p-10"><EmptyState title="Dữ liệu kỳ này chưa chốt" description="Dữ liệu kho chưa được chốt cho tháng này." /></div>
               ) : (
-                <div className="space-y-4">
-                  {/* Inventory quick metrics grid */}
-                  {inventorySummary && (
-                    <div className="grid gap-3 grid-cols-2 md:grid-cols-4 p-4 border-b bg-muted/5">
-                      <div className="rounded-xl border border-border/60 bg-card p-3 text-center">
-                        <span className="block text-[10px] font-bold uppercase text-muted-foreground tracking-wider">Tổng Tồn Đầu</span>
-                        <span className="mt-1 block text-lg font-extrabold text-foreground">{formatNumber(inventorySummary.totalOpening)}</span>
-                      </div>
-                      <div className="rounded-xl border border-border/60 bg-card p-3 text-center">
-                        <span className="block text-[10px] font-bold uppercase text-muted-foreground tracking-wider flex items-center justify-center gap-1">
-                          <ArrowDownToLine className="h-3 w-3 text-emerald-600" /> Nhập Vào
-                        </span>
-                        <span className="mt-1 block text-lg font-extrabold text-emerald-600">{formatNumber(inventorySummary.totalIn)}</span>
-                      </div>
-                      <div className="rounded-xl border border-border/60 bg-card p-3 text-center">
-                        <span className="block text-[10px] font-bold uppercase text-muted-foreground tracking-wider flex items-center justify-center gap-1">
-                          <ArrowUpFromLine className="h-3 w-3 text-amber-600" /> Xuất Bán
-                        </span>
-                        <span className="mt-1 block text-lg font-extrabold text-amber-600">{formatNumber(inventorySummary.totalOut)}</span>
-                      </div>
-                      <div className="rounded-xl border border-border/60 bg-card p-3 text-center">
-                        <span className="block text-[10px] font-bold uppercase text-muted-foreground tracking-wider">Tổng Tồn Cuối</span>
-                        <span className="mt-1 block text-lg font-extrabold text-foreground">{formatNumber(inventorySummary.totalClosing)}</span>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Table content */}
-                  <div className="overflow-x-auto px-4 pb-4">
-                    <div className="rounded-lg border border-border/70 overflow-hidden">
-                      <Table>
-                        <TableHeader className="bg-muted/30">
-                          <TableRow>
-                            <TableHead className="w-12 text-center">STT</TableHead>
-                            <TableHead>Sản Phẩm</TableHead>
-                            <TableHead className="text-right">Tồn Đầu</TableHead>
-                            <TableHead className="text-right">Nhập Vào</TableHead>
-                            <TableHead className="text-right">Xuất Bán</TableHead>
-                            <TableHead className="text-right">Tồn Cuối</TableHead>
-                            <TableHead className="text-center w-28">Hạn Mức Kho</TableHead>
-                            <TableHead className="text-center">ĐVT</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {inventory.chiTiet.map((item, idx) => {
-                            const lowStock = Number(item.tonCuoi ?? 0) < 10;
-                            const totalCap = Number(item.tonDau ?? 0) + Number(item.soLuongMuaVao ?? 0) || 1;
-                            const stockPercent = Math.min(100, Math.max(0, (Number(item.tonCuoi ?? 0) / totalCap) * 100));
-
-                            return (
-                              <TableRow key={`${inventory.maBaoCaoTonKho}-${item.stt}`} className="table-row-hover">
-                                <TableCell className="text-center font-medium text-muted-foreground">{item.stt}</TableCell>
-                                <TableCell className="font-bold text-foreground">{item.tenSanPham}</TableCell>
-                                <TableCell className="text-right font-medium">{formatNumber(item.tonDau)}</TableCell>
-                                <TableCell className="text-right text-emerald-600 font-semibold">{formatNumber(item.soLuongMuaVao)}</TableCell>
-                                <TableCell className="text-right text-amber-600 font-semibold">{formatNumber(item.soLuongBanRa)}</TableCell>
-                                <TableCell className={`text-right font-extrabold ${lowStock ? "text-rose-600" : "text-foreground"}`}>
-                                  {formatNumber(item.tonCuoi)}
-                                </TableCell>
-                                <TableCell className="text-center">
-                                  {/* Progress bar visual indicator */}
-                                  <div className="space-y-1">
-                                    <div className="h-2 w-full rounded-full bg-muted/65 overflow-hidden">
-                                      <div 
-                                        className={`h-full rounded-full transition-all ${
-                                          lowStock ? "bg-rose-500" : "bg-emerald-500"
-                                        }`}
-                                        style={{ width: `${stockPercent}%` }}
-                                      />
-                                    </div>
-                                    <Badge 
-                                      variant="outline" 
-                                      className={`text-[9px] py-0 px-1.5 ${
-                                        lowStock 
-                                          ? "bg-rose-500/10 text-rose-600 border-rose-500/20" 
-                                          : "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
-                                      }`}
-                                    >
-                                      {lowStock ? "Nhập gấp" : "An toàn"}
-                                    </Badge>
-                                  </div>
-                                </TableCell>
-                                <TableCell className="text-center text-muted-foreground font-semibold">{item.tenDonViTinh}</TableCell>
-                              </TableRow>
-                            );
-                          })}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </div>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader className="bg-muted/20">
+                      <TableRow>
+                        <TableHead className="w-12 text-center font-bold">STT</TableHead>
+                        <TableHead className="font-bold">Sản Phẩm</TableHead>
+                        <TableHead className="text-right font-bold">Tồn Đầu</TableHead>
+                        <TableHead className="text-right font-bold text-blue-600">Nhập</TableHead>
+                        <TableHead className="text-right font-bold text-orange-600">Xuất</TableHead>
+                        <TableHead className="text-right font-black">Tồn Cuối</TableHead>
+                        <TableHead className="text-center font-bold">ĐVT</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {inventory.chiTiet.map((item, idx) => (
+                        <TableRow
+                          key={idx}
+                          className="hover:bg-muted/20 cursor-pointer h-14 transition-colors"
+                          onClick={() => setDrillDown({ open: true, type: "product-purchase", id: item.maSanPham, name: item.tenSanPham })}
+                        >
+                          <TableCell className="text-center text-muted-foreground font-medium">{idx + 1}</TableCell>
+                          <TableCell className="font-black text-slate-700 dark:text-slate-200">{item.tenSanPham}</TableCell>
+                          <TableCell className="text-right font-medium">{formatNumber(item.tonDau)}</TableCell>
+                          <TableCell className="text-right text-blue-600 font-bold">+{formatNumber(item.soLuongMuaVao)}</TableCell>
+                          <TableCell className="text-right text-orange-600 font-bold">-{formatNumber(item.soLuongBanRa)}</TableCell>
+                          <TableCell className="text-right font-black text-base">{formatNumber(item.tonCuoi)}</TableCell>
+                          <TableCell className="text-center text-xs text-muted-foreground font-black uppercase">{item.tenDonViTinh}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </div>
               )}
             </CardContent>
           </Card>
 
-          {/* SECTION 2: BM11 Product Revenue Report & SVG Charts */}
-          <Card className="shadow-xs border-border/70 overflow-hidden hover-elevate">
-            <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b bg-muted/15 py-3.5 px-4 gap-3">
-              <div>
-                <CardTitle className="text-base font-bold flex items-center gap-2">
-                  <BarChart3 className="h-4.5 w-4.5 text-amber-500" />
-                  {t("reports.productRevenueTitle") || "Báo Cáo Doanh Thu Bán Hàng (BM11)"}
+          <div className="grid gap-8 lg:grid-cols-2">
+            {/* SECTION 2: BM11 Product Revenue */}
+            <Card className="border-none shadow-lg overflow-hidden border rounded-2xl">
+              <CardHeader className="flex flex-row items-center justify-between border-b px-6 py-5 bg-muted/5">
+                <CardTitle className="text-lg font-black flex items-center gap-2 uppercase tracking-tight">
+                  <BarChart3 className="h-5 w-5 text-primary" />
+                  Doanh Thu Bán Hàng (BM11)
                 </CardTitle>
-                <p className="text-xs text-muted-foreground">Phân tích mặt hàng bán chạy và tỷ trọng doanh thu trang sức.</p>
-              </div>
-              <div className="flex gap-2">
-                <Button size="sm" variant="outline" disabled={loading} onClick={() => runReport("product-revenue", "get")} className="text-xs">
-                  {t("common.getData") || "Lấy Dữ Liệu"}
-                </Button>
-                <Button size="sm" disabled={loading} onClick={() => runReport("product-revenue", "generate")} className="text-xs bg-gold-gradient text-gold-foreground font-semibold">
-                  {t("common.generate") || "Lập Báo Cáo"}
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              {!productRevenue ? (
-                <div className="p-5">
-                  <EmptyState title={t("reports.productRevenueEmpty") || "Chưa có dữ liệu doanh số"} description={t("reports.inventoryEmptyDesc") || "Vui lòng bấm lấy dữ liệu hoặc lập báo cáo."} />
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 font-black gap-1 p-0 px-2"
+                    onClick={() => productRevenue && exportToCsv(`doanh_thu_sp_${selectedMonth}_${selectedYear}.csv`, productRevenue.chiTiet)}
+                  >
+                    <FileDown className="h-4 w-4" /> EXCEL
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => runGenerate("product-revenue")} className="text-[10px] font-black rounded-lg h-7">KẾT TOÁN</Button>
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  {/* Product Revenue Summary Metrics */}
-                  {productSummary && (
-                    <div className="grid gap-3 grid-cols-1 md:grid-cols-3 p-4 border-b bg-muted/5">
-                      <div className="rounded-xl border border-border/60 bg-card p-3 text-center">
-                        <span className="block text-[10px] font-bold uppercase text-muted-foreground tracking-wider flex items-center justify-center gap-1">
-                          <Sparkles className="h-3.5 w-3.5 text-amber-500" /> Doanh Thu Sản Phẩm
-                        </span>
-                        <span className="mt-1 block text-lg font-extrabold text-amber-600">{formatCurrency(productRevenue.tongDoanhThuSanPham)}</span>
-                      </div>
-                      <div className="rounded-xl border border-border/60 bg-card p-3 text-center">
-                        <span className="block text-[10px] font-bold uppercase text-muted-foreground tracking-wider">Tổng Đã Bán</span>
-                        <span className="mt-1 block text-lg font-extrabold text-foreground">{formatNumber(productSummary.totalSales)} sản phẩm</span>
-                      </div>
-                      <div className="rounded-xl border border-border/60 bg-card p-3 text-center">
-                        <span className="block text-[10px] font-bold uppercase text-muted-foreground tracking-wider">Sản Phẩm Chủ Lực</span>
-                        <span className="mt-1 block text-xs font-bold text-foreground truncate px-1">
-                          {productSummary.topProduct ? `${productSummary.topProduct.tenSanPham} (${safeRatio(productSummary.topProduct.tiLe)})` : "N/A"}
-                        </span>
-                      </div>
+              </CardHeader>
+              <CardContent className="p-6">
+                {!productRevenue ? (
+                  <div className="h-[200px] flex items-center justify-center text-muted-foreground italic font-medium">Chưa có số liệu kết toán doanh thu.</div>
+                ) : (
+                  <div className="space-y-6">
+                    <div className="h-[260px] w-full bg-muted/5 rounded-xl border border-dashed p-2">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={productRevenue.chiTiet.slice(0, 5)} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                          <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} opacity={0.1} />
+                          <XAxis type="number" hide />
+                          <YAxis dataKey="tenSanPham" type="category" width={100} fontSize={10} fontWeight={800} tick={{ fill: 'currentColor' }} />
+                          <RechartsTooltip content={<ChartTooltip />} cursor={{ fill: 'currentColor', opacity: 0.05 }} />
+                          <Bar
+                            dataKey="doanhThu"
+                            fill="oklch(0.56 0.18 261)"
+                            radius={[0, 6, 6, 0]}
+                            barSize={24}
+                             onClick={(entry: any) => setDrillDown({ open: true, type: "product-sale", id: entry.maSanPham, name: entry.tenSanPham })}
+                            className="cursor-pointer"
+                          />
+                        </BarChart>
+                      </ResponsiveContainer>
                     </div>
-                  )}
-
-                  {/* SVG Bar Chart Panel & Legend */}
-                  <div className="grid gap-4 md:grid-cols-12 p-4 items-center">
-                    {/* SVG Bar Ticker Column */}
-                    <div className="md:col-span-7 flex flex-col justify-center">
-                      <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 text-center md:text-left">
-                        Biểu Đồ Thị Phần Doanh Thu Trang Sức
-                      </h4>
-                      <svg 
-                        viewBox="0 0 450 140" 
-                        className="w-full overflow-visible h-36"
-                      >
-                        <defs>
-                          <linearGradient id="bar-gold" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="oklch(0.71 0.12 74)" />
-                            <stop offset="100%" stopColor="oklch(0.62 0.14 58)" />
-                          </linearGradient>
-                          <linearGradient id="bar-gold-hover" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="oklch(0.56 0.18 261)" />
-                            <stop offset="100%" stopColor="oklch(0.71 0.12 74)" />
-                          </linearGradient>
-                        </defs>
-
-                        {/* Baseline */}
-                        <line x1="20" y1="120" x2="430" y2="120" stroke="#ddd" strokeWidth="1" />
-
-                        {productRevenue.chiTiet.slice(0, 5).map((item, idx) => {
-                          const maxRevenue = Math.max(...productRevenue.chiTiet.map(t => Number(t.doanhThu || 1))) || 1;
-                          const barHeight = (Number(item.doanhThu) / maxRevenue) * 90;
-                          const x = 30 + idx * 80;
-                          const y = 120 - barHeight;
-                          const isHovered = hoveredBar === idx;
-
-                          return (
-                            <g 
-                              key={item.stt}
-                              className="cursor-pointer"
-                              onMouseEnter={() => setHoveredBar(idx)}
-                              onMouseLeave={() => setHoveredBar(null)}
-                            >
-                              {/* Glowing background on hover */}
-                              {isHovered && (
-                                <rect 
-                                  x={x - 8} 
-                                  y="10" 
-                                  width="36" 
-                                  height="115" 
-                                  fill="oklch(0.71 0.12 74 / 6%)" 
-                                  rx="5"
-                                />
-                              )}
-                              
-                              {/* Main bar */}
-                              <motion.rect 
-                                x={x}
-                                y={y}
-                                width="20"
-                                height={Math.max(2, barHeight)}
-                                fill={isHovered ? "url(#bar-gold-hover)" : "url(#bar-gold)"}
-                                rx="3"
-                                initial={{ scaleY: 0, y: 120 }}
-                                animate={{ scaleY: 1, y }}
-                                style={{ transformOrigin: "bottom" }}
-                                transition={{ duration: 0.4, delay: idx * 0.05 }}
-                              />
-
-                              {/* Hover text label */}
-                              {isHovered && (
-                                <text 
-                                  x={x + 10} 
-                                  y={y - 8} 
-                                  textAnchor="middle" 
-                                  fontSize="9" 
-                                  fontWeight="bold" 
-                                  fill="oklch(0.56 0.18 261)"
-                                >
-                                  {formatNumber(Number(item.doanhThu) / 1000000)}M
-                                </text>
-                              )}
-                            </g>
-                          );
-                        })}
-                      </svg>
-                    </div>
-
-                    {/* Chart Legend list */}
-                    <div className="md:col-span-5 space-y-2">
-                      <span className="block text-[10px] font-bold uppercase text-muted-foreground tracking-wider mb-1">
-                        Sản phẩm doanh số cao nhất
-                      </span>
-                      <div className="space-y-1.5 max-h-32 overflow-y-auto app-scrollbar pr-2">
-                        {productRevenue.chiTiet.slice(0, 5).map((item, idx) => (
-                          <div 
-                            key={item.tenSanPham} 
-                            className={`flex items-center justify-between p-1.5 rounded-lg border text-xs transition-all ${
-                              hoveredBar === idx 
-                                ? "bg-amber-500/10 border-amber-500/30 font-bold scale-[1.01]" 
-                                : "bg-card border-border/40"
-                            }`}
-                            onMouseEnter={() => setHoveredBar(idx)}
-                            onMouseLeave={() => setHoveredBar(null)}
-                          >
-                            <div className="flex items-center gap-2 min-w-0">
-                              <span className="h-2 w-2 rounded-full bg-amber-500 shrink-0" />
-                              <span className="truncate">{item.tenSanPham}</span>
-                            </div>
-                            <span className="shrink-0 text-muted-foreground font-semibold ml-2">
-                              {safeRatio(item.tiLe)}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Raw Data List Grid */}
-                  <div className="overflow-x-auto px-4 pb-4">
-                    <div className="rounded-lg border border-border/70 overflow-hidden">
-                      <Table>
-                        <TableHeader className="bg-muted/30">
+                    <div className="rounded-xl border shadow-sm overflow-hidden bg-card">
+                      <Table className="text-xs">
+                        <TableHeader className="bg-muted/40">
                           <TableRow>
-                            <TableHead className="w-12 text-center">STT</TableHead>
-                            <TableHead>Tên Sản Phẩm</TableHead>
-                            <TableHead className="text-right">Số Lượng Đã Bán</TableHead>
-                            <TableHead className="text-right">Doanh Thu Thu Hoạch</TableHead>
-                            <TableHead className="text-right">Tỷ Trọng Doanh Số</TableHead>
+                            <TableHead className="font-bold">Sản phẩm</TableHead>
+                            <TableHead className="text-right font-bold">Doanh thu</TableHead>
+                            <TableHead className="text-right font-bold w-16">%</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {productRevenue.chiTiet.map((item) => (
-                            <TableRow key={`${productRevenue.maBaoCaoDoanhThuSp}-${item.stt}`} className="table-row-hover">
-                              <TableCell className="text-center font-medium text-muted-foreground">{item.stt}</TableCell>
-                              <TableCell className="font-bold text-foreground">{item.tenSanPham}</TableCell>
-                              <TableCell className="text-right font-medium">{formatNumber(item.soLuongBan)}</TableCell>
-                              <TableCell className="text-right text-emerald-600 font-extrabold">{formatCurrency(item.doanhThu)}</TableCell>
-                              <TableCell className="text-right font-semibold text-amber-600">{safeRatio(item.tiLe)}</TableCell>
+                          {productRevenue.chiTiet.slice(0, 5).map((item, i) => (
+                            <TableRow key={i} className="hover:bg-muted/20 cursor-pointer h-12 transition-colors" onClick={() => setDrillDown({ open: true, type: "product-sale", id: item.maSanPham, name: item.tenSanPham })}>
+                              <TableCell className="font-bold text-slate-600 dark:text-slate-300 truncate max-w-[120px]">{item.tenSanPham}</TableCell>
+                              <TableCell className="text-right font-black text-emerald-600">{formatCurrency(item.doanhThu)}</TableCell>
+                              <TableCell className="text-right font-black text-amber-600">{Math.round(Number(item.tiLe))}%</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
                       </Table>
                     </div>
                   </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                )}
+              </CardContent>
+            </Card>
 
-          {/* SECTION 3: BM12 Service Revenue Donut Charts */}
-          <Card className="shadow-xs border-border/70 overflow-hidden hover-elevate">
-            <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b bg-muted/15 py-3.5 px-4 gap-3">
-              <div>
-                <CardTitle className="text-base font-bold flex items-center gap-2">
-                  <PieChart className="h-4.5 w-4.5 text-amber-500" />
-                  {t("reports.serviceRevenueTitle") || "Báo Cáo Doanh Thu Dịch Vụ Gia Công (BM12)"}
+            {/* SECTION 3: BM12 Service Revenue */}
+            <Card className="border-none shadow-lg overflow-hidden border rounded-2xl">
+              <CardHeader className="flex flex-row items-center justify-between border-b px-6 py-5 bg-muted/5">
+                <CardTitle className="text-lg font-black flex items-center gap-2 uppercase tracking-tight">
+                  <PieChart className="h-5 w-5 text-primary" />
+                  Doanh Thu Dịch Vụ (BM12)
                 </CardTitle>
-                <p className="text-xs text-muted-foreground">Theo dõi dòng tiền từ dịch vụ gia công và tiền công chế tác.</p>
-              </div>
-              <div className="flex gap-2">
-                <Button size="sm" variant="outline" disabled={loading} onClick={() => runReport("service-revenue", "get")} className="text-xs">
-                  {t("common.getData") || "Lấy Dữ Liệu"}
-                </Button>
-                <Button size="sm" disabled={loading} onClick={() => runReport("service-revenue", "generate")} className="text-xs bg-gold-gradient text-gold-foreground font-semibold">
-                  {t("common.generate") || "Lập Báo Cáo"}
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              {!serviceRevenue ? (
-                <div className="p-5">
-                  <EmptyState title={t("reports.serviceRevenueEmpty") || "Chưa có dữ liệu dịch vụ"} description={t("reports.inventoryEmptyDesc") || "Vui lòng bấm lấy dữ liệu hoặc lập báo cáo."} />
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 font-black gap-1 p-0 px-2"
+                    onClick={() => serviceRevenue && exportToCsv(`doanh_thu_dv_${selectedMonth}_${selectedYear}.csv`, serviceRevenue.chiTiet)}
+                  >
+                    <FileDown className="h-4 w-4" /> EXCEL
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => runGenerate("service-revenue")} className="text-[10px] font-black rounded-lg h-7">QUYẾT TOÁN</Button>
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  {/* Service Revenue Summary Grid */}
-                  {serviceSummary && (
-                    <div className="grid gap-3 grid-cols-1 md:grid-cols-3 p-4 border-b bg-muted/5">
-                      <div className="rounded-xl border border-border/60 bg-card p-3 text-center">
-                        <span className="block text-[10px] font-bold uppercase text-muted-foreground tracking-wider flex items-center justify-center gap-1">
-                          <Wrench className="h-3.5 w-3.5 text-amber-500" /> Doanh Thu Dịch Vụ
-                        </span>
-                        <span className="mt-1 block text-lg font-extrabold text-amber-600">{formatCurrency(serviceRevenue.tongDoanhThuDichVu)}</span>
-                      </div>
-                      <div className="rounded-xl border border-border/60 bg-card p-3 text-center">
-                        <span className="block text-[10px] font-bold uppercase text-muted-foreground tracking-wider">Hạng Mục Kỹ Thuật</span>
-                        <span className="mt-1 block text-lg font-extrabold text-foreground">{serviceSummary.totalServices} loại hình</span>
-                      </div>
-                      <div className="rounded-xl border border-border/60 bg-card p-3 text-center">
-                        <span className="block text-[10px] font-bold uppercase text-muted-foreground tracking-wider">Dịch Vụ Phổ Biến Nhất</span>
-                        <span className="mt-1 block text-xs font-bold text-foreground truncate px-1">
-                          {serviceSummary.topService ? `${serviceSummary.topService.tenLoaiDichVu} (${safeRatio(serviceSummary.topService.tiLe)})` : "N/A"}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* SVG Segmented Donut Chart Panel */}
-                  <div className="grid gap-4 md:grid-cols-12 p-4 items-center">
-                    {/* SVG Segmented Donut Render */}
-                    <div className="md:col-span-7 flex justify-center">
-                      <div className="relative h-32 w-32">
-                        <svg viewBox="0 0 120 120" className="w-full h-full -rotate-90">
-                          {donutSegments.length === 0 ? (
-                            <circle cx="60" cy="60" r="50" fill="none" stroke="#e2e8f0" strokeWidth="12" />
-                          ) : (
-                            donutSegments.map((seg, idx) => {
-                              const isHovered = hoveredSegment === idx;
-                              return (
-                                <motion.circle
-                                  key={seg.tenLoaiDichVu}
-                                  cx="60"
-                                  cy="60"
-                                  r="50"
-                                  fill="none"
-                                  stroke={seg.color}
-                                  strokeWidth={isHovered ? 16 : 12}
-                                  strokeDasharray={seg.strokeDash}
-                                  strokeDashoffset={seg.strokeOffset}
-                                  className="transition-all duration-300 cursor-pointer"
-                                  onMouseEnter={() => setHoveredSegment(idx)}
-                                  onMouseLeave={() => setHoveredSegment(null)}
-                                  initial={{ strokeDasharray: `0 314.16` }}
-                                  animate={{ strokeDasharray: seg.strokeDash }}
-                                  transition={{ duration: 0.5, delay: idx * 0.08 }}
-                                />
-                              );
-                            })
-                          )}
-                        </svg>
-
-                        {/* Interactive middle label */}
-                        <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
-                          <span className="text-[9px] uppercase font-bold text-muted-foreground">Tỷ Lệ</span>
-                          <span className="text-sm font-extrabold text-foreground">
-                            {hoveredSegment !== null 
-                              ? safeRatio(donutSegments[hoveredSegment].tiLe) 
-                              : "100%"}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Donut Legend */}
-                    <div className="md:col-span-5 space-y-2">
-                      <span className="block text-[10px] font-bold uppercase text-muted-foreground tracking-wider mb-1">
-                        Cơ Cấu Hạng Mục Dịch Vụ
-                      </span>
-                      <div className="space-y-1.5 max-h-32 overflow-y-auto app-scrollbar pr-2">
-                        {donutSegments.map((seg, idx) => (
-                          <div 
-                            key={seg.tenLoaiDichVu} 
-                            className={`flex items-center justify-between p-1.5 rounded-lg border text-xs transition-all ${
-                              hoveredSegment === idx 
-                                ? "bg-muted border-border/80 font-bold scale-[1.01]" 
-                                : "bg-card border-border/40"
-                            }`}
-                            onMouseEnter={() => setHoveredSegment(idx)}
-                            onMouseLeave={() => setHoveredSegment(null)}
+              </CardHeader>
+              <CardContent className="p-6">
+                {!serviceRevenue ? (
+                  <div className="h-[200px] flex items-center justify-center text-muted-foreground italic font-medium">Chưa có số liệu quyết toán dịch vụ.</div>
+                ) : (
+                  <div className="space-y-6">
+                    <div className="h-[260px] w-full flex items-center justify-center">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <RechartsPieChart>
+                          <Pie
+                            data={serviceRevenue.chiTiet}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={70}
+                            outerRadius={100}
+                            paddingAngle={5}
+                            dataKey="doanhThu"
+                            nameKey="tenLoaiDichVu"
+                            stroke="none"
+                             onClick={(entry: any) => setDrillDown({ open: true, type: "service", id: entry.maLoaiDichVu, name: entry.tenLoaiDichVu })}
+                            className="cursor-pointer outline-none"
                           >
-                            <div className="flex items-center gap-2 min-w-0">
-                              <span 
-                                className="h-2.5 w-2.5 rounded-full shrink-0" 
-                                style={{ backgroundColor: seg.color }}
-                              />
-                              <span className="truncate">{seg.tenLoaiDichVu}</span>
-                            </div>
-                            <span className="shrink-0 text-muted-foreground font-semibold ml-2">
-                              {safeRatio(seg.tiLe)}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
+                            {serviceRevenue.chiTiet.map((_, i) => (
+                              <Cell key={i} fill={["#6366f1", "#f59e0b", "#10b981", "#3b82f6", "#ec4899"][i % 5]} className="hover:opacity-80 transition-opacity" />
+                            ))}
+                          </Pie>
+                          <RechartsTooltip content={<ChartTooltip />} />
+                        </RechartsPieChart>
+                      </ResponsiveContainer>
                     </div>
-                  </div>
-
-                  {/* Raw Data List Grid */}
-                  <div className="overflow-x-auto px-4 pb-4">
-                    <div className="rounded-lg border border-border/70 overflow-hidden">
-                      <Table>
-                        <TableHeader className="bg-muted/30">
+                    <div className="rounded-xl border shadow-sm overflow-hidden bg-card">
+                      <Table className="text-xs">
+                        <TableHeader className="bg-muted/40">
                           <TableRow>
-                            <TableHead className="w-12 text-center">STT</TableHead>
-                            <TableHead>Hạng Mục Kỹ Thuật</TableHead>
-                            <TableHead className="text-right">Doanh Thu Khai Thác</TableHead>
-                            <TableHead className="text-right">Tỷ Trọng Đóng Góp</TableHead>
+                            <TableHead className="font-bold">Dịch vụ</TableHead>
+                            <TableHead className="text-right font-bold">Doanh thu</TableHead>
+                            <TableHead className="text-right font-bold w-16">%</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {serviceRevenue.chiTiet.map((item) => (
-                            <TableRow key={`${serviceRevenue.maBaoCaoDoanhThuDv}-${item.stt}`} className="table-row-hover">
-                              <TableCell className="text-center font-medium text-muted-foreground">{item.stt}</TableCell>
-                              <TableCell className="font-bold text-foreground">{item.tenLoaiDichVu}</TableCell>
-                              <TableCell className="text-right text-emerald-600 font-extrabold">{formatCurrency(item.doanhThu)}</TableCell>
-                              <TableCell className="text-right font-semibold text-amber-600">{safeRatio(item.tiLe)}</TableCell>
+                          {serviceRevenue.chiTiet.slice(0, 5).map((item, i) => (
+                            <TableRow key={i} className="hover:bg-muted/20 cursor-pointer h-12 transition-colors" onClick={() => setDrillDown({ open: true, type: "service", id: item.maLoaiDichVu, name: item.tenLoaiDichVu })}>
+                              <TableCell className="font-bold text-slate-600 dark:text-slate-300 truncate max-w-[120px]">{item.tenLoaiDichVu}</TableCell>
+                              <TableCell className="text-right font-black text-emerald-600">{formatCurrency(item.doanhThu)}</TableCell>
+                              <TableCell className="text-right font-black text-amber-600">{Math.round(Number(item.tiLe))}%</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
                       </Table>
                     </div>
                   </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </div>
       )}
+      <DrillDownModal
+        open={drillDown.open}
+        onOpenChange={(open) => setDrillDown((prev) => ({ ...prev, open }))}
+        type={drillDown.type}
+        id={drillDown.id}
+        name={drillDown.name}
+        month={selectedMonth}
+        year={selectedYear}
+      />
     </div>
   );
 }

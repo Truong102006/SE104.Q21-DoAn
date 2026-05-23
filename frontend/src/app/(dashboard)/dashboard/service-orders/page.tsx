@@ -8,9 +8,11 @@ import { EmptyState, PageHeader, TableToolbar } from "@/components/dashboard/man
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
+import { DatePickerInput } from "@/components/ui/date-picker";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ContactPanel, DetailGrid, DetailModal, LineError, StickySummaryBar, VoucherSection } from "@/components/dashboard/voucher-ui";
 import { Combobox } from "@/components/ui/combobox";
+import { CustomerSelect } from "@/components/dashboard/customer-select";
 import { useToastStore } from "@/stores/toast-store";
 import { backendApi } from "@/services/backend-api";
 import type {
@@ -20,7 +22,7 @@ import type {
   ServiceTypeResponse,
 } from "@/types/backend";
 import { getApiErrorMessage } from "@/lib/api-error";
-import { formatCurrency, todayIsoDate, toPositiveInt, toPositiveNumber, formatVNCurrencyInput, parseVNCurrencyInput } from "@/lib/format";
+import { formatCurrency, todayIsoDate, toPositiveInt, toPositiveNumber, formatVNCurrencyInput, parseVNCurrencyInput, formatVietnameseStatus } from "@/lib/format";
 import { useTranslation } from "@/i18n/i18n-context";
 import { ClipboardList, Eye, Plus, ReceiptText, Truck, Trash2 } from "lucide-react";
 
@@ -45,7 +47,7 @@ export default function ServiceOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [customers, setCustomers] = useState<CustomerResponse[]>([]);
+  const [selectedCustomer, setSelectedCustomer] = useState<CustomerResponse | null>(null);
   const [serviceTypes, setServiceTypes] = useState<ServiceTypeResponse[]>([]);
   const [tickets, setTickets] = useState<ServiceTicketResponse[]>([]);
   const [prepaymentRate, setPrepaymentRate] = useState(50);
@@ -61,10 +63,18 @@ export default function ServiceOrdersPage() {
   const [historyStatus, setHistoryStatus] = useState("all");
   const [selectedTicket, setSelectedTicket] = useState<ServiceTicketResponse | null>(null);
 
-  const selectedCustomer = useMemo(
-    () => customers.find((item) => item.maKhachHang === maKhachHang) ?? null,
-    [customers, maKhachHang],
-  );
+  useEffect(() => {
+    if (maKhachHang) {
+      backendApi.customers.getById(maKhachHang)
+        .then(setSelectedCustomer)
+        .catch((err) => {
+          console.error("Error loading selected customer", err);
+          setSelectedCustomer(null);
+        });
+    } else {
+      setSelectedCustomer(null);
+    }
+  }, [maKhachHang]);
 
   const totals = useMemo(() => {
     const tongTien = items.reduce((sum, item) => {
@@ -101,21 +111,15 @@ export default function ServiceOrdersPage() {
     setLoading(true);
     setError(null);
     try {
-      const [customerData, serviceTypeData, ticketData, prepayment] = await Promise.all([
-        backendApi.customers.list(),
+      const [serviceTypeData, ticketData, prepayment] = await Promise.all([
         backendApi.serviceTypes.list(),
         backendApi.serviceTickets.list(),
         backendApi.settings.getServicePrepaymentRate(),
       ]);
 
-      setCustomers(customerData);
       setServiceTypes(serviceTypeData);
       setTickets(ticketData);
       setPrepaymentRate(Number(prepayment.value ?? 50));
-
-      if (!maKhachHang && customerData.length > 0) {
-        setMaKhachHang(customerData[0].maKhachHang);
-      }
     } catch (err) {
       setError(getApiErrorMessage(err, t("serviceOrders.loadError")));
     } finally {
@@ -270,11 +274,12 @@ export default function ServiceOrdersPage() {
 
     setSubmitting(true);
     try {
-      await backendApi.serviceTickets.create(payload);
+      const created = await backendApi.serviceTickets.create(payload);
       setSoPhieuDichVu("");
       setTongTienTraTruoc("0");
       setItems([createEmptyItem()]);
       await loadData();
+      useToastStore.getState().success(`Đã lập phiếu dịch vụ ${created.soPhieuDichVu} thành công!`);
     } catch (err) {
       setFormError(getApiErrorMessage(err, t("serviceOrders.createError")));
     } finally {
@@ -286,6 +291,7 @@ export default function ServiceOrdersPage() {
     try {
       await backendApi.serviceTickets.deliverItem(ticket.soPhieuDichVu, maLoaiDichVu);
       await loadData();
+      useToastStore.getState().success(`Đã bàn giao sản phẩm dịch vụ thành công cho phiếu ${ticket.soPhieuDichVu}!`);
     } catch (err) {
       setError(getApiErrorMessage(err, t("serviceOrders.deliverError")));
     }
@@ -295,6 +301,7 @@ export default function ServiceOrdersPage() {
     try {
       await backendApi.serviceTickets.deliverAll(ticket.soPhieuDichVu);
       await loadData();
+      useToastStore.getState().success(`Đã bàn giao toàn bộ sản phẩm dịch vụ cho phiếu ${ticket.soPhieuDichVu}!`);
     } catch (err) {
       setError(getApiErrorMessage(err, t("serviceOrders.deliverAllError")));
     }
@@ -317,25 +324,24 @@ export default function ServiceOrdersPage() {
       <Card className="shadow-sm border-border/80">
         <CardContent className="space-y-6 p-6">
           <VoucherSection title="Thông tin chung" description="Chọn khách hàng và ngày lập phiếu" icon={ClipboardList}>
-            <div className="grid gap-4 lg:grid-cols-[220px_minmax(260px,1fr)_minmax(320px,1.2fr)] lg:items-end">
+            <div className="grid gap-4 lg:grid-cols-[180px_220px_1fr] lg:items-end">
               <div className="space-y-2">
                 <Label className="text-sm font-semibold text-muted-foreground">{t("common.dateCreated")}</Label>
-                <Input type="date" className="h-9 text-sm" value={ngayLapPhieuDichVu} onChange={(e) => setNgayLapPhieuDichVu(e.target.value)} />
+                <DatePickerInput value={ngayLapPhieuDichVu} onValueChange={setNgayLapPhieuDichVu} />
               </div>
               <div className="space-y-2">
-                <Label className="text-sm font-semibold text-muted-foreground">{t("common.customer")}</Label>
-                <Combobox
+                <Label className="text-sm font-semibold text-muted-foreground">{t("common.phone")}</Label>
+                <CustomerSelect
                   value={maKhachHang || ""}
                   onValueChange={setMaKhachHang}
-                  options={customers.map((item) => ({ value: item.maKhachHang, label: `${item.maKhachHang} - ${item.tenKhachHang}` }))}
                   className="h-9"
-                  placeholder="Chọn khách hàng..."
+                  placeholder="Nhập Số điện thoại..."
                 />
               </div>
               <ContactPanel
                 emptyText="Chưa chọn khách hàng"
                 rows={selectedCustomer ? [
-                  { label: t("common.phone"), value: selectedCustomer.soDienThoaiKhachHang },
+                  { label: "Tên khách hàng", value: selectedCustomer.tenKhachHang },
                   { label: t("common.address"), value: selectedCustomer.diaChiKhachHang },
                 ] : []}
               />
@@ -374,10 +380,12 @@ export default function ServiceOrdersPage() {
                         <Combobox
                           value={item.maLoaiDichVu || ""}
                           onValueChange={(value) => onServiceTypeChange(index, value)}
-                          options={serviceTypes.map((option) => ({
-                            value: option.maLoaiDichVu,
-                            label: `${option.maLoaiDichVu} - ${option.tenLoaiDichVu}`,
-                          }))}
+                          options={serviceTypes
+                            .filter((st) => (st.isActive !== false || st.maLoaiDichVu === item.maLoaiDichVu) && !items.some((draftItem, idx) => idx !== index && draftItem.maLoaiDichVu === st.maLoaiDichVu))
+                            .map((option) => ({
+                              value: option.maLoaiDichVu,
+                              label: option.tenLoaiDichVu,
+                            }))}
                           className="h-9"
                           placeholder="Chọn loại dịch vụ..."
                         />
@@ -414,6 +422,12 @@ export default function ServiceOrdersPage() {
                             type="number"
                             min="1"
                             onChange={(e) => updateItem(index, { soLuongDichVu: e.target.value })}
+                            onBlur={(e) => {
+                              const val = toPositiveInt(e.target.value);
+                              if (val <= 0) {
+                                updateItem(index, { soLuongDichVu: "1" });
+                              }
+                            }}
                             className="h-full w-full min-w-0 border-0 bg-transparent text-center focus:outline-none focus:ring-0 text-sm font-semibold px-1"
                           />
                           <button
@@ -430,7 +444,7 @@ export default function ServiceOrdersPage() {
                       </TableCell>
                       <TableCell className="py-3.5 px-4 text-sm font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(thanhTien)}</TableCell>
                       <TableCell className="py-3.5 px-4">
-                        <Input type="date" className="h-9 text-sm" value={item.ngayGiao} onChange={(e) => updateItem(index, { ngayGiao: e.target.value })} />
+                        <DatePickerInput value={item.ngayGiao} onValueChange={(val) => updateItem(index, { ngayGiao: val })} />
                       </TableCell>
                       <TableCell className="py-3.5 px-4">
                         <Badge variant="secondary" className="px-2 py-0.5 text-xs bg-slate-100 text-slate-700 border-slate-200">
@@ -496,14 +510,23 @@ export default function ServiceOrdersPage() {
                   </div>
                 </div>
 
-                <Button size="default" className="h-10 text-sm font-semibold px-6 cursor-pointer" onClick={submit} disabled={submitting || loading}>
+                <Button
+                  size="default"
+                  className="bg-gold-gradient text-gold-foreground font-bold hover:brightness-105 active:scale-95 shadow-md shadow-gold/25 h-10 text-sm px-6 cursor-pointer rounded-xl transition-all border-none"
+                  onClick={submit}
+                  disabled={submitting || loading}
+                >
                   {submitting ? t("common.creating") : t("serviceOrders.createButton")}
                 </Button>
               </div>
             )}
           >
-            <Button variant="outline" size="sm" className="h-9 text-sm px-4" onClick={addRow}>
-              <Plus className="mr-1.5 h-4 w-4" />
+            <Button
+              variant="outline"
+              className="border-blue-500/40 text-blue-600 hover:bg-blue-500/10 active:scale-95 transition-all shadow-xs h-10 text-sm px-5 font-bold rounded-xl cursor-pointer border"
+              onClick={addRow}
+            >
+              <Plus className="mr-1.5 h-4.5 w-4.5 stroke-[2.5]" />
               {t("common.addRow")}
             </Button>
           </StickySummaryBar>
@@ -572,11 +595,11 @@ export default function ServiceOrdersPage() {
                       </TableCell>
                       <TableCell className="py-3.5 px-4 text-sm text-center">
                         <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold border ${
-                          ticket.tinhTrangDichVu.toLowerCase().includes("da giao")
+                          ticket.tinhTrangDichVu.toLowerCase().includes("da giao") || ticket.tinhTrangDichVu.toLowerCase().includes("hoan thanh") || ticket.tinhTrangDichVu.toLowerCase().includes("hoàn thành")
                             ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-800"
                             : "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-800"
                         }`}>
-                          {ticket.tinhTrangDichVu.toLowerCase().includes("da giao") ? "Đã giao" : "Chưa giao"}
+                          {formatVietnameseStatus(ticket.tinhTrangDichVu)}
                         </span>
                       </TableCell>
                       <TableCell className="py-3.5 px-4 text-sm text-right">
@@ -620,7 +643,6 @@ export default function ServiceOrdersPage() {
               items={[
                 { label: "Ngày lập", value: selectedTicket.ngayLapPhieuDichVu },
                 { label: "Khách hàng", value: selectedTicket.khachHang?.tenKhachHang ?? selectedTicket.maKhachHang },
-                { label: "SĐT", value: selectedTicket.khachHang?.soDienThoai },
                 { label: "Tổng tiền", value: formatCurrency(selectedTicket.tongTien) },
                 { label: "Trả trước", value: formatCurrency(selectedTicket.tongTienTraTruoc) },
                 { label: "Còn lại", value: formatCurrency(selectedTicket.tongTienConLai) },
@@ -632,7 +654,7 @@ export default function ServiceOrdersPage() {
                   <TableRow>
                     <TableHead>Dịch vụ</TableHead>
                     <TableHead className="text-right">SL</TableHead>
-                    <TableHead className="text-right">Đơn giá</TableHead>
+                    <TableHead className="text-right">Đơn giá được tính</TableHead>
                     <TableHead className="text-right">Thành tiền</TableHead>
                     <TableHead>Ngày giao</TableHead>
                     <TableHead>Tình trạng</TableHead>
@@ -646,7 +668,7 @@ export default function ServiceOrdersPage() {
                       <TableCell className="text-right">{formatCurrency(item.donGiaDuocTinh)}</TableCell>
                       <TableCell className="text-right font-semibold">{formatCurrency(item.thanhTien)}</TableCell>
                       <TableCell>{item.ngayGiao || "-"}</TableCell>
-                      <TableCell>{item.tinhTrang}</TableCell>
+                      <TableCell>{formatVietnameseStatus(item.tinhTrang)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

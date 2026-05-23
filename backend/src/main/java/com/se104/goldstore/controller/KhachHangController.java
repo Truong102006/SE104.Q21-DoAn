@@ -31,9 +31,11 @@ public class KhachHangController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<KhachHangResponse>>> getAll(
-        @RequestParam(name = "q", required = false) String keyword
+        @RequestParam(name = "q", required = false) String keyword,
+        @RequestParam(name = "page", required = false) Integer page,
+        @RequestParam(name = "size", required = false) Integer size
     ) {
-        return ResponseEntity.ok(ApiResponse.success("Lay danh sach khach hang thanh cong", khachHangService.getAll(keyword)));
+        return ResponseEntity.ok(ApiResponse.success("Lay danh sach khach hang thanh cong", khachHangService.getAll(keyword, page, size)));
     }
 
     @GetMapping("/{maKhachHang}")

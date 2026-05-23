@@ -44,8 +44,6 @@ const MENU_SECTIONS: MenuSection[] = [
     icon: Home,
     items: [
       { key: "nav.dashboard", href: "/dashboard", icon: Gauge, roles: ["ADMIN", "STAFF"] },
-      { key: "nav.accounts", href: "/dashboard/staff", icon: Users, roles: ["ADMIN"] },
-      { key: "nav.settings", href: "/dashboard/settings", icon: Settings, roles: ["ADMIN"] },
     ],
   },
   {
@@ -72,17 +70,18 @@ const MENU_SECTIONS: MenuSection[] = [
     ],
   },
   {
-    key: "nav.notificationScreen",
-    icon: Bell,
-    items: [
-      { key: "nav.notifications", href: "/dashboard/notifications", icon: Bell, roles: ["ADMIN", "STAFF"] },
-    ],
-  },
-  {
     key: "nav.reportsScreen",
     icon: BarChart3,
     items: [
       { key: "nav.reports", href: "/dashboard/reports", icon: BarChart3, roles: ["ADMIN"] },
+    ],
+  },
+  {
+    key: "nav.systemManagement",
+    icon: Settings,
+    items: [
+      { key: "nav.accounts", href: "/dashboard/staff", icon: Users, roles: ["ADMIN"] },
+      { key: "nav.settings", href: "/dashboard/settings", icon: Settings, roles: ["ADMIN"] },
     ],
   },
 ];

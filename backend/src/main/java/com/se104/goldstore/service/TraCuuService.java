@@ -17,4 +17,6 @@ public interface TraCuuService {
         int page,
         int size
     );
+
+    Object getDrillDown(String type, String id, Integer month, Integer year);
 }

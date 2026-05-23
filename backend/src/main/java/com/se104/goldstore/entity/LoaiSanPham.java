@@ -20,6 +20,9 @@ public class LoaiSanPham {
     @Column(name = "ti_le_loi_nhuan", nullable = false, precision = 5, scale = 2)
     private BigDecimal tiLeLoiNhuan;
 
+    @Column(name = "is_active", nullable = false)
+    private Boolean isActive = true;
+
     public String getMaLoaiSanPham() {
         return maLoaiSanPham;
     }
@@ -42,5 +45,13 @@ public class LoaiSanPham {
 
     public void setTiLeLoiNhuan(BigDecimal tiLeLoiNhuan) {
         this.tiLeLoiNhuan = tiLeLoiNhuan;
+    }
+
+    public Boolean getIsActive() {
+        return isActive;
+    }
+
+    public void setIsActive(Boolean isActive) {
+        this.isActive = isActive;
     }
 }

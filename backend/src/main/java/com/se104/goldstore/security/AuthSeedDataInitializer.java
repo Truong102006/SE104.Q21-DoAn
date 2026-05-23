@@ -63,8 +63,8 @@ public class AuthSeedDataInitializer implements ApplicationRunner {
     }
 
     private void ensureSeedUser(String username, String rawPassword, String groupCode) {
-        String normalizedUsername = normalizeRequired(username, "Username seed khong duoc de trong");
-        String normalizedPassword = normalizeRequired(rawPassword, "Password seed khong duoc de trong");
+        String normalizedUsername = normalizeRequired(username, "Tên đăng nhập mẫu không được để trống");
+        String normalizedPassword = normalizeRequired(rawPassword, "Mật khẩu mẫu không được để trống");
 
         NguoiDung user = nguoiDungRepository.findById(normalizedUsername).orElseGet(() -> {
             NguoiDung entity = new NguoiDung();

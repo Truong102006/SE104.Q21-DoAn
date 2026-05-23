@@ -15,6 +15,7 @@ public class LoaiSanPhamRequest {
     @NotNull(message = "Ti le loi nhuan khong duoc de trong")
     @DecimalMin(value = "0", inclusive = true, message = "Ti le loi nhuan phai >= 0")
     private BigDecimal tiLeLoiNhuan;
+    private Boolean isActive;
 
     public String getMaLoaiSanPham() {
         return maLoaiSanPham;
@@ -38,5 +39,13 @@ public class LoaiSanPhamRequest {
 
     public void setTiLeLoiNhuan(BigDecimal tiLeLoiNhuan) {
         this.tiLeLoiNhuan = tiLeLoiNhuan;
+    }
+
+    public Boolean getIsActive() {
+        return isActive;
+    }
+
+    public void setIsActive(Boolean isActive) {
+        this.isActive = isActive;
     }
 }

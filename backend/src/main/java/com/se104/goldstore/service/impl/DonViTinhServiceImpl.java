@@ -55,7 +55,7 @@ public class DonViTinhServiceImpl implements DonViTinhService {
     @Transactional
     public DonViTinhResponse create(DonViTinhRequest request) {
         if (donViTinhRepository.existsByTenDonViTinhIgnoreCase(request.getTenDonViTinh().trim())) {
-            throw new BusinessException("Ten don vi tinh da ton tai");
+            throw new BusinessException("Tên đơn vị tính đã tồn tại");
         }
 
         String maDonViTinh = request.getMaDonViTinh();
@@ -68,7 +68,7 @@ public class DonViTinhServiceImpl implements DonViTinhService {
         }
 
         if (donViTinhRepository.existsById(maDonViTinh)) {
-            throw new BusinessException("Ma don vi tinh da ton tai");
+            throw new BusinessException("Mã đơn vị tính đã tồn tại");
         }
 
         DonViTinh entity = new DonViTinh();
@@ -77,6 +77,7 @@ public class DonViTinhServiceImpl implements DonViTinhService {
         entity.setLoaiDonVi(emptyToNull(request.getLoaiDonVi()));
         entity.setHeSoQuyDoi(request.getHeSoQuyDoi());
         entity.setGhiChu(emptyToNull(request.getGhiChu()));
+        entity.setIsActive(request.getIsActive() != null ? request.getIsActive() : true);
 
         return toResponse(donViTinhRepository.save(entity));
     }
@@ -87,13 +88,16 @@ public class DonViTinhServiceImpl implements DonViTinhService {
         DonViTinh entity = findByIdOrThrow(maDonViTinh);
 
         if (donViTinhRepository.existsByTenDonViTinhIgnoreCaseAndMaDonViTinhNot(request.getTenDonViTinh().trim(), maDonViTinh)) {
-            throw new BusinessException("Ten don vi tinh da ton tai");
+            throw new BusinessException("Tên đơn vị tính đã tồn tại");
         }
 
         entity.setTenDonViTinh(request.getTenDonViTinh().trim());
         entity.setLoaiDonVi(emptyToNull(request.getLoaiDonVi()));
         entity.setHeSoQuyDoi(request.getHeSoQuyDoi());
         entity.setGhiChu(emptyToNull(request.getGhiChu()));
+        if (request.getIsActive() != null) {
+            entity.setIsActive(request.getIsActive());
+        }
 
         return toResponse(donViTinhRepository.save(entity));
     }
@@ -103,18 +107,18 @@ public class DonViTinhServiceImpl implements DonViTinhService {
     public void delete(String maDonViTinh) {
         DonViTinh entity = findByIdOrThrow(maDonViTinh);
         if (sanPhamRepository.existsByMaDonViTinh(maDonViTinh) || chiTietPhieuMuaRepository.existsByMaDonViTinh(maDonViTinh)) {
-            throw new BusinessException("Khong the xoa don vi tinh da duoc su dung trong san pham hoac chi tiet phieu");
+            throw new BusinessException("Không thể xóa đơn vị tính đã được sử dụng trong sản phẩm hoặc phiếu mua");
         }
         try {
             donViTinhRepository.delete(entity);
         } catch (DataIntegrityViolationException ex) {
-            throw new BusinessException("Khong the xoa don vi tinh da co du lieu lien quan");
+            throw new BusinessException("Không thể xóa đơn vị tính đã có dữ liệu liên quan");
         }
     }
 
     private DonViTinh findByIdOrThrow(String maDonViTinh) {
         return donViTinhRepository.findById(maDonViTinh)
-            .orElseThrow(() -> new ResourceNotFoundException("Khong tim thay don vi tinh: " + maDonViTinh));
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn vị tính: " + maDonViTinh));
     }
 
     private String emptyToNull(String value) {
@@ -131,6 +135,7 @@ public class DonViTinhServiceImpl implements DonViTinhService {
         response.setLoaiDonVi(entity.getLoaiDonVi());
         response.setHeSoQuyDoi(entity.getHeSoQuyDoi());
         response.setGhiChu(entity.getGhiChu());
+        response.setIsActive(entity.getIsActive());
         return response;
     }
 }

@@ -31,7 +31,7 @@ public class RestAccessDeniedHandler implements AccessDeniedHandler {
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         ApiResponse<Object> body = ApiResponse.failure(
             "Forbidden",
-            List.of(new ApiError("forbidden", "Ban khong co quyen truy cap"))
+            List.of(new ApiError("forbidden", "Bạn không có quyền truy cập"))
         );
         objectMapper.writeValue(response.getWriter(), body);
     }

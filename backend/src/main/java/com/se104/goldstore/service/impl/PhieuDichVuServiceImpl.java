@@ -66,9 +66,7 @@ public class PhieuDichVuServiceImpl implements PhieuDichVuService {
     @Override
     public List<PhieuDichVuResponse> getAll(String keyword) {
         String normalized = SearchUtils.normalizeKeyword(keyword);
-        List<PhieuDichVu> entities = normalized.isEmpty()
-            ? phieuDichVuRepository.findAll()
-            : phieuDichVuRepository.findBySoPhieuDichVuContainingIgnoreCase(normalized);
+        List<PhieuDichVu> entities = phieuDichVuRepository.findByKeyword(normalized);
 
         return entities.stream().map(entity -> buildResponse(entity, loadDetails(entity.getSoPhieuDichVu()))).toList();
     }
@@ -85,10 +83,10 @@ public class PhieuDichVuServiceImpl implements PhieuDichVuService {
         KhachHang khachHang = validateKhachHang(request.getMaKhachHang().trim());
         String soPhieuDichVu = normalizeVoucherCode(request.getSoPhieuDichVu());
         if (phieuDichVuRepository.existsById(soPhieuDichVu)) {
-            throw new BusinessException("So phieu dich vu da ton tai");
+            throw new BusinessException("Số phiếu dịch vụ đã tồn tại");
         }
         if (request.getItems() == null || request.getItems().isEmpty()) {
-            throw new BusinessException("Danh sach dich vu khong duoc de trong");
+            throw new BusinessException("Danh sách dịch vụ không được để trống");
         }
 
         BigDecimal prepaymentRate = getServicePrepaymentRate();
@@ -101,26 +99,26 @@ public class PhieuDichVuServiceImpl implements PhieuDichVuService {
         for (PhieuDichVuRequest.ItemRequest item : request.getItems()) {
             String maLoaiDichVu = item.getMaLoaiDichVu().trim();
             if (!seenServiceTypes.add(maLoaiDichVu)) {
-                throw new BusinessException("Loai dich vu bi trung trong cung mot phieu: " + maLoaiDichVu);
+                throw new BusinessException("Loại dịch vụ bị trùng trong cùng một phiếu: " + maLoaiDichVu);
             }
 
             LoaiDichVu loaiDichVu = loaiDichVuRepository.findById(maLoaiDichVu)
-                .orElseThrow(() -> new BusinessException("Ma loai dich vu khong ton tai: " + maLoaiDichVu));
-            BigDecimal donGiaDichVu = normalizeMoney(loaiDichVu.getDonGiaDichVu(), "Don gia dich vu phai >= 0");
+                .orElseThrow(() -> new BusinessException("Mã loại dịch vụ không tồn tại: " + maLoaiDichVu));
+            BigDecimal donGiaDichVu = normalizeMoney(loaiDichVu.getDonGiaDichVu(), "Đơn giá dịch vụ phải >= 0");
             BigDecimal donGiaDuocTinh = resolveDonGiaDuocTinh(item, donGiaDichVu);
             Integer soLuongDichVu = item.getSoLuongDichVu();
             BigDecimal thanhTien = donGiaDuocTinh
                 .multiply(BigDecimal.valueOf(soLuongDichVu.longValue()))
                 .setScale(2, RoundingMode.HALF_UP);
-            BigDecimal tienTraTruoc = normalizeMoney(item.getTienTraTruoc(), "Tien tra truoc phai >= 0");
+            BigDecimal tienTraTruoc = normalizeMoney(item.getTienTraTruoc(), "Tiền trả trước phải >= 0");
             BigDecimal minPrepayment = calculateMinPrepayment(thanhTien, prepaymentRate);
             if (tienTraTruoc.compareTo(minPrepayment) < 0) {
                 throw new BusinessException(
-                    "Tien tra truoc cua loai dich vu " + maLoaiDichVu + " phai >= " + minPrepayment.toPlainString()
+                    "Tiền trả trước của loại dịch vụ " + maLoaiDichVu + " phải >= " + minPrepayment.toPlainString()
                 );
             }
             if (tienTraTruoc.compareTo(thanhTien) > 0) {
-                throw new BusinessException("Tien tra truoc khong duoc lon hon thanh tien cua loai dich vu: " + maLoaiDichVu);
+                throw new BusinessException("Tiền trả trước không được lớn hơn thành tiền của loại dịch vụ: " + maLoaiDichVu);
             }
             BigDecimal tienConLai = thanhTien.subtract(tienTraTruoc).setScale(2, RoundingMode.HALF_UP);
 
@@ -161,7 +159,7 @@ public class PhieuDichVuServiceImpl implements PhieuDichVuService {
         PhieuDichVu voucher = findByIdOrThrow(soPhieuDichVu);
         String normalizedServiceTypeId = maLoaiDichVu == null ? "" : maLoaiDichVu.trim();
         if (normalizedServiceTypeId.isEmpty()) {
-            throw new BusinessException("Ma loai dich vu khong duoc de trong");
+            throw new BusinessException("Mã loại dịch vụ không được để trống");
         }
 
         ChiTietPhieuDichVu.ChiTietPhieuDichVuId detailId = new ChiTietPhieuDichVu.ChiTietPhieuDichVuId(
@@ -171,14 +169,14 @@ public class PhieuDichVuServiceImpl implements PhieuDichVuService {
         ChiTietPhieuDichVu detail = chiTietPhieuDichVuRepository.findById(detailId)
             .orElseThrow(
                 () -> new ResourceNotFoundException(
-                    "Khong tim thay chi tiet phieu dich vu: " + soPhieuDichVu + " - " + normalizedServiceTypeId
+                    "Không tìm thấy chi tiết phiếu dịch vụ: " + soPhieuDichVu + " - " + normalizedServiceTypeId
                 )
             );
 
         if (!TINH_TRANG_DA_GIAO.equalsIgnoreCase(detail.getTinhTrang())) {
             detail.setTinhTrang(TINH_TRANG_DA_GIAO);
             detail.setNgayGiao(ngayGiao != null ? ngayGiao : LocalDate.now());
-            detail.setTienTraTruoc(normalizeMoney(detail.getThanhTien(), "Thanh tien phai >= 0"));
+            detail.setTienTraTruoc(normalizeMoney(detail.getThanhTien(), "Thành tiền phải >= 0"));
             detail.setTienConLai(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP));
             chiTietPhieuDichVuRepository.save(detail);
         }
@@ -195,7 +193,7 @@ public class PhieuDichVuServiceImpl implements PhieuDichVuService {
         PhieuDichVu voucher = findByIdOrThrow(soPhieuDichVu);
         List<ChiTietPhieuDichVu> details = loadDetails(soPhieuDichVu);
         if (details.isEmpty()) {
-            throw new BusinessException("Phieu dich vu khong co chi tiet de giao");
+            throw new BusinessException("Phiếu dịch vụ không có chi tiết để giao");
         }
 
         LocalDate deliveryDate = ngayGiao != null ? ngayGiao : LocalDate.now();
@@ -203,7 +201,7 @@ public class PhieuDichVuServiceImpl implements PhieuDichVuService {
             if (!TINH_TRANG_DA_GIAO.equalsIgnoreCase(detail.getTinhTrang())) {
                 detail.setTinhTrang(TINH_TRANG_DA_GIAO);
                 detail.setNgayGiao(deliveryDate);
-                detail.setTienTraTruoc(normalizeMoney(detail.getThanhTien(), "Thanh tien phai >= 0"));
+                detail.setTienTraTruoc(normalizeMoney(detail.getThanhTien(), "Thành tiền phải >= 0"));
                 detail.setTienConLai(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP));
             }
         }
@@ -215,12 +213,12 @@ public class PhieuDichVuServiceImpl implements PhieuDichVuService {
 
     private PhieuDichVu findByIdOrThrow(String soPhieuDichVu) {
         return phieuDichVuRepository.findById(soPhieuDichVu)
-            .orElseThrow(() -> new ResourceNotFoundException("Khong tim thay phieu dich vu: " + soPhieuDichVu));
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phiếu dịch vụ: " + soPhieuDichVu));
     }
 
     private KhachHang validateKhachHang(String maKhachHang) {
         return khachHangRepository.findById(maKhachHang)
-            .orElseThrow(() -> new BusinessException("Ma khach hang khong ton tai"));
+            .orElseThrow(() -> new BusinessException("Mã khách hàng không tồn tại"));
     }
 
     private String normalizeVoucherCode(String requestedCode) {
@@ -242,7 +240,7 @@ public class PhieuDichVuServiceImpl implements PhieuDichVuService {
             rate = DEFAULT_PREPAYMENT_RATE;
         }
         if (rate.compareTo(BigDecimal.ZERO) < 0 || rate.compareTo(ONE_HUNDRED) > 0) {
-            throw new BusinessException("Gia tri tham so SERVICE_PREPAYMENT_RATE phai nam trong khoang [0, 100]");
+            throw new BusinessException("Giá trị tham số SERVICE_PREPAYMENT_RATE phải nằm trong khoảng [0, 100]");
         }
         return rate;
     }
@@ -256,14 +254,14 @@ public class PhieuDichVuServiceImpl implements PhieuDichVuService {
 
     private BigDecimal resolveDonGiaDuocTinh(PhieuDichVuRequest.ItemRequest item, BigDecimal donGiaDichVu) {
         if (item.getChiPhiRieng() != null) {
-            BigDecimal chiPhiRieng = normalizeMoney(item.getChiPhiRieng(), "Chi phi rieng phai >= 0");
+            BigDecimal chiPhiRieng = normalizeMoney(item.getChiPhiRieng(), "Chi phí riêng phải >= 0");
             return donGiaDichVu.add(chiPhiRieng).setScale(2, RoundingMode.HALF_UP);
         }
 
         if (item.getDonGiaDuocTinh() != null) {
-            BigDecimal donGiaDuocTinh = normalizeMoney(item.getDonGiaDuocTinh(), "Don gia duoc tinh phai >= 0");
+            BigDecimal donGiaDuocTinh = normalizeMoney(item.getDonGiaDuocTinh(), "Đơn giá được tính phải >= 0");
             if (donGiaDuocTinh.compareTo(donGiaDichVu) < 0) {
-                throw new BusinessException("Don gia duoc tinh phai >= don gia dich vu");
+                throw new BusinessException("Đơn giá được tính phải >= đơn giá dịch vụ");
             }
             return donGiaDuocTinh;
         }
@@ -292,15 +290,15 @@ public class PhieuDichVuServiceImpl implements PhieuDichVuService {
         boolean allDelivered = !details.isEmpty();
 
         for (ChiTietPhieuDichVu detail : details) {
-            BigDecimal thanhTien = normalizeMoney(detail.getThanhTien(), "Thanh tien phai >= 0");
-            BigDecimal tienTraTruoc = normalizeMoney(detail.getTienTraTruoc(), "Tien tra truoc phai >= 0");
-            BigDecimal tienConLai = normalizeMoney(detail.getTienConLai(), "Tien con lai phai >= 0");
+            BigDecimal thanhTien = normalizeMoney(detail.getThanhTien(), "Thành tiền phải >= 0");
+            BigDecimal tienTraTruoc = normalizeMoney(detail.getTienTraTruoc(), "Tiền trả trước phải >= 0");
+            BigDecimal tienConLai = normalizeMoney(detail.getTienConLai(), "Tiền còn lại phải >= 0");
 
             if (tienTraTruoc.compareTo(thanhTien) > 0) {
-                throw new BusinessException("Tien tra truoc khong duoc lon hon thanh tien");
+                throw new BusinessException("Tiền trả trước không được lớn hơn thành tiền");
             }
             if (thanhTien.subtract(tienTraTruoc).setScale(2, RoundingMode.HALF_UP).compareTo(tienConLai) != 0) {
-                throw new BusinessException("Du lieu tien con lai khong hop le trong chi tiet phieu dich vu");
+                throw new BusinessException("Dữ liệu tiền còn lại không hợp lệ trong chi tiết phiếu dịch vụ");
             }
 
             tongTien = tongTien.add(thanhTien).setScale(2, RoundingMode.HALF_UP);
@@ -377,7 +375,7 @@ public class PhieuDichVuServiceImpl implements PhieuDichVuService {
         LoaiDichVu loaiDichVu = loaiDichVuMap.get(detail.getMaLoaiDichVu());
         if (loaiDichVu != null) {
             item.setTenLoaiDichVu(loaiDichVu.getTenLoaiDichVu());
-            item.setDonGiaDichVu(normalizeMoney(loaiDichVu.getDonGiaDichVu(), "Don gia dich vu phai >= 0"));
+            item.setDonGiaDichVu(normalizeMoney(loaiDichVu.getDonGiaDichVu(), "Đơn giá dịch vụ phải >= 0"));
         }
 
         return item;

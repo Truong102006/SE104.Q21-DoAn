@@ -47,8 +47,8 @@ export const backendApi = {
   },
 
   customers: {
-    list: (q?: string) =>
-      apiRequest<CustomerResponse[]>("/api/customers", { query: { q } }),
+    list: (q?: string, page?: number, size?: number) =>
+      apiRequest<CustomerResponse[]>("/api/customers", { query: { q, page, size } }),
     getById: (id: string) => apiRequest<CustomerResponse>(`/api/customers/${id}`),
     create: (payload: CustomerRequest) =>
       apiRequest<CustomerResponse>("/api/customers", { method: "POST", body: payload }),
@@ -174,6 +174,15 @@ export const backendApi = {
           toDate: params.toDate,
           page: params.page ?? 0,
           size: params.size ?? 20,
+        },
+      }),
+    drillDown: (params: { type: string; id: string; month: number; year: number }) =>
+      apiRequest<any[]>("/api/search/drill-down", {
+        query: {
+          type: params.type,
+          id: params.id,
+          month: params.month,
+          year: params.year,
         },
       }),
   },
