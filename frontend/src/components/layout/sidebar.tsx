@@ -70,13 +70,6 @@ const MENU_SECTIONS: MenuSection[] = [
     ],
   },
   {
-    key: "nav.notificationScreen",
-    icon: Bell,
-    items: [
-      { key: "nav.notifications", href: "/dashboard/notifications", icon: Bell, roles: ["ADMIN", "STAFF"] },
-    ],
-  },
-  {
     key: "nav.reportsScreen",
     icon: BarChart3,
     items: [

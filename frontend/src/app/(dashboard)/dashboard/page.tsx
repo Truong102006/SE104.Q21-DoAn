@@ -9,6 +9,8 @@ import { EmptyState, MetricCard, PageHeader } from "@/components/dashboard/manag
 import { backendApi } from "@/services/backend-api";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { formatCurrency, formatNumber } from "@/lib/format";
+import { useAuthStore } from "@/stores/auth-store";
+import { useToastStore } from "@/stores/toast-store";
 import {
   BarChart3,
   Boxes,
@@ -151,39 +153,44 @@ export default function DashboardPage() {
   const [hoveredChartPoint, setHoveredChartPoint] = useState<number | null>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
 
-  // Simulate Live Gold Ticker
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const targetIndex = Math.floor(Math.random() * goldPrices.length);
-      const isUp = Math.random() > 0.4;
-      const amount = (isUp ? 1 : -1) * 10000;
+  const role = useAuthStore((state) => state.user?.role ?? "STAFF");
+  const isAdmin = role === "ADMIN";
+  const [isEditingPrices, setIsEditingPrices] = useState(false);
+  const [editPricesDraft, setEditPricesDraft] = useState<GoldPrice[]>([]);
+  const toast = useToastStore();
 
-      setGoldPrices((prev) =>
-        prev.map((item, idx) => {
-          if (idx === targetIndex) {
-            return {
-              ...item,
-              buy: item.buy + amount,
-              sell: item.sell + amount,
-              change: amount,
-            };
-          }
-          return { ...item, change: 0 };
-        })
-      );
+  function handleOpenEditPrices() {
+    setEditPricesDraft(JSON.parse(JSON.stringify(goldPrices)));
+    setIsEditingPrices(true);
+  }
 
-      setFlashRow(goldPrices[targetIndex].type);
+  function handleSavePrices() {
+    // Calculate delta changes to trigger green/red flashes dynamically
+    setGoldPrices(prev => prev.map((oldItem, idx) => {
+      const newItem = editPricesDraft[idx];
+      const change = newItem.sell - oldItem.sell;
+      return {
+        ...newItem,
+        change: change
+      };
+    }));
+
+    // Trigger flash highlighting on the first modified gold type
+    const changedItem = editPricesDraft.find((item, idx) => item.sell !== goldPrices[idx].sell);
+    if (changedItem) {
+      const idx = editPricesDraft.findIndex(item => item.type === changedItem.type);
+      const isUp = editPricesDraft[idx].sell > goldPrices[idx].sell;
+      setFlashRow(changedItem.type);
       setFlashDirection(isUp ? "up" : "down");
-
-      // Reset flash highlight after 1.5s
       setTimeout(() => {
         setFlashRow(null);
         setFlashDirection(null);
-      }, 1500);
-    }, 8000);
+      }, 2000);
+    }
 
-    return () => clearInterval(interval);
-  }, [goldPrices]);
+    setIsEditingPrices(false);
+    toast.success("Cập nhật bảng giá vàng thành công!");
+  }
 
   // Load Data
   useEffect(() => {
@@ -728,14 +735,19 @@ export default function DashboardPage() {
                   </div>
                 </CardContent>
               </div>
-              <div className="p-3 border-t bg-muted/10 text-center">
-                <Link href="/dashboard/gold-prices">
-                  <Button variant="outline" size="sm" className="w-full text-xs font-semibold hover:bg-muted">
-                    {t("dashboard.manageGoldPrices")}
+              {isAdmin && (
+                <div className="p-3 border-t bg-muted/10 text-center">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full text-xs font-bold hover:bg-muted cursor-pointer rounded-lg border h-8.5"
+                    onClick={handleOpenEditPrices}
+                  >
+                    Cập nhật bảng giá vàng
                     <ArrowUpRight className="ml-1.5 h-3.5 w-3.5" />
                   </Button>
-                </Link>
-              </div>
+                </div>
+              )}
             </Card>
           </div>
 
@@ -848,6 +860,66 @@ export default function DashboardPage() {
             </Card>
           </div>
         </>
+      )}
+      {isEditingPrices && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+            <h3 className="text-base font-extrabold text-foreground mb-1">Cập nhật bảng giá vàng</h3>
+            <p className="text-xs text-muted-foreground mb-4">Thay đổi giá mua và giá bán của các loại vàng đang giao dịch.</p>
+            
+            <div className="space-y-4">
+              {editPricesDraft.map((gold, index) => (
+                <div key={gold.type} className="space-y-1.5 p-3 rounded-xl border border-border/80 bg-muted/20">
+                  <span className="text-xs font-bold text-foreground block">{gold.type}</span>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-muted-foreground uppercase">Giá mua (đ)</label>
+                      <input
+                        type="number"
+                        value={gold.buy}
+                        onChange={(e) => {
+                          const val = Number(e.target.value);
+                          setEditPricesDraft(prev => prev.map((item, idx) => idx === index ? { ...item, buy: val } : item));
+                        }}
+                        className="w-full h-8.5 rounded-lg border border-border/80 bg-background px-2.5 py-1 text-xs font-semibold focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-muted-foreground uppercase">Giá bán (đ)</label>
+                      <input
+                        type="number"
+                        value={gold.sell}
+                        onChange={(e) => {
+                          const val = Number(e.target.value);
+                          setEditPricesDraft(prev => prev.map((item, idx) => idx === index ? { ...item, sell: val } : item));
+                        }}
+                        className="w-full h-8.5 rounded-lg border border-border/80 bg-background px-2.5 py-1 text-xs font-semibold focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-6 flex justify-end gap-2.5">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8.5 text-xs font-bold px-4 rounded-lg cursor-pointer"
+                onClick={() => setIsEditingPrices(false)}
+              >
+                Hủy bỏ
+              </Button>
+              <Button
+                size="sm"
+                className="h-8.5 text-xs font-bold px-4 rounded-lg cursor-pointer bg-primary text-primary-foreground hover:brightness-105"
+                onClick={handleSavePrices}
+              >
+                Lưu thay đổi
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

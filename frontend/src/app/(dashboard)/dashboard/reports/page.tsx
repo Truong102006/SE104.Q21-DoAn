@@ -5,8 +5,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState, PageHeader } from "@/components/dashboard/management";
+import { cn } from "@/lib/utils";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Select } from "@/components/ui/select";
+import { MonthPickerInput } from "@/components/ui/date-picker";
 import { backendApi } from "@/services/backend-api";
 import type {
   InventoryReportResponse,
@@ -172,7 +173,15 @@ function DrillDownModal({ open, onOpenChange, type, id, name, month, year }: Dri
                       <TableCell className="text-right font-black text-emerald-600">{formatCurrency(item.thanhTien)}</TableCell>
                       {type === "service" && (
                         <TableCell>
-                          <Badge variant={item.tinhTrang === "Da giao" ? "success" : "warning"} className="text-[9px] font-black uppercase">
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "text-[9px] font-black uppercase border",
+                              item.tinhTrang === "Da giao"
+                                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                                : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
+                            )}
+                          >
                             {item.tinhTrang === "Da giao" ? "Đã xong" : "Đang chờ"}
                           </Badge>
                         </TableCell>
@@ -280,13 +289,6 @@ export default function ReportsPage() {
     }
   }
 
-  const monthOptions = useMemo(() => Array.from({ length: 12 }, (_, i) => ({ value: String(i + 1), label: `Tháng ${i + 1}` })), []);
-  const yearOptions = useMemo(() => {
-    const years = [];
-    for (let y = now.year; y >= 2020; y--) years.push({ value: String(y), label: `Năm ${y}` });
-    return years;
-  }, [now.year]);
-
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-20">
       <PageHeader
@@ -315,9 +317,17 @@ export default function ReportsPage() {
             <Calendar className="h-5 w-5 text-primary" />
             <span className="text-sm font-black text-foreground uppercase tracking-wider">Kỳ báo cáo:</span>
           </div>
-          <div className="flex items-center gap-2">
-            <Select value={selectedMonth} options={monthOptions} onValueChange={(v) => setSelectedMonth(Number(v))} className="w-36 h-10 font-bold" />
-            <Select value={selectedYear} options={yearOptions} onValueChange={(v) => setSelectedYear(Number(v))} className="w-36 h-10 font-bold" />
+          <div className="w-48">
+            <MonthPickerInput
+              value={`${selectedYear}-${String(selectedMonth).padStart(2, "0")}`}
+              onValueChange={(val) => {
+                if (val) {
+                  const [year, month] = val.split("-").map(Number);
+                  setSelectedYear(year);
+                  setSelectedMonth(month);
+                }
+              }}
+            />
           </div>
         </CardContent>
       </Card>
@@ -421,7 +431,7 @@ export default function ReportsPage() {
                             fill="oklch(0.56 0.18 261)"
                             radius={[0, 6, 6, 0]}
                             barSize={24}
-                            onClick={(entry) => setDrillDown({ open: true, type: "product-sale", id: entry.maSanPham, name: entry.tenSanPham })}
+                             onClick={(entry: any) => setDrillDown({ open: true, type: "product-sale", id: entry.maSanPham, name: entry.tenSanPham })}
                             className="cursor-pointer"
                           />
                         </BarChart>
@@ -489,7 +499,7 @@ export default function ReportsPage() {
                             dataKey="doanhThu"
                             nameKey="tenLoaiDichVu"
                             stroke="none"
-                            onClick={(entry) => setDrillDown({ open: true, type: "service", id: entry.maLoaiDichVu, name: entry.tenLoaiDichVu })}
+                             onClick={(entry: any) => setDrillDown({ open: true, type: "service", id: entry.maLoaiDichVu, name: entry.tenLoaiDichVu })}
                             className="cursor-pointer outline-none"
                           >
                             {serviceRevenue.chiTiet.map((_, i) => (

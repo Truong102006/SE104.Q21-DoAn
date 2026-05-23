@@ -274,11 +274,12 @@ export default function ServiceOrdersPage() {
 
     setSubmitting(true);
     try {
-      await backendApi.serviceTickets.create(payload);
+      const created = await backendApi.serviceTickets.create(payload);
       setSoPhieuDichVu("");
       setTongTienTraTruoc("0");
       setItems([createEmptyItem()]);
       await loadData();
+      useToastStore.getState().success(`Đã lập phiếu dịch vụ ${created.soPhieuDichVu} thành công!`);
     } catch (err) {
       setFormError(getApiErrorMessage(err, t("serviceOrders.createError")));
     } finally {
@@ -290,6 +291,7 @@ export default function ServiceOrdersPage() {
     try {
       await backendApi.serviceTickets.deliverItem(ticket.soPhieuDichVu, maLoaiDichVu);
       await loadData();
+      useToastStore.getState().success(`Đã bàn giao sản phẩm dịch vụ thành công cho phiếu ${ticket.soPhieuDichVu}!`);
     } catch (err) {
       setError(getApiErrorMessage(err, t("serviceOrders.deliverError")));
     }
@@ -299,6 +301,7 @@ export default function ServiceOrdersPage() {
     try {
       await backendApi.serviceTickets.deliverAll(ticket.soPhieuDichVu);
       await loadData();
+      useToastStore.getState().success(`Đã bàn giao toàn bộ sản phẩm dịch vụ cho phiếu ${ticket.soPhieuDichVu}!`);
     } catch (err) {
       setError(getApiErrorMessage(err, t("serviceOrders.deliverAllError")));
     }

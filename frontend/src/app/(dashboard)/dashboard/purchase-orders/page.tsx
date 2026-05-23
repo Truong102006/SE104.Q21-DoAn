@@ -257,6 +257,7 @@ export default function PurchaseOrdersPage() {
       setSoPhieuMua("");
       setItems([createEmptyItem()]);
       await loadData();
+      useToastStore.getState().success(`Đã lập phiếu mua hàng ${created.soPhieuMua} thành công!`);
     } catch (err) {
       setFormError(getApiErrorMessage(err, t("purchaseOrders.createError")));
     } finally {

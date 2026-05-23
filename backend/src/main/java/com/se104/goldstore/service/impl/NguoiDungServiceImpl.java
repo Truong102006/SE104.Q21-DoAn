@@ -11,6 +11,8 @@ import com.se104.goldstore.repository.NhomNguoiDungRepository;
 import com.se104.goldstore.service.NguoiDungService;
 import java.util.List;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -78,7 +80,40 @@ public class NguoiDungServiceImpl implements NguoiDungService {
     public NguoiDungResponse update(String tenDangNhap, NguoiDungRequest request) {
         NguoiDung entity = findByIdOrThrow(tenDangNhap);
 
+        // Ràng buộc 1: Không thể tự khóa tài khoản của chính mình
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.isAuthenticated()) {
+            String currentUsername = authentication.getName();
+            if (currentUsername.equalsIgnoreCase(tenDangNhap) && request.getIsActive() != null && !request.getIsActive()) {
+                throw new BusinessException("Không thể tự ngưng hoạt động tài khoản của chính mình!");
+            }
+        }
+
+        // Ràng buộc 2: Không thể ngưng hoạt động tài khoản cuối cùng hoạt động trong nhóm
+        if (request.getIsActive() != null && !request.getIsActive()) {
+            String role = entity.getMaNhom();
+            long activeCount = nguoiDungRepository.findAll().stream()
+                .filter(u -> role.equals(u.getMaNhom()) && u.getIsActive())
+                .count();
+            if (activeCount <= 1) {
+                String roleName = "ADMIN".equals(role) ? "Quản trị viên (ADMIN)" : "Nhân viên (STAFF)";
+                throw new BusinessException("Không thể ngưng hoạt động tài khoản " + roleName + " hoạt động duy nhất trong hệ thống!");
+            }
+        }
+
         String maNhom = normalizeAndValidateNhom(request.getMaNhom());
+
+        // Ràng buộc 3: Không thể chuyển nhóm tài khoản hoạt động duy nhất của nhóm sang nhóm khác
+        if (maNhom != null && !entity.getMaNhom().equals(maNhom)) {
+            String originalRole = entity.getMaNhom();
+            long activeCount = nguoiDungRepository.findAll().stream()
+                .filter(u -> originalRole.equals(u.getMaNhom()) && u.getIsActive())
+                .count();
+            if (activeCount <= 1) {
+                String roleName = "ADMIN".equals(originalRole) ? "Quản trị viên (ADMIN)" : "Nhân viên (STAFF)";
+                throw new BusinessException("Không thể chuyển nhóm tài khoản " + roleName + " hoạt động duy nhất sang nhóm khác!");
+            }
+        }
 
         if (request.getMatKhau() != null && !request.getMatKhau().isBlank()) {
             entity.setMatKhau(passwordEncoder.encode(request.getMatKhau().trim()));
@@ -95,6 +130,26 @@ public class NguoiDungServiceImpl implements NguoiDungService {
     @Transactional
     public void delete(String tenDangNhap) {
         NguoiDung entity = findByIdOrThrow(tenDangNhap);
+
+        // Ràng buộc 4: Không thể tự xóa tài khoản của chính mình
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.isAuthenticated()) {
+            String currentUsername = authentication.getName();
+            if (currentUsername.equalsIgnoreCase(tenDangNhap)) {
+                throw new BusinessException("Không thể tự xóa tài khoản của chính mình!");
+            }
+        }
+
+        // Ràng buộc 5: Không thể xóa tài khoản hoạt động duy nhất trong nhóm
+        String role = entity.getMaNhom();
+        long activeCount = nguoiDungRepository.findAll().stream()
+            .filter(u -> role.equals(u.getMaNhom()) && u.getIsActive())
+            .count();
+        if (activeCount <= 1) {
+            String roleName = "ADMIN".equals(role) ? "Quản trị viên (ADMIN)" : "Nhân viên (STAFF)";
+            throw new BusinessException("Không thể xóa tài khoản " + roleName + " hoạt động duy nhất trong hệ thống!");
+        }
+
         try {
             nguoiDungRepository.delete(entity);
         } catch (DataIntegrityViolationException ex) {

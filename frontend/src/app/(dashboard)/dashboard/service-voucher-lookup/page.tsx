@@ -13,6 +13,7 @@ import { DetailModal, DetailGrid } from "@/components/dashboard/voucher-ui";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
+import { DatePickerInput } from "@/components/ui/date-picker";
 import {
   Table,
   TableBody,
@@ -245,11 +246,9 @@ export default function ServiceVoucherLookupPage() {
           <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
             {t("serviceLookup.from")}
           </Label>
-          <Input
-            type="date"
+          <DatePickerInput
             value={fromDate}
-            onChange={(e) => setFromDate(e.target.value)}
-            className="h-10 rounded-xl border border-border bg-card text-sm focus:ring-2 focus:ring-gold/20"
+            onValueChange={setFromDate}
           />
         </div>
 
@@ -258,11 +257,9 @@ export default function ServiceVoucherLookupPage() {
           <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
             {t("serviceLookup.to")}
           </Label>
-          <Input
-            type="date"
+          <DatePickerInput
             value={toDate}
-            onChange={(e) => setToDate(e.target.value)}
-            className="h-10 rounded-xl border border-border bg-card text-sm focus:ring-2 focus:ring-gold/20"
+            onValueChange={setToDate}
           />
         </div>
 

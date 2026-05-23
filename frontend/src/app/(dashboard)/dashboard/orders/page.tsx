@@ -244,10 +244,11 @@ export default function SalesPage() {
 
     setSubmitting(true);
     try {
-      await backendApi.sales.create(payload);
+      const created = await backendApi.sales.create(payload);
       setSoPhieuBan("");
       setItems([createEmptyItem()]);
       await loadData();
+      useToastStore.getState().success(`Đã lập phiếu bán hàng ${created.soPhieuBan} thành công!`);
     } catch (err) {
       setFormError(getApiErrorMessage(err, t("salesOrders.createError")));
     } finally {
