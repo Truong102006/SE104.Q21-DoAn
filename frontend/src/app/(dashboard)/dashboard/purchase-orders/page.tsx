@@ -11,6 +11,7 @@ import { DatePickerInput } from "@/components/ui/date-picker";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ContactPanel, DetailGrid, DetailModal, LineError, StickySummaryBar, VoucherSection } from "@/components/dashboard/voucher-ui";
 import { Combobox } from "@/components/ui/combobox";
+import { Pagination } from "@/components/dashboard/pagination";
 import { useToastStore } from "@/stores/toast-store";
 import { backendApi } from "@/services/backend-api";
 import type {
@@ -51,6 +52,7 @@ export default function PurchaseOrdersPage() {
   const [units, setUnits] = useState<UnitResponse[]>([]);
 
   const [purchaseList, setPurchaseList] = useState<PurchaseResponse[]>([]);
+  const [totalRecords, setTotalRecords] = useState(0);
   const [latestCreated, setLatestCreated] = useState<PurchaseResponse | null>(null);
 
   const [soPhieuMua, setSoPhieuMua] = useState("");
@@ -80,47 +82,27 @@ export default function PurchaseOrdersPage() {
     [items],
   );
 
-  const filteredPurchaseList = useMemo(() => {
-    const query = historyQuery.trim().toLowerCase();
-    if (!query) {
-      return purchaseList;
-    }
-    return purchaseList.filter((item) =>
-      item.soPhieuMua.toLowerCase().includes(query)
-      || (item.nhaCungCap?.tenNhaCungCap ?? item.maNhaCungCap).toLowerCase().includes(query),
-    );
-  }, [historyQuery, purchaseList]);
-
-  // Reset page when search query changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [historyQuery]);
-
-  const totalPages = Math.ceil(filteredPurchaseList.length / itemsPerPage) || 1;
-
-  const paginatedPurchaseList = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
-    return filteredPurchaseList.slice(start, start + itemsPerPage);
-  }, [filteredPurchaseList, currentPage, itemsPerPage]);
+  const totalPages = Math.ceil(totalRecords / itemsPerPage) || 1;
 
   async function loadData() {
     setLoading(true);
     setError(null);
     try {
-      const [supplierData, productPage, unitData, purchases] = await Promise.all([
+      const [supplierData, productPage, unitData] = await Promise.all([
         backendApi.suppliers.list(),
         backendApi.products.list({ page: 0, size: 100 }),
         backendApi.units.list(),
-        backendApi.purchases.list(),
       ]);
 
       setSuppliers(supplierData);
       setProducts(productPage.content);
       setUnits(unitData);
-      setPurchaseList(purchases);
+
       if (!maNhaCungCap && supplierData.length > 0) {
         setMaNhaCungCap(supplierData[0].maNhaCungCap);
       }
+
+      await loadHistory(1, historyQuery);
     } catch (err) {
       setError(getApiErrorMessage(err, t("purchaseOrders.loadError")));
     } finally {
@@ -128,10 +110,43 @@ export default function PurchaseOrdersPage() {
     }
   }
 
+  async function loadHistory(page: number, keyword: string) {
+    try {
+      const response = await backendApi.purchases.list({
+        keyword: keyword.trim() || undefined,
+        page: page - 1,
+        size: itemsPerPage
+      });
+
+      if (Array.isArray(response)) {
+        setPurchaseList(response);
+        setTotalRecords(response.length);
+      } else {
+        setPurchaseList(response.content);
+        setTotalRecords(response.totalElements);
+      }
+    } catch (err) {
+      useToastStore.getState().error(getApiErrorMessage(err, "Không thể tải lịch sử phiếu mua"));
+    }
+  }
+
   useEffect(() => {
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Update history when page or search query changes
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      loadHistory(currentPage, historyQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [currentPage, historyQuery]);
+
+  // Reset page when search query changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [historyQuery]);
 
   // Ref-based keyboard listener to avoid resetting event handler on state updates
   const submitRef = useRef(submit);
@@ -512,7 +527,7 @@ export default function PurchaseOrdersPage() {
         <CardContent className="p-6">
           {loading ? (
             <p className="py-4 text-sm text-muted-foreground">{t("common.loading")}</p>
-          ) : filteredPurchaseList.length === 0 ? (
+          ) : purchaseList.length === 0 ? (
             <EmptyState title={t("purchaseOrders.emptyTitle")} description={t("purchaseOrders.emptyDesc")} />
           ) : (
             <>
@@ -530,7 +545,7 @@ export default function PurchaseOrdersPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {paginatedPurchaseList.map((item, idx) => (
+                    {purchaseList.map((item, idx) => (
                       <TableRow key={item.soPhieuMua} className="table-row-hover border-b border-border/60">
                         <TableCell className="py-1.5 px-3 text-center font-bold text-xs text-muted-foreground">
                           {(currentPage - 1) * itemsPerPage + idx + 1}
@@ -538,7 +553,7 @@ export default function PurchaseOrdersPage() {
                         <TableCell className="py-1.5 px-3 text-xs font-semibold">{item.soPhieuMua}</TableCell>
                         <TableCell className="py-1.5 px-3 text-xs text-muted-foreground">{item.ngayLapPhieuMua}</TableCell>
                         <TableCell className="py-1.5 px-3 text-xs">{item.nhaCungCap?.tenNhaCungCap ?? item.maNhaCungCap}</TableCell>
-                        <TableCell className="py-1.5 px-3 text-xs text-center font-medium text-muted-foreground">{formatNumber(item.items.length)}</TableCell>
+                        <TableCell className="py-1.5 px-3 text-xs text-center font-medium text-muted-foreground">{formatNumber(item.items?.length ?? 0)}</TableCell>
                         <TableCell className="py-1.5 px-3 text-xs font-bold text-emerald-600 dark:text-emerald-400 text-right">{formatCurrency(item.tongTien)}</TableCell>
                         <TableCell className="py-1.5 px-3 text-right">
                           <Button variant="outline" size="sm" className="h-7 w-7 p-0 cursor-pointer" title="Xem chi tiết" onClick={() => setSelectedPurchase(item)}>
@@ -552,69 +567,13 @@ export default function PurchaseOrdersPage() {
               </div>
 
               {/* Pagination Controls */}
-              {totalPages > 1 && (
-                <div className="flex items-center justify-center border-t border-border/60 pt-4 mt-4">
-                  <div className="flex items-center space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8 px-3 rounded-lg border border-border/80 hover:bg-muted/50 disabled:opacity-40 disabled:cursor-not-allowed select-none cursor-pointer"
-                      onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                      disabled={currentPage === 1}
-                    >
-                      <ChevronLeft className="h-4 w-4 mr-1" />
-                      Trước
-                    </Button>
-                    
-                    {/* Page numbers */}
-                    <div className="flex items-center space-x-1">
-                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
-                        if (
-                          totalPages > 5 &&
-                          page !== 1 &&
-                          page !== totalPages &&
-                          Math.abs(page - currentPage) > 1
-                        ) {
-                          if (page === 2 && currentPage > 3) {
-                            return <span key="ellipsis-start" className="text-muted-foreground px-1 text-sm select-none">...</span>;
-                          }
-                          if (page === totalPages - 1 && currentPage < totalPages - 2) {
-                            return <span key="ellipsis-end" className="text-muted-foreground px-1 text-sm select-none">...</span>;
-                          }
-                          return null;
-                        }
-
-                        return (
-                          <Button
-                            key={page}
-                            variant={currentPage === page ? "default" : "outline"}
-                            size="sm"
-                            className={`h-8 w-8 p-0 rounded-lg select-none cursor-pointer ${
-                              currentPage === page
-                                ? "bg-gold-gradient text-gold-foreground font-bold border-none"
-                                : "border border-border/80 hover:bg-muted/50 font-medium"
-                            }`}
-                            onClick={() => setCurrentPage(page)}
-                          >
-                            {page}
-                          </Button>
-                        );
-                      })}
-                    </div>
-
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8 px-3 rounded-lg border border-border/80 hover:bg-muted/50 disabled:opacity-40 disabled:cursor-not-allowed select-none cursor-pointer"
-                      onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                      disabled={currentPage === totalPages}
-                    >
-                      Sau
-                      <ChevronRight className="h-4 w-4 ml-1" />
-                    </Button>
-                  </div>
-                </div>
-              )}
+              <div className="flex items-center justify-center border-t border-border/60 pt-4 mt-4">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                />
+              </div>
             </>
           )}
         </CardContent>
@@ -666,3 +625,5 @@ export default function PurchaseOrdersPage() {
     </div>
   );
 }
+
+// Force recompile

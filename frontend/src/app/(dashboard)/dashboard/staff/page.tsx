@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ConfirmDialog, EmptyState, PageHeader, TableToolbar } from "@/components/dashboard/management";
+import { Pagination } from "@/components/dashboard/pagination";
+import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
@@ -30,6 +32,9 @@ export default function StaffPage() {
   const [users, setUsers] = useState<UserResponse[]>([]);
   const [groups, setGroups] = useState<UserGroupResponse[]>([]);
   const [keyword, setKeyword] = useState("");
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const [openForm, setOpenForm] = useState(false);
   const [editing, setEditing] = useState<UserResponse | null>(null);
@@ -65,6 +70,18 @@ export default function StaffPage() {
     }
     return users.filter((item) => `${item.tenDangNhap} ${item.maNhom}`.toLowerCase().includes(q));
   }, [users, keyword]);
+
+  // Reset page when keyword changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [keyword]);
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage) || 1;
+
+  const paginatedItems = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filtered.slice(start, start + itemsPerPage);
+  }, [filtered, currentPage, itemsPerPage]);
 
   function openCreate() {
     setEditing(null);
@@ -218,61 +235,68 @@ export default function StaffPage() {
               <EmptyState title={t("common.emptyTitle")} description={t("staff.emptyDesc")} />
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-16 pl-5">{t("common.stt")}</TableHead>
-                  <TableHead className="w-48">{t("staff.username")}</TableHead>
-                  <TableHead className="w-48">{t("staff.groupCode")}</TableHead>
-                  <TableHead className="w-64 pl-4">{t("common.status") || "Trạng thái"}</TableHead>
-                  <TableHead className="w-28 pr-5 text-right">{t("common.actions")}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.map((item, index) => (
-                  <TableRow
-                    key={item.tenDangNhap}
-                    className={item.isActive === false ? "opacity-60 bg-slate-50/40 dark:bg-slate-900/10" : ""}
-                  >
-                    <TableCell className="pl-5 font-semibold text-muted-foreground">{index + 1}</TableCell>
-                    <TableCell className="font-semibold text-foreground">{item.tenDangNhap}</TableCell>
-                    <TableCell>{item.maNhom}</TableCell>
-                    <TableCell className="pl-4">
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => toggleActive(item)}
-                          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                            item.isActive !== false ? "bg-emerald-500" : "bg-slate-300 dark:bg-slate-700"
-                          }`}
-                          aria-label="Toggle active status"
-                        >
-                          <span
-                            aria-hidden="true"
-                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
-                              item.isActive !== false ? "translate-x-5" : "translate-x-0"
-                            }`}
-                          />
-                        </button>
-                        <span className={`text-xs font-semibold select-none ${item.isActive !== false ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"}`}>
-                          {item.isActive !== false ? "Đang hoạt động" : "Ngừng hoạt động"}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="pr-5">
-                      <div className="flex justify-end gap-1.5">
-                        <Button variant="outline" size="icon-sm" onClick={() => openEdit(item)}>
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button variant="destructive" size="icon-sm" onClick={() => setDeleting(item)}>
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    </TableCell>
+            <>
+              <Table>
+                <TableHeader className="bg-muted/30">
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="w-14 text-center py-2 px-3 h-8 text-[11px] font-bold uppercase tracking-wider">{t("common.stt")}</TableHead>
+                    <TableHead className="py-2 px-3 h-8 text-[11px] font-bold uppercase tracking-wider">{t("staff.username")}</TableHead>
+                    <TableHead className="py-2 px-3 h-8 text-[11px] font-bold uppercase tracking-wider">{t("staff.groupCode")}</TableHead>
+                    <TableHead className="py-2 px-3 h-8 text-[11px] font-bold uppercase tracking-wider pl-4">{t("common.status") || "Trạng thái"}</TableHead>
+                    <TableHead className="py-2 px-3 h-8 text-[11px] font-bold uppercase tracking-wider text-right w-24">{t("common.actions")}</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {paginatedItems.map((item, index) => (
+                    <TableRow
+                      key={item.tenDangNhap}
+                      className={cn("table-row-hover border-b border-border/60", item.isActive === false ? "opacity-60 bg-slate-50/40 dark:bg-slate-900/10" : "")}
+                    >
+                      <TableCell className="py-1.5 px-3 text-center font-bold text-xs text-muted-foreground">{(currentPage - 1) * itemsPerPage + index + 1}</TableCell>
+                      <TableCell className="py-1.5 px-3 text-xs font-semibold text-foreground">{item.tenDangNhap}</TableCell>
+                      <TableCell className="py-1.5 px-3 text-xs">{item.maNhom}</TableCell>
+                      <TableCell className="py-1.5 px-3 pl-4">
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => toggleActive(item)}
+                            className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                              item.isActive !== false ? "bg-emerald-500" : "bg-slate-300 dark:bg-slate-700"
+                            }`}
+                            aria-label="Toggle active status"
+                          >
+                            <span
+                              aria-hidden="true"
+                              className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                                item.isActive !== false ? "translate-x-4" : "translate-x-0"
+                              }`}
+                            />
+                          </button>
+                        </div>
+                      </TableCell>
+                      <TableCell className="py-1.5 px-3 text-right">
+                        <div className="flex justify-end gap-1.5">
+                          <Button variant="outline" size="icon-xs" className="h-7 w-7" onClick={() => openEdit(item)}>
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                          <Button variant="destructive" size="icon-xs" className="h-7 w-7" onClick={() => setDeleting(item)}>
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+
+              <div className="flex items-center justify-center border-t border-border/60 py-4">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                />
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

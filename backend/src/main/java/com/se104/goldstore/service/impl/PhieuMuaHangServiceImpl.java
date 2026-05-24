@@ -29,6 +29,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,6 +40,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class PhieuMuaHangServiceImpl implements PhieuMuaHangService {
 
     private static final String PREFIX = "PM";
+    private static final int DEFAULT_PAGE_SIZE = 20;
+    private static final int MAX_PAGE_SIZE = 100;
 
     private final PhieuMuaHangRepository phieuMuaHangRepository;
     private final ChiTietPhieuMuaRepository chiTietPhieuMuaRepository;
@@ -64,9 +69,23 @@ public class PhieuMuaHangServiceImpl implements PhieuMuaHangService {
     @Override
     public List<PhieuMuaHangResponse> getAll(String keyword) {
         String normalized = SearchUtils.normalizeKeyword(keyword);
-        List<PhieuMuaHang> entities = phieuMuaHangRepository.findByKeyword(normalized);
+        List<PhieuMuaHang> entities = phieuMuaHangRepository.findAllByKeyword(normalized);
 
-        return entities.stream().map(entity -> buildResponse(entity, loadDetails(entity.getSoPhieuMua()))).toList();
+        // Optimization: Do not load items/details for list view to avoid N+1 and heavy mapping
+        return entities.stream().map(entity -> buildResponse(entity, List.of())).toList();
+    }
+
+    @Override
+    public Page<PhieuMuaHangResponse> getAllPaginated(String keyword, int page, int size) {
+        String normalized = SearchUtils.normalizeKeyword(keyword);
+        PageRequest pageRequest = PageRequest.of(
+            Math.max(page, 0),
+            Math.min(size > 0 ? size : DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE),
+            Sort.by(Sort.Direction.DESC, "ngayLapPhieuMua").and(Sort.by(Sort.Direction.DESC, "soPhieuMua"))
+        );
+
+        return phieuMuaHangRepository.findByKeyword(normalized, pageRequest)
+            .map(entity -> buildResponse(entity, List.of()));
     }
 
     @Override
@@ -182,8 +201,7 @@ public class PhieuMuaHangServiceImpl implements PhieuMuaHangService {
     }
 
     private PhieuMuaHangResponse buildResponse(PhieuMuaHang voucher, List<ChiTietPhieuMua> details) {
-        NhaCungCap nhaCungCap = nhaCungCapRepository.findById(voucher.getMaNhaCungCap()).orElse(null);
-        return buildResponse(voucher, details, nhaCungCap);
+        return buildResponse(voucher, details, voucher.getNhaCungCap());
     }
 
     private PhieuMuaHangResponse buildResponse(

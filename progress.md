@@ -69,6 +69,21 @@
 
 ## 5. Lịch Sử Phát Triển
 
+### 2026-05-22 — Performance Optimization + Theme Toggle + Git Sync
+
+- **Performance Fix (N+1 Select & Server-side Pagination):**
+    - Loại bỏ hoàn toàn lỗi N+1 Query trong mapper Service bằng cách sử dụng các đối tượng đã được `JOIN FETCH`.
+    - Triển khai **Phân trang phía Server (Server-side Pagination)** cho các module Phiếu bán hàng, Phiếu mua hàng, và Phiếu dịch vụ.
+    - Chuyển logic lọc/phân trang từ Client về Server để xử lý mượt mà hàng ngàn bản ghi.
+- **Search Improvement:** Mở rộng thanh tìm kiếm cho phép tìm theo tên đối tác/SĐT thay vì chỉ mã số ở tất cả module.
+- **UI/UX:** Triển khai Dark/Light/System mode toggle toàn hệ thống.
+- **Git:** Đồng bộ và đẩy mã nguồn lên nhánh mới `feat/improved-search-and-delete-logic`.
+- **Files Modified:**
+    - `PhieuBanHangRepository.java`, `PhieuMuaHangRepository.java`, `PhieuDichVuRepository.java`, `SanPhamRepository.java` (JPA Optimization & Pagination)
+    - `PhieuBanHangServiceImpl.java`, `PhieuMuaHangServiceImpl.java`, `PhieuDichVuServiceImpl.java`, `TraCuuServiceImpl.java` (Pagination & N+1 fix)
+    - `backend-api.ts`, `purchase-orders/page.tsx`, `orders/page.tsx` (Frontend server-pagination implementation)
+    - `layout.tsx`, `header.tsx`, `theme-toggle.tsx` (Theme implementation)
+
 ### 2026-05-21 — i18n Multi-Language + Font Fix
 
 - Triển khai i18n zero-dependency (React Context + JSON dictionaries)

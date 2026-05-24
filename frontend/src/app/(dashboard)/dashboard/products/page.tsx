@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ConfirmDialog, EmptyState, PageHeader, TableToolbar } from "@/components/dashboard/management";
+import { Pagination } from "@/components/dashboard/pagination";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -305,24 +306,6 @@ export default function ProductsPage() {
               />
             </div>
           }
-          actions={
-            <div className="flex gap-2">
-              <Button size="sm" variant="outline" onClick={() => loadData(0, keyword, selectedType)}>
-                {t("common.filter")}
-              </Button>
-              <Button size="sm" variant="outline" disabled={page <= 0} onClick={() => loadData(page - 1, keyword, selectedType)}>
-                {t("common.prev")}
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={page + 1 >= totalPages}
-                onClick={() => loadData(page + 1, keyword, selectedType)}
-              >
-                {t("common.next")}
-              </Button>
-            </div>
-          }
         />
         <CardContent className="px-0">
           {loading ? (
@@ -334,6 +317,7 @@ export default function ProductsPage() {
               <EmptyState title={t("common.emptyTitle")} description={t("common.emptyFilterDesc")} />
             </div>
           ) : (
+            <>
             <div className="overflow-x-auto">
                 <Table>
                     <TableHeader>
@@ -425,6 +409,14 @@ export default function ProductsPage() {
                     </TableBody>
                 </Table>
             </div>
+            <div className="flex items-center justify-center border-t border-border/60 py-4">
+                <Pagination
+                  currentPage={page + 1}
+                  totalPages={totalPages}
+                  onPageChange={(p) => loadData(p - 1)}
+                />
+            </div>
+            </>
           )}
         </CardContent>
       </Card>

@@ -15,13 +15,24 @@ public interface PhieuDichVuRepository extends JpaRepository<PhieuDichVu, String
     @Query(
         """
         SELECT pdv FROM PhieuDichVu pdv
-        LEFT JOIN pdv.khachHang kh
+        LEFT JOIN FETCH pdv.khachHang kh
         WHERE (:keyword = '' OR LOWER(pdv.soPhieuDichVu) LIKE CONCAT('%', LOWER(:keyword), '%')
             OR LOWER(kh.tenKhachHang) LIKE CONCAT('%', LOWER(:keyword), '%')
             OR LOWER(kh.soDienThoaiKhachHang) LIKE CONCAT('%', LOWER(:keyword), '%'))
         """
     )
-    List<PhieuDichVu> findByKeyword(@Param("keyword") String keyword);
+    Page<PhieuDichVu> findByKeyword(@Param("keyword") String keyword, Pageable pageable);
+
+    @Query(
+        """
+        SELECT pdv FROM PhieuDichVu pdv
+        LEFT JOIN FETCH pdv.khachHang kh
+        WHERE (:keyword = '' OR LOWER(pdv.soPhieuDichVu) LIKE CONCAT('%', LOWER(:keyword), '%')
+            OR LOWER(kh.tenKhachHang) LIKE CONCAT('%', LOWER(:keyword), '%')
+            OR LOWER(kh.soDienThoaiKhachHang) LIKE CONCAT('%', LOWER(:keyword), '%'))
+        """
+    )
+    List<PhieuDichVu> findAllByKeyword(@Param("keyword") String keyword);
 
     boolean existsByMaKhachHang(String maKhachHang);
 
@@ -37,9 +48,9 @@ public interface PhieuDichVuRepository extends JpaRepository<PhieuDichVu, String
         WHERE (:keyword = '' OR LOWER(pdv.soPhieuDichVu) LIKE CONCAT('%', :keyword, '%')
             OR LOWER(kh.tenKhachHang) LIKE CONCAT('%', :keyword, '%')
             OR LOWER(kh.soDienThoaiKhachHang) LIKE CONCAT('%', :keyword, '%'))
-          AND (:status IS NULL OR pdv.tinhTrangDichVu = :status)
-          AND (:fromDate IS NULL OR pdv.ngayLapPhieuDichVu >= :fromDate)
-          AND (:toDate IS NULL OR pdv.ngayLapPhieuDichVu <= :toDate)
+          AND (CAST(:status AS string) IS NULL OR pdv.tinhTrangDichVu = :status)
+          AND (CAST(:fromDate AS date) IS NULL OR pdv.ngayLapPhieuDichVu >= :fromDate)
+          AND (CAST(:toDate AS date) IS NULL OR pdv.ngayLapPhieuDichVu <= :toDate)
         """
     )
     Page<PhieuDichVu> search(

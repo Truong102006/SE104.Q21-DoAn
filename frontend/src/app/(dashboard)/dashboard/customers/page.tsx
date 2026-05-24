@@ -8,6 +8,7 @@ import { ConfirmDialog, EmptyState, PageHeader, TableToolbar } from "@/component
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Pagination } from "@/components/dashboard/pagination";
 import { backendApi } from "@/services/backend-api";
 import type { CustomerRequest, CustomerResponse } from "@/types/backend";
 import { getApiErrorMessage } from "@/lib/api-error";
@@ -260,69 +261,13 @@ export default function CustomersPage() {
               </Table>
 
               {/* Pagination Controls */}
-              {totalPages > 1 && (
-                <div className="flex items-center justify-center border-t border-border/60 pt-4 mt-4 px-4">
-                  <div className="flex items-center space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8 px-3 rounded-lg border border-border/80 hover:bg-muted/50 disabled:opacity-40 disabled:cursor-not-allowed select-none cursor-pointer"
-                      onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                      disabled={currentPage === 1}
-                    >
-                      <ChevronLeft className="h-4 w-4 mr-1" />
-                      Trước
-                    </Button>
-                    
-                    {/* Page numbers */}
-                    <div className="flex items-center space-x-1">
-                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
-                        if (
-                          totalPages > 5 &&
-                          page !== 1 &&
-                          page !== totalPages &&
-                          Math.abs(page - currentPage) > 1
-                        ) {
-                          if (page === 2 && currentPage > 3) {
-                            return <span key="ellipsis-start" className="text-muted-foreground px-1 text-sm select-none">...</span>;
-                          }
-                          if (page === totalPages - 1 && currentPage < totalPages - 2) {
-                            return <span key="ellipsis-end" className="text-muted-foreground px-1 text-sm select-none">...</span>;
-                          }
-                          return null;
-                        }
-
-                        return (
-                          <Button
-                            key={page}
-                            variant={currentPage === page ? "default" : "outline"}
-                            size="sm"
-                            className={`h-8 w-8 p-0 rounded-lg select-none cursor-pointer ${
-                              currentPage === page
-                                ? "bg-gold-gradient text-gold-foreground font-bold border-none"
-                                : "border border-border/80 hover:bg-muted/50 font-medium"
-                            }`}
-                            onClick={() => setCurrentPage(page)}
-                          >
-                            {page}
-                          </Button>
-                        );
-                      })}
-                    </div>
-
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8 px-3 rounded-lg border border-border/80 hover:bg-muted/50 disabled:opacity-40 disabled:cursor-not-allowed select-none cursor-pointer"
-                      onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                      disabled={currentPage === totalPages}
-                    >
-                      Sau
-                      <ChevronRight className="h-4 w-4 ml-1" />
-                    </Button>
-                  </div>
-                </div>
-              )}
+              <div className="flex items-center justify-center border-t border-border/60 py-4">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                />
+              </div>
             </>
           )}
         </CardContent>

@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ContactPanel, DetailGrid, DetailModal, LineError, StickySummaryBar, VoucherSection } from "@/components/dashboard/voucher-ui";
 import { Combobox } from "@/components/ui/combobox";
 import { CustomerSelect } from "@/components/dashboard/customer-select";
+import { Pagination } from "@/components/dashboard/pagination";
 import { useToastStore } from "@/stores/toast-store";
 import { backendApi } from "@/services/backend-api";
 import type {
@@ -46,6 +47,7 @@ export default function SalesPage() {
   const [products, setProducts] = useState<ProductResponse[]>([]);
 
   const [salesList, setSalesList] = useState<SaleResponse[]>([]);
+  const [totalRecords, setTotalRecords] = useState(0);
 
   const [soPhieuBan, setSoPhieuBan] = useState("");
   const [ngayLapPhieuBan, setNgayLapPhieuBan] = useState(todayIsoDate());
@@ -83,40 +85,18 @@ export default function SalesPage() {
     [items, products],
   );
 
-  const filteredSalesList = useMemo(() => {
-    const query = historyQuery.trim().toLowerCase();
-    if (!query) {
-      return salesList;
-    }
-    return salesList.filter((item) =>
-      item.soPhieuBan.toLowerCase().includes(query)
-      || (item.khachHang?.tenKhachHang ?? item.maKhachHang).toLowerCase().includes(query),
-    );
-  }, [historyQuery, salesList]);
-
-  // Reset page when search query changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [historyQuery]);
-
-  const totalPages = Math.ceil(filteredSalesList.length / itemsPerPage) || 1;
-
-  const paginatedSalesList = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
-    return filteredSalesList.slice(start, start + itemsPerPage);
-  }, [filteredSalesList, currentPage, itemsPerPage]);
+  const totalPages = Math.ceil(totalRecords / itemsPerPage) || 1;
 
   async function loadData() {
     setLoading(true);
     setError(null);
     try {
-      const [productPage, sales] = await Promise.all([
+      const [productPage] = await Promise.all([
         backendApi.products.list({ page: 0, size: 100 }),
-        backendApi.sales.list(),
       ]);
 
       setProducts(productPage.content);
-      setSalesList(sales);
+      await loadHistory(1, historyQuery);
     } catch (err) {
       setError(getApiErrorMessage(err, t("salesOrders.loadError")));
     } finally {
@@ -124,10 +104,43 @@ export default function SalesPage() {
     }
   }
 
+  async function loadHistory(page: number, keyword: string) {
+    try {
+      const response = await backendApi.sales.list({
+        keyword: keyword.trim() || undefined,
+        page: page - 1,
+        size: itemsPerPage
+      });
+
+      if (Array.isArray(response)) {
+        setSalesList(response);
+        setTotalRecords(response.length);
+      } else {
+        setSalesList(response.content);
+        setTotalRecords(response.totalElements);
+      }
+    } catch (err) {
+      useToastStore.getState().error(getApiErrorMessage(err, "Không thể tải lịch sử phiếu bán"));
+    }
+  }
+
   useEffect(() => {
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Update history when page or search query changes
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      loadHistory(currentPage, historyQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [currentPage, historyQuery]);
+
+  // Reset page when search query changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [historyQuery]);
 
   // Ref-based keyboard listener to avoid resetting event handler on state updates
   const submitRef = useRef(submit);
@@ -458,7 +471,7 @@ export default function SalesPage() {
         <CardContent className="p-6">
           {loading ? (
             <p className="py-4 text-sm text-muted-foreground">{t("common.loading")}</p>
-          ) : filteredSalesList.length === 0 ? (
+          ) : salesList.length === 0 ? (
             <EmptyState title={t("salesOrders.emptyTitle")} description={t("salesOrders.emptyDesc")} />
           ) : (
             <>
@@ -476,7 +489,7 @@ export default function SalesPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {paginatedSalesList.map((item, idx) => (
+                    {salesList.map((item, idx) => (
                       <TableRow key={item.soPhieuBan} className="table-row-hover border-b border-border/60">
                         <TableCell className="py-1.5 px-3 text-center font-bold text-xs text-muted-foreground">
                           {(currentPage - 1) * itemsPerPage + idx + 1}
@@ -484,7 +497,7 @@ export default function SalesPage() {
                         <TableCell className="py-1.5 px-3 text-xs font-semibold">{item.soPhieuBan}</TableCell>
                         <TableCell className="py-1.5 px-3 text-xs text-muted-foreground">{item.ngayLapPhieuBan}</TableCell>
                         <TableCell className="py-1.5 px-3 text-xs">{item.khachHang?.tenKhachHang ?? item.maKhachHang}</TableCell>
-                        <TableCell className="py-1.5 px-3 text-xs text-center font-medium text-muted-foreground">{formatNumber(item.items.length)}</TableCell>
+                        <TableCell className="py-1.5 px-3 text-xs text-center font-medium text-muted-foreground">{formatNumber(item.items?.length ?? 0)}</TableCell>
                         <TableCell className="py-1.5 px-3 text-xs font-bold text-emerald-600 dark:text-emerald-400 text-right">{formatCurrency(item.tongTien)}</TableCell>
                         <TableCell className="py-1.5 px-3 text-right">
                           <Button variant="outline" size="sm" className="h-7 w-7 p-0 cursor-pointer" title="Xem chi tiết" onClick={() => setSelectedSale(item)}>
@@ -498,69 +511,13 @@ export default function SalesPage() {
               </div>
 
               {/* Pagination Controls */}
-              {totalPages > 1 && (
-                <div className="flex items-center justify-center border-t border-border/60 pt-4 mt-4">
-                  <div className="flex items-center space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8 px-3 rounded-lg border border-border/80 hover:bg-muted/50 disabled:opacity-40 disabled:cursor-not-allowed select-none cursor-pointer"
-                      onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                      disabled={currentPage === 1}
-                    >
-                      <ChevronLeft className="h-4 w-4 mr-1" />
-                      Trước
-                    </Button>
-                    
-                    {/* Page numbers */}
-                    <div className="flex items-center space-x-1">
-                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
-                        if (
-                          totalPages > 5 &&
-                          page !== 1 &&
-                          page !== totalPages &&
-                          Math.abs(page - currentPage) > 1
-                        ) {
-                          if (page === 2 && currentPage > 3) {
-                            return <span key="ellipsis-start" className="text-muted-foreground px-1 text-sm select-none">...</span>;
-                          }
-                          if (page === totalPages - 1 && currentPage < totalPages - 2) {
-                            return <span key="ellipsis-end" className="text-muted-foreground px-1 text-sm select-none">...</span>;
-                          }
-                          return null;
-                        }
-
-                        return (
-                          <Button
-                            key={page}
-                            variant={currentPage === page ? "default" : "outline"}
-                            size="sm"
-                            className={`h-8 w-8 p-0 rounded-lg select-none cursor-pointer ${
-                              currentPage === page
-                                ? "bg-gold-gradient text-gold-foreground font-bold border-none"
-                                : "border border-border/80 hover:bg-muted/50 font-medium"
-                            }`}
-                            onClick={() => setCurrentPage(page)}
-                          >
-                            {page}
-                          </Button>
-                        );
-                      })}
-                    </div>
-
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8 px-3 rounded-lg border border-border/80 hover:bg-muted/50 disabled:opacity-40 disabled:cursor-not-allowed select-none cursor-pointer"
-                      onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                      disabled={currentPage === totalPages}
-                    >
-                      Sau
-                      <ChevronRight className="h-4 w-4 ml-1" />
-                    </Button>
-                  </div>
-                </div>
-              )}
+              <div className="flex items-center justify-center border-t border-border/60 pt-4 mt-4">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                />
+              </div>
             </>
           )}
         </CardContent>
@@ -611,3 +568,5 @@ export default function SalesPage() {
     </div>
   );
 }
+
+// Force recompile

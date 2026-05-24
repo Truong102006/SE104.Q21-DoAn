@@ -164,16 +164,13 @@ public class TraCuuServiceImpl implements TraCuuService {
     }
 
     private TraCuuPhieuDichVuResponse toServiceTicketResponse(PhieuDichVu entity) {
-        List<ChiTietPhieuDichVu> details = chiTietPhieuDichVuRepository.findBySoPhieuDichVu(entity.getSoPhieuDichVu());
-        String computedStatus = resolveTicketStatus(details);
-
         TraCuuPhieuDichVuResponse response = new TraCuuPhieuDichVuResponse();
         response.setSoPhieuDichVu(entity.getSoPhieuDichVu());
         response.setNgayLapPhieuDichVu(entity.getNgayLapPhieuDichVu());
         response.setTongTien(entity.getTongTien());
         response.setTongTienTraTruoc(entity.getTongTienTraTruoc());
         response.setTongTienConLai(entity.getTongTienConLai());
-        response.setTinhTrangDichVu(computedStatus);
+        response.setTinhTrangDichVu(entity.getTinhTrangDichVu());
         response.setTenKhachHang(entity.getKhachHang() != null ? entity.getKhachHang().getTenKhachHang() : null);
         return response;
     }

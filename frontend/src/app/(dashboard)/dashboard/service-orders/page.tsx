@@ -4,7 +4,7 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { EmptyState, PageHeader, TableToolbar } from "@/components/dashboard/management";
+import { EmptyState, PageHeader, TableToolbar, StatusBadge } from "@/components/dashboard/management";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
@@ -13,10 +13,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ContactPanel, DetailGrid, DetailModal, LineError, StickySummaryBar, VoucherSection } from "@/components/dashboard/voucher-ui";
 import { Combobox } from "@/components/ui/combobox";
 import { CustomerSelect } from "@/components/dashboard/customer-select";
+import { Pagination } from "@/components/dashboard/pagination";
 import { useToastStore } from "@/stores/toast-store";
 import { backendApi } from "@/services/backend-api";
 import type {
   CustomerResponse,
+  SearchServiceTicketResponse,
   ServiceTicketRequest,
   ServiceTicketResponse,
   ServiceTypeResponse,
@@ -24,7 +26,86 @@ import type {
 import { getApiErrorMessage } from "@/lib/api-error";
 import { formatCurrency, todayIsoDate, toPositiveInt, toPositiveNumber, formatVNCurrencyInput, parseVNCurrencyInput, formatVietnameseStatus } from "@/lib/format";
 import { useTranslation } from "@/i18n/i18n-context";
-import { ChevronLeft, ChevronRight, ClipboardList, Eye, Plus, ReceiptText, Truck, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, ClipboardList, Eye, Filter, Plus, ReceiptText, RotateCcw, Search, Truck, Trash2, X } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+function getStatusBadge(statusStr: string) {
+  const s = statusStr.toLowerCase();
+  const displayStatus = formatVietnameseStatus(statusStr);
+  if (s.includes("hoan thanh") || s.includes("hoàn thành") || s.includes("da giao") || s.includes("đã giao")) {
+    return <StatusBadge tone="success">{displayStatus}</StatusBadge>;
+  }
+  return <StatusBadge tone="warning">{displayStatus}</StatusBadge>;
+}
+
+function ServiceStatusStepper({ status }: { status: string }) {
+  const steps = [
+    { label: "Lập phiếu", desc: "Tạo yêu cầu" },
+    { label: "Nhận máy / Gia công", desc: "Đang xử lý" },
+    { label: "Đã hoàn thành", desc: "Sẵn sàng giao" },
+    { label: "Đã giao khách", desc: "Hoàn tất giao" }
+  ];
+
+  const lowerStatus = status.toLowerCase();
+  let activeStep = 1;
+  if (lowerStatus.includes("hoan thanh") || lowerStatus.includes("hoàn thành")) {
+    activeStep = 2;
+  }
+  if (lowerStatus.includes("da giao") || lowerStatus.includes("đã giao")) {
+    activeStep = 3;
+  }
+
+  return (
+    <div className="py-6 px-4 bg-muted/10 rounded-2xl border border-border/40 my-4 shadow-inner">
+      <div className="relative flex justify-between items-center max-w-3xl mx-auto">
+        <div className="absolute top-[18px] left-[5%] right-[5%] h-1 bg-border/65 -z-0 rounded-full">
+          <div
+            className="h-full bg-gradient-to-r from-gold via-primary to-emerald-500 rounded-full transition-all duration-500"
+            style={{ width: `${(activeStep / (steps.length - 1)) * 100}%` }}
+          />
+        </div>
+
+        {steps.map((step, idx) => {
+          const isCompleted = idx < activeStep;
+          const isActive = idx === activeStep;
+          const isUpcoming = idx > activeStep;
+
+          return (
+            <div key={step.label} className="relative z-10 flex flex-col items-center flex-1">
+              <div
+                className={cn(
+                  "h-10 w-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 shadow-md",
+                  isCompleted && "bg-emerald-500 border-emerald-500 text-white shadow-emerald-500/20",
+                  isActive && "bg-background border-gold text-gold ring-4 ring-gold/20 animate-pulse scale-110",
+                  isUpcoming && "bg-muted border-border text-muted-foreground"
+                )}
+              >
+                {isCompleted ? (
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                ) : (
+                  <span className="text-xs font-bold">{idx + 1}</span>
+                )}
+              </div>
+              <p
+                className={cn(
+                  "mt-2 text-xs font-semibold text-center whitespace-nowrap",
+                  isCompleted && "text-emerald-600 dark:text-emerald-400",
+                  isActive && "text-gold font-bold",
+                  isUpcoming && "text-muted-foreground"
+                )}
+              >
+                {step.label}
+              </p>
+              <p className="text-[9px] text-muted-foreground/60 hidden sm:block">{step.desc}</p>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 type ServiceItemDraft = {
   keyId: string;
@@ -49,7 +130,6 @@ export default function ServiceOrdersPage() {
 
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerResponse | null>(null);
   const [serviceTypes, setServiceTypes] = useState<ServiceTypeResponse[]>([]);
-  const [tickets, setTickets] = useState<ServiceTicketResponse[]>([]);
   const [prepaymentRate, setPrepaymentRate] = useState(50);
 
   const [soPhieuDichVu, setSoPhieuDichVu] = useState("");
@@ -59,12 +139,18 @@ export default function ServiceOrdersPage() {
   const [items, setItems] = useState<ServiceItemDraft[]>([createEmptyItem()]);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-  const [historyQuery, setHistoryQuery] = useState("");
-  const [historyStatus, setHistoryStatus] = useState("all");
   const [selectedTicket, setSelectedTicket] = useState<ServiceTicketResponse | null>(null);
 
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  // Advanced Lookup States
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const [historyTickets, setHistoryTickets] = useState<SearchServiceTicketResponse[]>([]);
+  const [historyPage, setHistoryPage] = useState(0);
+  const [historyTotalPages, setHistoryTotalPages] = useState(1);
+
+  const [historyKeyword, setHistoryKeyword] = useState("");
+  const [historyStatus, setHistoryStatus] = useState("");
+  const [historyFromDate, setHistoryFromDate] = useState("");
+  const [historyToDate, setHistoryToDate] = useState("");
 
   useEffect(() => {
     if (maKhachHang) {
@@ -96,44 +182,16 @@ export default function ServiceOrdersPage() {
     };
   }, [items, tongTienTraTruoc]);
 
-  const filteredTickets = useMemo(() => {
-    const query = historyQuery.trim().toLowerCase();
-    return tickets.filter((ticket) => {
-      const status = ticket.tinhTrangDichVu.toLowerCase();
-      const matchesQuery = !query
-        || ticket.soPhieuDichVu.toLowerCase().includes(query)
-        || (ticket.khachHang?.tenKhachHang ?? ticket.maKhachHang).toLowerCase().includes(query);
-      const matchesStatus = historyStatus === "all"
-        || (historyStatus === "completed" && status.includes("hoan thanh"))
-        || (historyStatus === "incomplete" && !status.includes("hoan thanh"));
-      return matchesQuery && matchesStatus;
-    });
-  }, [historyQuery, historyStatus, tickets]);
-
-  // Reset page when search query or status changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [historyQuery, historyStatus]);
-
-  const totalPages = Math.ceil(filteredTickets.length / itemsPerPage) || 1;
-
-  const paginatedTickets = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
-    return filteredTickets.slice(start, start + itemsPerPage);
-  }, [filteredTickets, currentPage, itemsPerPage]);
-
   async function loadData() {
     setLoading(true);
     setError(null);
     try {
-      const [serviceTypeData, ticketData, prepayment] = await Promise.all([
+      const [serviceTypeData, prepayment] = await Promise.all([
         backendApi.serviceTypes.list(),
-        backendApi.serviceTickets.list(),
         backendApi.settings.getServicePrepaymentRate(),
       ]);
 
       setServiceTypes(serviceTypeData);
-      setTickets(ticketData);
       setPrepaymentRate(Number(prepayment.value ?? 50));
     } catch (err) {
       setError(getApiErrorMessage(err, t("serviceOrders.loadError")));
@@ -142,9 +200,51 @@ export default function ServiceOrdersPage() {
     }
   }
 
+  async function loadHistory(nextPage = historyPage) {
+    setHistoryLoading(true);
+    setError(null);
+    try {
+      const data = await backendApi.search.serviceTickets({
+        keyword: historyKeyword.trim() || undefined,
+        status: historyStatus || undefined,
+        fromDate: historyFromDate || undefined,
+        toDate: historyToDate || undefined,
+        page: nextPage,
+        size: 10,
+      });
+
+      setHistoryTickets(data.content);
+      setHistoryPage(data.number ?? nextPage);
+      setHistoryTotalPages(Math.max(1, data.totalPages || 1));
+    } catch (err) {
+      setError(getApiErrorMessage(err, t("serviceLookup.loadError")));
+    } finally {
+      setHistoryLoading(false);
+    }
+  }
+
+  // Debounced search when any filter changes
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      loadHistory(0);
+    }, 300);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [historyKeyword, historyStatus, historyFromDate, historyToDate]);
+
+  async function openDetail(soPhieuDichVu: string) {
+    setError(null);
+    try {
+      const data = await backendApi.serviceTickets.getById(soPhieuDichVu);
+      setSelectedTicket(data);
+    } catch (err) {
+      setError(getApiErrorMessage(err, t("serviceLookup.detailError")));
+    }
+  }
 
   useEffect(() => {
     loadData();
+    loadHistory(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -294,6 +394,7 @@ export default function ServiceOrdersPage() {
       setTongTienTraTruoc("0");
       setItems([createEmptyItem()]);
       await loadData();
+      await loadHistory(0);
       useToastStore.getState().success(`Đã lập phiếu dịch vụ ${created.soPhieuDichVu} thành công!`);
     } catch (err) {
       setFormError(getApiErrorMessage(err, t("serviceOrders.createError")));
@@ -302,21 +403,29 @@ export default function ServiceOrdersPage() {
     }
   }
 
-  async function deliverItem(ticket: ServiceTicketResponse, maLoaiDichVu: string) {
+  async function deliverItem(soPhieuDichVu: string, maLoaiDichVu: string) {
     try {
-      await backendApi.serviceTickets.deliverItem(ticket.soPhieuDichVu, maLoaiDichVu);
-      await loadData();
-      useToastStore.getState().success(`Đã bàn giao sản phẩm dịch vụ thành công cho phiếu ${ticket.soPhieuDichVu}!`);
+      await backendApi.serviceTickets.deliverItem(soPhieuDichVu, maLoaiDichVu);
+      await loadHistory(historyPage);
+      if (selectedTicket && selectedTicket.soPhieuDichVu === soPhieuDichVu) {
+        const updated = await backendApi.serviceTickets.getById(soPhieuDichVu);
+        setSelectedTicket(updated);
+      }
+      useToastStore.getState().success(`Đã bàn giao sản phẩm dịch vụ thành công cho phiếu ${soPhieuDichVu}!`);
     } catch (err) {
       setError(getApiErrorMessage(err, t("serviceOrders.deliverError")));
     }
   }
 
-  async function deliverAll(ticket: ServiceTicketResponse) {
+  async function deliverAll(soPhieuDichVu: string) {
     try {
-      await backendApi.serviceTickets.deliverAll(ticket.soPhieuDichVu);
-      await loadData();
-      useToastStore.getState().success(`Đã bàn giao toàn bộ sản phẩm dịch vụ cho phiếu ${ticket.soPhieuDichVu}!`);
+      await backendApi.serviceTickets.deliverAll(soPhieuDichVu);
+      await loadHistory(historyPage);
+      if (selectedTicket && selectedTicket.soPhieuDichVu === soPhieuDichVu) {
+        const updated = await backendApi.serviceTickets.getById(soPhieuDichVu);
+        setSelectedTicket(updated);
+      }
+      useToastStore.getState().success(`Đã bàn giao toàn bộ sản phẩm dịch vụ cho phiếu ${soPhieuDichVu}!`);
     } catch (err) {
       setError(getApiErrorMessage(err, t("serviceOrders.deliverAllError")));
     }
@@ -556,82 +665,189 @@ export default function ServiceOrdersPage() {
         </CardContent>
       </Card>
 
-      {/* KHỐI LỊCH SỬ PHIẾU DỊCH VỤ - Ở DƯỚI */}
-      <Card className="shadow-sm border-border/80">
-        <TableToolbar
-          title={t("serviceOrders.historyTitle")}
-          description={t("serviceOrders.historyDesc")}
-          search={(
-            <div className="grid gap-2 sm:grid-cols-[minmax(220px,1fr)_180px]">
-              <Input value={historyQuery} onChange={(e) => setHistoryQuery(e.target.value)} placeholder="Tìm mã phiếu hoặc khách hàng" className="h-9" />
-              <Select
-                value={historyStatus}
-                onValueChange={setHistoryStatus}
-                className="h-9"
-                options={[
-                  { value: "all", label: "Tất cả trạng thái" },
-                  { value: "completed", label: "Hoàn thành" },
-                  { value: "incomplete", label: "Chưa hoàn thành" },
-                ]}
+      {/* ADVANCED SERVICE VOUCHER LOOKUP PANEL */}
+      <Card className="shadow-sm border-border/80 p-5 space-y-4 glass-card">
+        <div className="flex items-center space-x-2 border-b border-border/40 pb-2">
+          <Filter className="h-5 w-5 text-gold" />
+          <h2 className="text-base font-bold text-foreground uppercase tracking-wider">{t("serviceLookup.title")}</h2>
+        </div>
+
+        {/* Advanced Filter Panel Redesign */}
+        <div className="grid gap-3 grid-cols-1 md:grid-cols-12 items-end">
+          {/* Keyword Search Field */}
+          <div className="lg:col-span-4 md:col-span-12 space-y-1.5">
+            <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+              Từ khóa tìm kiếm
+            </Label>
+            <div className="relative">
+              <span className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-muted-foreground/75">
+                <Search className="h-4 w-4" />
+              </span>
+              <Input
+                value={historyKeyword}
+                onChange={(e) => setHistoryKeyword(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") loadHistory(0);
+                }}
+                placeholder="Tìm theo số phiếu hoặc tên khách hàng..."
+                className="pl-9 pr-8 h-10 w-full rounded-xl border border-input/90 bg-card text-sm shadow-xs focus:border-gold focus:ring-2 focus:ring-gold/20 transition-all duration-150"
               />
+              {historyKeyword && (
+                <button
+                  type="button"
+                  onClick={() => setHistoryKeyword("")}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-gold cursor-pointer transition-colors duration-150"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
             </div>
-          )}
+          </div>
+
+          {/* Status Dropdown */}
+          <div className="lg:col-span-2 md:col-span-4 space-y-1.5">
+            <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+              Trạng thái
+            </Label>
+            <Select
+              value={historyStatus || "all"}
+              onValueChange={(value) => setHistoryStatus(value === "all" ? "" : value)}
+              options={[
+                { value: "all", label: "Tất cả" },
+                { value: "Hoan thanh", label: "Hoàn thành" },
+                { value: "Chua hoan thanh", label: "Chưa hoàn thành" },
+              ]}
+              className="h-10 rounded-xl border border-border bg-card text-sm w-full focus:ring-2 focus:ring-gold/20"
+            />
+          </div>
+
+          {/* From Date */}
+          <div className="lg:col-span-2 md:col-span-4 space-y-1.5">
+            <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+              Từ ngày
+            </Label>
+            <DatePickerInput
+              value={historyFromDate}
+              onValueChange={setHistoryFromDate}
+            />
+          </div>
+
+          {/* To Date */}
+          <div className="lg:col-span-2 md:col-span-4 space-y-1.5">
+            <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+              Đến ngày
+            </Label>
+            <DatePickerInput
+              value={historyToDate}
+              onValueChange={setHistoryToDate}
+            />
+          </div>
+
+          {/* Search Buttons Action Row */}
+          <div className="lg:col-span-2 md:col-span-12 flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setHistoryKeyword("");
+                setHistoryStatus("");
+                setHistoryFromDate("");
+                setHistoryToDate("");
+              }}
+              className="rounded-xl h-10 px-3 text-xs font-bold transition-all duration-200 flex items-center justify-center gap-1.5 hover:bg-muted/40 cursor-pointer flex-1"
+              title="Đặt lại bộ lọc"
+            >
+              <RotateCcw className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+              Đặt lại
+            </Button>
+            <Button
+              onClick={() => loadHistory(0)}
+              className="rounded-xl h-10 px-3 text-xs font-bold text-white bg-gradient-to-r from-gold via-amber-500 to-amber-600 hover:from-amber-500 hover:to-gold transition-all duration-300 shadow-md shadow-gold/15 flex items-center justify-center gap-1.5 hover-elevate cursor-pointer border-0 flex-1"
+            >
+              <Search className="h-4 w-4 shrink-0" />
+              Tra cứu
+            </Button>
+          </div>
+        </div>
+      </Card>
+
+      {/* Results Table Card */}
+      <Card className="overflow-hidden border border-border/70 shadow-md rounded-2xl">
+        <TableToolbar
+          title="Danh sách phiếu dịch vụ tra cứu"
+          actions={
+            <div className="flex gap-2 items-center">
+              <span className="text-xs font-semibold text-muted-foreground mr-1">
+                Trang {historyPage + 1}/{historyTotalPages}
+              </span>
+            </div>
+          }
         />
-        <CardContent className="p-6">
-          {loading ? (
-            <p className="py-4 text-sm text-muted-foreground">{t("common.loading")}</p>
-          ) : filteredTickets.length === 0 ? (
-            <EmptyState title={t("serviceOrders.emptyTitle")} description={t("serviceOrders.emptyDesc")} />
+
+        <CardContent className="p-0">
+          {historyLoading ? (
+            <div className="flex items-center justify-center py-20">
+              <div className="flex flex-col items-center gap-3">
+                <span className="h-8 w-8 rounded-full border-4 border-gold/30 border-t-gold animate-spin" />
+                <p className="text-sm font-medium text-muted-foreground">{t("common.loading")}</p>
+              </div>
+            </div>
+          ) : historyTickets.length === 0 ? (
+            <div className="p-8">
+              <EmptyState title={t("common.emptyTitle")} description="Không tìm thấy phiếu dịch vụ nào phù hợp" />
+            </div>
           ) : (
             <>
-              <div className="rounded-md border border-border/80 overflow-hidden">
-                <Table>
-                  <TableHeader className="bg-muted/30">
-                    <TableRow className="hover:bg-transparent">
-                      <TableHead className="w-14 text-center py-2 px-3 h-8 text-[11px] font-bold uppercase tracking-wider">{t("common.stt")}</TableHead>
-                      <TableHead className="py-2 px-3 h-8 text-[11px] font-bold uppercase tracking-wider">{t("common.voucherNumber")}</TableHead>
-                      <TableHead className="py-2 px-3 h-8 text-[11px] font-bold uppercase tracking-wider">{t("common.dateCreated")}</TableHead>
-                      <TableHead className="py-2 px-3 h-8 text-[11px] font-bold uppercase tracking-wider">{t("common.customer")}</TableHead>
-                      <TableHead className="py-2 px-3 h-8 text-[11px] font-bold uppercase tracking-wider text-right">{t("common.total")}</TableHead>
-                      <TableHead className="py-2 px-3 h-8 text-[11px] font-bold uppercase tracking-wider text-center">{t("serviceOrders.serviceStatus")}</TableHead>
-                      <TableHead className="py-2 px-3 h-8 text-[11px] font-bold uppercase tracking-wider text-right w-28">Thao tác</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {paginatedTickets.map((ticket, idx) => (
-                      <TableRow key={ticket.soPhieuDichVu} className="hover:bg-accent/15 border-b border-border/60">
-                        <TableCell className="py-1.5 px-3 text-center font-bold text-xs text-muted-foreground">
-                          {(currentPage - 1) * itemsPerPage + idx + 1}
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader className="bg-muted/10">
+                  <TableRow>
+                    <TableHead className="w-12 font-bold py-2 px-3 h-8 text-[11px] uppercase tracking-wider">{t("common.stt")}</TableHead>
+                    <TableHead className="font-bold py-2 px-3 h-8 text-[11px] uppercase tracking-wider">{t("common.voucherNumber")}</TableHead>
+                    <TableHead className="font-bold py-2 px-3 h-8 text-[11px] uppercase tracking-wider">{t("common.dateCreated")}</TableHead>
+                    <TableHead className="font-bold py-2 px-3 h-8 text-[11px] uppercase tracking-wider">{t("common.customer")}</TableHead>
+                    <TableHead className="font-bold text-right py-2 px-3 h-8 text-[11px] uppercase tracking-wider">{t("common.total")}</TableHead>
+                    <TableHead className="font-bold text-right py-2 px-3 h-8 text-[11px] uppercase tracking-wider">Trả trước</TableHead>
+                    <TableHead className="font-bold text-right py-2 px-3 h-8 text-[11px] uppercase tracking-wider">Còn lại</TableHead>
+                    <TableHead className="font-bold text-center py-2 px-3 h-8 text-[11px] uppercase tracking-wider">Tình trạng</TableHead>
+                    <TableHead className="text-right font-bold py-2 px-3 h-8 text-[11px] uppercase tracking-wider w-28">Thao tác</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {historyTickets.map((item, index) => {
+                    const remains = item.tongTienConLai ?? 0;
+                    return (
+                      <TableRow key={item.soPhieuDichVu} className="hover:bg-muted/30 transition-colors">
+                        <TableCell className="py-1.5 px-3 font-bold text-xs text-muted-foreground">{historyPage * 10 + index + 1}</TableCell>
+                        <TableCell className="py-1.5 px-3 text-xs font-semibold text-foreground">{item.soPhieuDichVu}</TableCell>
+                        <TableCell className="py-1.5 px-3 text-xs text-muted-foreground">{item.ngayLapPhieuDichVu}</TableCell>
+                        <TableCell className="py-1.5 px-3 text-xs font-medium">{item.tenKhachHang}</TableCell>
+                        <TableCell className="py-1.5 px-3 text-xs text-right font-bold text-foreground">{formatCurrency(item.tongTien)}</TableCell>
+                        <TableCell className="py-1.5 px-3 text-xs text-right text-emerald-600 dark:text-emerald-400 font-semibold">{formatCurrency(item.tongTienTraTruoc)}</TableCell>
+                        <TableCell className={cn(
+                          "py-1.5 px-3 text-xs text-right font-bold",
+                          remains > 0 ? "text-amber-600 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400"
+                        )}>
+                          {formatCurrency(remains)}
                         </TableCell>
-                        <TableCell className="py-1.5 px-3 text-xs font-semibold">{ticket.soPhieuDichVu}</TableCell>
-                        <TableCell className="py-1.5 px-3 text-xs text-muted-foreground">{ticket.ngayLapPhieuDichVu}</TableCell>
-                        <TableCell className="py-1.5 px-3 text-xs">
-                          {ticket.khachHang?.tenKhachHang ?? ticket.maKhachHang}
-                        </TableCell>
-                        <TableCell className="py-1.5 px-3 text-xs font-bold text-emerald-600 dark:text-emerald-400 text-right">
-                          {formatCurrency(ticket.tongTien)}
-                        </TableCell>
-                        <TableCell className="py-1.5 px-3 text-xs text-center">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold border ${
-                            ticket.tinhTrangDichVu.toLowerCase().includes("da giao") || ticket.tinhTrangDichVu.toLowerCase().includes("hoan thanh") || ticket.tinhTrangDichVu.toLowerCase().includes("hoàn thành")
-                              ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-800"
-                              : "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-800"
-                          }`}>
-                            {formatVietnameseStatus(ticket.tinhTrangDichVu)}
-                          </span>
-                        </TableCell>
+                        <TableCell className="py-1.5 px-3 text-xs text-center">{getStatusBadge(item.tinhTrangDichVu)}</TableCell>
                         <TableCell className="py-1.5 px-3 text-xs text-right">
                           <div className="flex justify-end gap-1">
-                            <Button variant="outline" size="sm" className="h-7 w-7 p-0 cursor-pointer" title="Xem chi tiết" onClick={() => setSelectedTicket(ticket)}>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => openDetail(item.soPhieuDichVu)}
+                              className="h-7 w-7 p-0 cursor-pointer hover-elevate transition-all duration-150 rounded-lg"
+                              title="Xem chi tiết"
+                            >
                               <Eye className="h-3.5 w-3.5" />
                             </Button>
-                            {!ticket.tinhTrangDichVu.toLowerCase().includes("da giao") ? (
+                            {!item.tinhTrangDichVu.toLowerCase().includes("da giao") ? (
                               <Button
                                 variant="outline"
                                 size="sm"
                                 className="h-7 w-7 p-0 cursor-pointer"
                                 title={t("serviceOrders.deliverAll")}
-                                onClick={() => deliverAll(ticket)}
+                                onClick={() => deliverAll(item.soPhieuDichVu)}
                               >
                                 <Truck className="h-3.5 w-3.5" />
                               </Button>
@@ -641,126 +857,128 @@ export default function ServiceOrdersPage() {
                           </div>
                         </TableCell>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-
-              {/* Pagination Controls */}
-              {totalPages > 1 && (
-                <div className="flex items-center justify-center border-t border-border/60 pt-4 mt-4">
-                  <div className="flex items-center space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8 px-3 rounded-lg border border-border/80 hover:bg-muted/50 disabled:opacity-40 disabled:cursor-not-allowed select-none cursor-pointer"
-                      onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                      disabled={currentPage === 1}
-                    >
-                      <ChevronLeft className="h-4 w-4 mr-1" />
-                      Trước
-                    </Button>
-                    
-                    {/* Page numbers */}
-                    <div className="flex items-center space-x-1">
-                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
-                        if (
-                          totalPages > 5 &&
-                          page !== 1 &&
-                          page !== totalPages &&
-                          Math.abs(page - currentPage) > 1
-                        ) {
-                          if (page === 2 && currentPage > 3) {
-                            return <span key="ellipsis-start" className="text-muted-foreground px-1 text-sm select-none">...</span>;
-                          }
-                          if (page === totalPages - 1 && currentPage < totalPages - 2) {
-                            return <span key="ellipsis-end" className="text-muted-foreground px-1 text-sm select-none">...</span>;
-                          }
-                          return null;
-                        }
-
-                        return (
-                          <Button
-                            key={page}
-                            variant={currentPage === page ? "default" : "outline"}
-                            size="sm"
-                            className={`h-8 w-8 p-0 rounded-lg select-none cursor-pointer ${
-                              currentPage === page
-                                ? "bg-gold-gradient text-gold-foreground font-bold border-none"
-                                : "border border-border/80 hover:bg-muted/50 font-medium"
-                            }`}
-                            onClick={() => setCurrentPage(page)}
-                          >
-                            {page}
-                          </Button>
-                        );
-                      })}
-                    </div>
-
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8 px-3 rounded-lg border border-border/80 hover:bg-muted/50 disabled:opacity-40 disabled:cursor-not-allowed select-none cursor-pointer"
-                      onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                      disabled={currentPage === totalPages}
-                    >
-                      Sau
-                      <ChevronRight className="h-4 w-4 ml-1" />
-                    </Button>
-                  </div>
-                </div>
-              )}
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+            <div className="flex items-center justify-center border-t border-border/60 py-4">
+              <Pagination
+                currentPage={historyPage + 1}
+                totalPages={historyTotalPages}
+                onPageChange={(page) => loadHistory(page - 1)}
+              />
+            </div>
             </>
           )}
         </CardContent>
       </Card>
-      <DetailModal
-        open={Boolean(selectedTicket)}
-        title={`Phiếu dịch vụ ${selectedTicket?.soPhieuDichVu ?? ""}`}
-        subtitle="Chi tiết dịch vụ, thanh toán và trạng thái giao"
-        onClose={() => setSelectedTicket(null)}
-        onPrint={printTicket}
-      >
-        {selectedTicket && (
-          <div className="space-y-4">
-            <DetailGrid
-              items={[
-                { label: "Ngày lập", value: selectedTicket.ngayLapPhieuDichVu },
-                { label: "Khách hàng", value: selectedTicket.khachHang?.tenKhachHang ?? selectedTicket.maKhachHang },
-                { label: "Tổng tiền", value: formatCurrency(selectedTicket.tongTien) },
-                { label: "Trả trước", value: formatCurrency(selectedTicket.tongTienTraTruoc) },
-                { label: "Còn lại", value: formatCurrency(selectedTicket.tongTienConLai) },
-              ]}
-            />
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Dịch vụ</TableHead>
-                    <TableHead className="text-right">SL</TableHead>
-                    <TableHead className="text-right">Đơn giá được tính</TableHead>
-                    <TableHead className="text-right">Thành tiền</TableHead>
-                    <TableHead>Ngày giao</TableHead>
-                    <TableHead>Tình trạng</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {selectedTicket.items.map((item) => (
-                    <TableRow key={item.maLoaiDichVu}>
-                      <TableCell>{item.tenLoaiDichVu}</TableCell>
-                      <TableCell className="text-right">{item.soLuongDichVu}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(item.donGiaDuocTinh)}</TableCell>
-                      <TableCell className="text-right font-semibold">{formatCurrency(item.thanhTien)}</TableCell>
-                      <TableCell>{item.ngayGiao || "-"}</TableCell>
-                      <TableCell>{formatVietnameseStatus(item.tinhTrang)}</TableCell>
+
+      {/* Detail Modal */}
+      {selectedTicket && (
+        <DetailModal
+          open={Boolean(selectedTicket)}
+          title={`Phiếu dịch vụ ${selectedTicket.soPhieuDichVu}`}
+          subtitle="Chi tiết dịch vụ gia công, thanh toán và tiến độ xử lý"
+          onClose={() => setSelectedTicket(null)}
+          onPrint={printTicket}
+        >
+          <div className="space-y-6">
+            {/* Visual Stepper Progress Pipeline */}
+            <div className="space-y-1">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Tiến độ thực hiện</p>
+              <ServiceStatusStepper status={selectedTicket.tinhTrangDichVu} />
+            </div>
+
+            {/* General Info Grid */}
+            <div className="space-y-1.5">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Thông tin chung</p>
+              <DetailGrid
+                items={[
+                  { label: "Ngày lập phiếu", value: selectedTicket.ngayLapPhieuDichVu },
+                  { label: "Khách hàng", value: selectedTicket.khachHang?.tenKhachHang ?? selectedTicket.maKhachHang },
+                  { label: "Số điện thoại", value: selectedTicket.khachHang?.soDienThoai ?? "-" },
+                  { label: "Tổng chi phí", value: <span className="font-bold text-foreground">{formatCurrency(selectedTicket.tongTien)}</span> },
+                  { label: "Đã thanh toán trước", value: <span className="font-semibold text-emerald-600 dark:text-emerald-400">{formatCurrency(selectedTicket.tongTienTraTruoc)}</span> },
+                  { label: "Số dư còn lại", value: <span className={cn("font-bold", selectedTicket.tongTienConLai > 0 ? "text-amber-600 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400")}>{formatCurrency(selectedTicket.tongTienConLai)}</span> },
+                ]}
+              />
+            </div>
+
+            {/* Items Table */}
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Danh sách dịch vụ chi tiết</p>
+                {!selectedTicket.tinhTrangDichVu.toLowerCase().includes("da giao") && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs font-bold text-gold border-gold/45 hover:bg-gold/10 gap-1.5 cursor-pointer"
+                    onClick={() => deliverAll(selectedTicket.soPhieuDichVu)}
+                  >
+                    <Truck className="h-4 w-4" />
+                    Bàn giao tất cả
+                  </Button>
+                )}
+              </div>
+              <div className="rounded-xl border border-border/70 overflow-hidden shadow-sm">
+                <Table>
+                  <TableHeader className="bg-muted/10">
+                    <TableRow>
+                      <TableHead className="w-12 font-bold">{t("common.stt")}</TableHead>
+                      <TableHead className="font-bold">{t("serviceTypes.title")}</TableHead>
+                      <TableHead className="text-center font-bold">{t("common.quantity")}</TableHead>
+                      <TableHead className="text-right font-bold">{t("serviceOrders.calculatedPrice")}</TableHead>
+                      <TableHead className="text-right font-bold">{t("common.subtotal")}</TableHead>
+                      <TableHead className="text-right font-bold">Trả trước</TableHead>
+                      <TableHead className="text-right font-bold">Còn lại</TableHead>
+                      <TableHead className="text-center font-bold">Trạng thái</TableHead>
+                      <TableHead className="text-right font-bold w-24">Thao tác</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {selectedTicket.items.map((item, index) => {
+                      const itemRemains = item.tienConLai ?? 0;
+                      const isDelivered = item.tinhTrang.toLowerCase().includes("da giao") || item.tinhTrang.toLowerCase().includes("đã giao");
+                      return (
+                        <TableRow key={`${selectedTicket.soPhieuDichVu}-${item.maLoaiDichVu}`} className="hover:bg-muted/20 transition-colors">
+                          <TableCell className="font-bold text-muted-foreground">{index + 1}</TableCell>
+                          <TableCell className="font-semibold text-foreground">{item.tenLoaiDichVu}</TableCell>
+                          <TableCell className="text-center font-medium">{item.soLuongDichVu}</TableCell>
+                          <TableCell className="text-right text-muted-foreground">{formatCurrency(item.donGiaDuocTinh)}</TableCell>
+                          <TableCell className="text-right font-bold">{formatCurrency(item.thanhTien)}</TableCell>
+                          <TableCell className="text-right text-emerald-600 dark:text-emerald-400 font-semibold">{formatCurrency(item.tienTraTruoc)}</TableCell>
+                          <TableCell className={cn(
+                            "text-right font-bold",
+                            itemRemains > 0 ? "text-amber-600 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400"
+                          )}>
+                            {formatCurrency(itemRemains)}
+                          </TableCell>
+                          <TableCell className="text-center">{getStatusBadge(item.tinhTrang)}</TableCell>
+                          <TableCell className="text-right">
+                            {!isDelivered ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 text-[11px] px-2 font-semibold hover:bg-muted/40 cursor-pointer"
+                                onClick={() => deliverItem(selectedTicket.soPhieuDichVu, item.maLoaiDichVu)}
+                              >
+                                Bàn giao
+                              </Button>
+                            ) : (
+                              <span className="text-[10px] text-muted-foreground italic font-semibold px-2">Đã giao</span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
           </div>
-        )}
-      </DetailModal>
+        </DetailModal>
+      )}
     </div>
   );
 }

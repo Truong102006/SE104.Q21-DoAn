@@ -113,8 +113,14 @@ export const backendApi = {
   },
 
   purchases: {
-    list: (keyword?: string) =>
-      apiRequest<PurchaseResponse[]>("/api/purchases", { query: { keyword } }),
+    list: (params?: { keyword?: string; page?: number; size?: number }) =>
+      apiRequest<PurchaseResponse[] | PageResponse<PurchaseResponse>>("/api/purchases", {
+        query: {
+          keyword: params?.keyword,
+          page: params?.page,
+          size: params?.size,
+        },
+      }),
     getById: (soPhieuMua: string) =>
       apiRequest<PurchaseResponse>(`/api/purchases/${soPhieuMua}`),
     printData: (soPhieuMua: string) =>
@@ -124,15 +130,28 @@ export const backendApi = {
   },
 
   sales: {
-    list: (keyword?: string) => apiRequest<SaleResponse[]>("/api/sales", { query: { keyword } }),
+    list: (params?: { keyword?: string; page?: number; size?: number }) =>
+      apiRequest<SaleResponse[] | PageResponse<SaleResponse>>("/api/sales", {
+        query: {
+          keyword: params?.keyword,
+          page: params?.page,
+          size: params?.size,
+        },
+      }),
     getById: (soPhieuBan: string) => apiRequest<SaleResponse>(`/api/sales/${soPhieuBan}`),
     create: (payload: SaleRequest) =>
       apiRequest<SaleResponse>("/api/sales", { method: "POST", body: payload }),
   },
 
   serviceTickets: {
-    list: (keyword?: string) =>
-      apiRequest<ServiceTicketResponse[]>("/api/service-tickets", { query: { keyword } }),
+    list: (params?: { keyword?: string; page?: number; size?: number }) =>
+      apiRequest<ServiceTicketResponse[] | PageResponse<ServiceTicketResponse>>("/api/service-tickets", {
+        query: {
+          keyword: params?.keyword,
+          page: params?.page,
+          size: params?.size,
+        },
+      }),
     getById: (soPhieuDichVu: string) =>
       apiRequest<ServiceTicketResponse>(`/api/service-tickets/${soPhieuDichVu}`),
     create: (payload: ServiceTicketRequest) =>

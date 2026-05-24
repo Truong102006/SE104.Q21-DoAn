@@ -93,13 +93,13 @@ function formatDateTime(dateStr: string | undefined | null): string {
     const day = String(d.getDate()).padStart(2, "0");
     const month = String(d.getMonth() + 1).padStart(2, "0");
     const year = d.getFullYear();
-    
+
     // Check if it has time part
     const hasTime = dateStr.includes(":") || dateStr.includes("T");
     if (!hasTime) {
       return `${day}/${month}/${year}`;
     }
-    
+
     const hours = String(d.getHours()).padStart(2, "0");
     const minutes = String(d.getMinutes()).padStart(2, "0");
     return `${day}/${month}/${year} ${hours}:${minutes}`;
@@ -229,7 +229,7 @@ export default function DashboardPage() {
       setLoading(true);
       setError(null);
       try {
-        const [productsPage, sales, serviceTickets, purchases] = await Promise.all([
+        const [productsPage, salesRes, serviceTicketsRes, purchasesRes] = await Promise.all([
           backendApi.products.list({ page: 0, size: 100 }),
           backendApi.sales.list(),
           backendApi.serviceTickets.list(),
@@ -239,6 +239,10 @@ export default function DashboardPage() {
         if (!mounted) return;
 
         const products = productsPage.content;
+        const sales = Array.isArray(salesRes) ? salesRes : salesRes.content;
+        const serviceTickets = Array.isArray(serviceTicketsRes) ? serviceTicketsRes : serviceTicketsRes.content;
+        const purchases = Array.isArray(purchasesRes) ? purchasesRes : purchasesRes.content;
+
         setSalesList(sales);
         setServicesList(serviceTickets);
         setPurchasesList(purchases);
@@ -953,7 +957,7 @@ export default function DashboardPage() {
           <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl animate-in zoom-in-95 duration-200">
             <h3 className="text-base font-extrabold text-foreground mb-1">Cập nhật bảng giá vàng</h3>
             <p className="text-xs text-muted-foreground mb-4">Thay đổi giá mua và giá bán của các loại vàng đang giao dịch.</p>
-            
+
             <div className="space-y-4">
               {editPricesDraft.map((gold, index) => (
                 <div key={gold.type} className="space-y-1.5 p-3 rounded-xl border border-border/80 bg-muted/20">
@@ -1058,12 +1062,12 @@ export default function DashboardPage() {
                 {/* Tabs */}
                 <div className="flex flex-wrap gap-1 bg-muted/40 p-1 rounded-xl border w-full sm:w-auto">
                   {(["all", "sale", "service", "purchase", "system"] as const).map((type) => {
-                    const label = 
+                    const label =
                       type === "all" ? "Tất cả" :
                       type === "sale" ? t("common.sale") || "Bán lẻ" :
                       type === "service" ? t("common.service") || "Dịch vụ" :
                       type === "purchase" ? t("nav.purchaseOrders") || "Mua vào" : "Hệ thống";
-                    
+
                     const count = allActivities.filter(a => type === "all" ? true : a.type === type).length;
                     const isActive = activityTypeFilter === type;
 
@@ -1072,8 +1076,8 @@ export default function DashboardPage() {
                         key={type}
                         onClick={() => setActivityTypeFilter(type)}
                         className={`px-3 py-1.5 text-xs font-bold rounded-lg cursor-pointer transition-all ${
-                          isActive 
-                            ? "bg-amber-500 text-white shadow-sm" 
+                          isActive
+                            ? "bg-amber-500 text-white shadow-sm"
                             : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                         }`}
                       >

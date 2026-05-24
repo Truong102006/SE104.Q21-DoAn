@@ -7,6 +7,7 @@ import com.se104.goldstore.dto.response.PhieuBanHangResponse;
 import com.se104.goldstore.service.PhieuBanHangService;
 import jakarta.validation.Valid;
 import java.util.List;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -27,11 +28,21 @@ public class PhieuBanHangController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<PhieuBanHangResponse>>> getAll(
+    public ResponseEntity<ApiResponse<Object>> getAll(
         @RequestParam(name = "keyword", required = false) String keyword,
-        @RequestParam(name = "q", required = false) String keywordLegacy
+        @RequestParam(name = "q", required = false) String keywordLegacy,
+        @RequestParam(name = "page", required = false) Integer page,
+        @RequestParam(name = "size", required = false) Integer size
     ) {
         String resolvedKeyword = keyword != null ? keyword : keywordLegacy;
+        if (page != null && size != null) {
+            return ResponseEntity.ok(
+                ApiResponse.success(
+                    "Lay danh sach phieu ban hang thanh cong",
+                    phieuBanHangService.getAllPaginated(resolvedKeyword, page, size)
+                )
+            );
+        }
         return ResponseEntity.ok(
             ApiResponse.success("Lay danh sach phieu ban hang thanh cong", phieuBanHangService.getAll(resolvedKeyword))
         );

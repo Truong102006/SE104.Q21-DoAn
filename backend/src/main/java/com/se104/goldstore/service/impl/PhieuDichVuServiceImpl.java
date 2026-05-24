@@ -27,6 +27,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,6 +38,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class PhieuDichVuServiceImpl implements PhieuDichVuService {
 
     private static final String PREFIX = "DV";
+    private static final int DEFAULT_PAGE_SIZE = 20;
+    private static final int MAX_PAGE_SIZE = 100;
     private static final String PREPAYMENT_RATE_KEY = "SERVICE_PREPAYMENT_RATE";
     private static final BigDecimal DEFAULT_PREPAYMENT_RATE = BigDecimal.valueOf(50);
     private static final BigDecimal ONE_HUNDRED = BigDecimal.valueOf(100);
@@ -66,9 +71,23 @@ public class PhieuDichVuServiceImpl implements PhieuDichVuService {
     @Override
     public List<PhieuDichVuResponse> getAll(String keyword) {
         String normalized = SearchUtils.normalizeKeyword(keyword);
-        List<PhieuDichVu> entities = phieuDichVuRepository.findByKeyword(normalized);
+        List<PhieuDichVu> entities = phieuDichVuRepository.findAllByKeyword(normalized);
 
-        return entities.stream().map(entity -> buildResponse(entity, loadDetails(entity.getSoPhieuDichVu()))).toList();
+        // Optimization: Do not load items/details for list view to avoid N+1 and heavy mapping
+        return entities.stream().map(entity -> buildResponse(entity, List.of())).toList();
+    }
+
+    @Override
+    public Page<PhieuDichVuResponse> getAllPaginated(String keyword, int page, int size) {
+        String normalized = SearchUtils.normalizeKeyword(keyword);
+        PageRequest pageRequest = PageRequest.of(
+            Math.max(page, 0),
+            Math.min(size > 0 ? size : DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE),
+            Sort.by(Sort.Direction.DESC, "ngayLapPhieuDichVu").and(Sort.by(Sort.Direction.DESC, "soPhieuDichVu"))
+        );
+
+        return phieuDichVuRepository.findByKeyword(normalized, pageRequest)
+            .map(entity -> buildResponse(entity, List.of()));
     }
 
     @Override
@@ -317,8 +336,7 @@ public class PhieuDichVuServiceImpl implements PhieuDichVuService {
     }
 
     private PhieuDichVuResponse buildResponse(PhieuDichVu voucher, List<ChiTietPhieuDichVu> details) {
-        KhachHang khachHang = khachHangRepository.findById(voucher.getMaKhachHang()).orElse(null);
-        return buildResponse(voucher, details, khachHang);
+        return buildResponse(voucher, details, voucher.getKhachHang());
     }
 
     private PhieuDichVuResponse buildResponse(

@@ -31,7 +31,8 @@ public interface SanPhamRepository extends JpaRepository<SanPham, String> {
         """
         SELECT sp
         FROM SanPham sp
-        LEFT JOIN sp.loaiSanPham lsp
+        LEFT JOIN FETCH sp.loaiSanPham lsp
+        LEFT JOIN FETCH sp.donViTinh dvt
         WHERE (:keyword = '' OR LOWER(sp.maSanPham) LIKE CONCAT('%', :keyword, '%')
             OR LOWER(sp.tenSanPham) LIKE CONCAT('%', :keyword, '%')
             OR LOWER(lsp.tenLoaiSanPham) LIKE CONCAT('%', :keyword, '%'))
@@ -48,7 +49,8 @@ public interface SanPhamRepository extends JpaRepository<SanPham, String> {
         """
         SELECT sp
         FROM SanPham sp
-        LEFT JOIN sp.loaiSanPham lsp
+        LEFT JOIN FETCH sp.loaiSanPham lsp
+        LEFT JOIN FETCH sp.donViTinh dvt
         WHERE :keyword = '' OR LOWER(sp.maSanPham) LIKE CONCAT('%', :keyword, '%')
             OR LOWER(sp.tenSanPham) LIKE CONCAT('%', :keyword, '%')
             OR LOWER(lsp.tenLoaiSanPham) LIKE CONCAT('%', :keyword, '%')

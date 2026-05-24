@@ -29,6 +29,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,6 +40,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class PhieuBanHangServiceImpl implements PhieuBanHangService {
 
     private static final String PREFIX = "PB";
+    private static final int DEFAULT_PAGE_SIZE = 20;
+    private static final int MAX_PAGE_SIZE = 100;
 
     private final PhieuBanHangRepository phieuBanHangRepository;
     private final ChiTietPhieuBanRepository chiTietPhieuBanRepository;
@@ -64,9 +69,23 @@ public class PhieuBanHangServiceImpl implements PhieuBanHangService {
     @Override
     public List<PhieuBanHangResponse> getAll(String keyword) {
         String normalized = SearchUtils.normalizeKeyword(keyword);
-        List<PhieuBanHang> entities = phieuBanHangRepository.findByKeyword(normalized);
+        List<PhieuBanHang> entities = phieuBanHangRepository.findAllByKeyword(normalized);
 
-        return entities.stream().map(entity -> buildResponse(entity, loadDetails(entity.getSoPhieuBan()))).toList();
+        // Optimization: Do not load items/details for list view to avoid N+1 and heavy mapping
+        return entities.stream().map(entity -> buildResponse(entity, List.of())).toList();
+    }
+
+    @Override
+    public Page<PhieuBanHangResponse> getAllPaginated(String keyword, int page, int size) {
+        String normalized = SearchUtils.normalizeKeyword(keyword);
+        PageRequest pageRequest = PageRequest.of(
+            Math.max(page, 0),
+            Math.min(size > 0 ? size : DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE),
+            Sort.by(Sort.Direction.DESC, "ngayLapPhieuBan").and(Sort.by(Sort.Direction.DESC, "soPhieuBan"))
+        );
+
+        return phieuBanHangRepository.findByKeyword(normalized, pageRequest)
+            .map(entity -> buildResponse(entity, List.of()));
     }
 
     @Override
@@ -173,8 +192,7 @@ public class PhieuBanHangServiceImpl implements PhieuBanHangService {
     }
 
     private PhieuBanHangResponse buildResponse(PhieuBanHang voucher, List<ChiTietPhieuBan> details) {
-        KhachHang khachHang = khachHangRepository.findById(voucher.getMaKhachHang()).orElse(null);
-        return buildResponse(voucher, details, khachHang);
+        return buildResponse(voucher, details, voucher.getKhachHang());
     }
 
     private PhieuBanHangResponse buildResponse(

@@ -9,6 +9,7 @@ import com.se104.goldstore.service.PhieuDichVuService;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.time.LocalDate;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -30,11 +31,21 @@ public class PhieuDichVuController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<PhieuDichVuResponse>>> getAll(
+    public ResponseEntity<ApiResponse<Object>> getAll(
         @RequestParam(name = "keyword", required = false) String keyword,
-        @RequestParam(name = "q", required = false) String keywordLegacy
+        @RequestParam(name = "q", required = false) String keywordLegacy,
+        @RequestParam(name = "page", required = false) Integer page,
+        @RequestParam(name = "size", required = false) Integer size
     ) {
         String resolvedKeyword = keyword != null ? keyword : keywordLegacy;
+        if (page != null && size != null) {
+            return ResponseEntity.ok(
+                ApiResponse.success(
+                    "Lay danh sach phieu dich vu thanh cong",
+                    phieuDichVuService.getAllPaginated(resolvedKeyword, page, size)
+                )
+            );
+        }
         return ResponseEntity.ok(
             ApiResponse.success("Lay danh sach phieu dich vu thanh cong", phieuDichVuService.getAll(resolvedKeyword))
         );

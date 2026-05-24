@@ -62,13 +62,6 @@ const MENU_SECTIONS: MenuSection[] = [
     ],
   },
   {
-    key: "nav.lookupScreen",
-    icon: Search,
-    items: [
-      { key: "nav.serviceSearch", href: "/dashboard/service-voucher-lookup", icon: Search, roles: ["ADMIN", "STAFF"] },
-    ],
-  },
-  {
     key: "nav.reportsScreen",
     icon: BarChart3,
     items: [

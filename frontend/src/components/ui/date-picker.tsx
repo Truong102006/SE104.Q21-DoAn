@@ -297,10 +297,11 @@ function PickerInput({
                             "relative h-8 w-8 rounded-full text-xs transition-all flex items-center justify-center",
                             isSelected
                               ? "bg-primary text-primary-foreground font-bold shadow-md shadow-primary/20 scale-110"
-                              : isCurrentMonth
-                                ? "hover:bg-accent hover:text-accent-foreground text-foreground"
-                                : "text-muted-foreground/30 hover:bg-transparent",
-                            isToday && !isSelected && "after:content-[''] after:absolute after:bottom-1 after:h-1 after:w-1 after:bg-gold after:rounded-full",
+                              : isToday
+                                ? "border-2 border-gold text-gold font-black bg-gold/10 hover:bg-gold/20 shadow-sm"
+                                : isCurrentMonth
+                                  ? "hover:bg-accent hover:text-accent-foreground text-foreground"
+                                  : "text-muted-foreground/30 hover:bg-transparent",
                             isDisabled && "opacity-10 cursor-not-allowed"
                           )}
                         >
