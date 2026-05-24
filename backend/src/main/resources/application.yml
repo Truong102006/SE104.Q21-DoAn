@@ -15,6 +15,7 @@ spring:
       maximum-pool-size: ${SPRING_DATASOURCE_MAX_POOL_SIZE:10}
       minimum-idle: ${SPRING_DATASOURCE_MIN_IDLE:2}
       pool-name: GoldStoreHikariPool
+      leak-detection-threshold: 2000
   jpa:
     open-in-view: false
     hibernate:
