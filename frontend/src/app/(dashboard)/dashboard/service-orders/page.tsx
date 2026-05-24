@@ -24,7 +24,7 @@ import type {
 import { getApiErrorMessage } from "@/lib/api-error";
 import { formatCurrency, todayIsoDate, toPositiveInt, toPositiveNumber, formatVNCurrencyInput, parseVNCurrencyInput, formatVietnameseStatus } from "@/lib/format";
 import { useTranslation } from "@/i18n/i18n-context";
-import { ClipboardList, Eye, Plus, ReceiptText, Truck, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, ClipboardList, Eye, Plus, ReceiptText, Truck, Trash2 } from "lucide-react";
 
 type ServiceItemDraft = {
   keyId: string;
@@ -62,6 +62,9 @@ export default function ServiceOrdersPage() {
   const [historyQuery, setHistoryQuery] = useState("");
   const [historyStatus, setHistoryStatus] = useState("all");
   const [selectedTicket, setSelectedTicket] = useState<ServiceTicketResponse | null>(null);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => {
     if (maKhachHang) {
@@ -106,6 +109,18 @@ export default function ServiceOrdersPage() {
       return matchesQuery && matchesStatus;
     });
   }, [historyQuery, historyStatus, tickets]);
+
+  // Reset page when search query or status changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [historyQuery, historyStatus]);
+
+  const totalPages = Math.ceil(filteredTickets.length / itemsPerPage) || 1;
+
+  const paginatedTickets = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredTickets.slice(start, start + itemsPerPage);
+  }, [filteredTickets, currentPage, itemsPerPage]);
 
   async function loadData() {
     setLoading(true);
@@ -568,65 +583,134 @@ export default function ServiceOrdersPage() {
           ) : filteredTickets.length === 0 ? (
             <EmptyState title={t("serviceOrders.emptyTitle")} description={t("serviceOrders.emptyDesc")} />
           ) : (
-            <div className="rounded-md border border-border/80 overflow-hidden">
-              <Table>
-                <TableHeader className="bg-muted/30">
-                  <TableRow className="hover:bg-transparent">
-                    <TableHead className="w-14 text-center py-3 px-4 h-10 text-xs font-bold uppercase tracking-wider">{t("common.stt")}</TableHead>
-                    <TableHead className="py-3 px-4 h-10 text-xs font-bold uppercase tracking-wider">{t("common.voucherNumber")}</TableHead>
-                    <TableHead className="py-3 px-4 h-10 text-xs font-bold uppercase tracking-wider">{t("common.dateCreated")}</TableHead>
-                    <TableHead className="py-3 px-4 h-10 text-xs font-bold uppercase tracking-wider">{t("common.customer")}</TableHead>
-                    <TableHead className="py-3 px-4 h-10 text-xs font-bold uppercase tracking-wider text-right">{t("common.total")}</TableHead>
-                    <TableHead className="py-3 px-4 h-10 text-xs font-bold uppercase tracking-wider text-center">{t("serviceOrders.serviceStatus")}</TableHead>
-                    <TableHead className="py-3 px-4 h-10 text-xs font-bold uppercase tracking-wider text-right w-28">Thao tác</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredTickets.map((ticket, idx) => (
-                    <TableRow key={ticket.soPhieuDichVu} className="hover:bg-accent/15 border-b border-border/60">
-                      <TableCell className="py-3.5 px-4 text-center font-bold text-sm text-muted-foreground">{idx + 1}</TableCell>
-                      <TableCell className="py-3.5 px-4 text-sm font-semibold">{ticket.soPhieuDichVu}</TableCell>
-                      <TableCell className="py-3.5 px-4 text-sm text-muted-foreground">{ticket.ngayLapPhieuDichVu}</TableCell>
-                      <TableCell className="py-3.5 px-4 text-sm">
-                        {ticket.khachHang?.tenKhachHang ?? ticket.maKhachHang}
-                      </TableCell>
-                      <TableCell className="py-3.5 px-4 text-sm font-bold text-emerald-600 dark:text-emerald-400 text-right">
-                        {formatCurrency(ticket.tongTien)}
-                      </TableCell>
-                      <TableCell className="py-3.5 px-4 text-sm text-center">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold border ${
-                          ticket.tinhTrangDichVu.toLowerCase().includes("da giao") || ticket.tinhTrangDichVu.toLowerCase().includes("hoan thanh") || ticket.tinhTrangDichVu.toLowerCase().includes("hoàn thành")
-                            ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-800"
-                            : "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-800"
-                        }`}>
-                          {formatVietnameseStatus(ticket.tinhTrangDichVu)}
-                        </span>
-                      </TableCell>
-                      <TableCell className="py-3.5 px-4 text-sm text-right">
-                        <div className="flex justify-end gap-1">
-                          <Button variant="outline" size="sm" className="h-8 w-8 p-0 cursor-pointer" title="Xem chi tiết" onClick={() => setSelectedTicket(ticket)}>
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          {!ticket.tinhTrangDichVu.toLowerCase().includes("da giao") ? (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-8 w-8 p-0 cursor-pointer"
-                              title={t("serviceOrders.deliverAll")}
-                              onClick={() => deliverAll(ticket)}
-                            >
-                              <Truck className="h-4 w-4" />
-                            </Button>
-                          ) : (
-                            <span className="text-xs text-muted-foreground italic font-semibold px-2">Đã giao</span>
-                          )}
-                        </div>
-                      </TableCell>
+            <>
+              <div className="rounded-md border border-border/80 overflow-hidden">
+                <Table>
+                  <TableHeader className="bg-muted/30">
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead className="w-14 text-center py-2 px-3 h-8 text-[11px] font-bold uppercase tracking-wider">{t("common.stt")}</TableHead>
+                      <TableHead className="py-2 px-3 h-8 text-[11px] font-bold uppercase tracking-wider">{t("common.voucherNumber")}</TableHead>
+                      <TableHead className="py-2 px-3 h-8 text-[11px] font-bold uppercase tracking-wider">{t("common.dateCreated")}</TableHead>
+                      <TableHead className="py-2 px-3 h-8 text-[11px] font-bold uppercase tracking-wider">{t("common.customer")}</TableHead>
+                      <TableHead className="py-2 px-3 h-8 text-[11px] font-bold uppercase tracking-wider text-right">{t("common.total")}</TableHead>
+                      <TableHead className="py-2 px-3 h-8 text-[11px] font-bold uppercase tracking-wider text-center">{t("serviceOrders.serviceStatus")}</TableHead>
+                      <TableHead className="py-2 px-3 h-8 text-[11px] font-bold uppercase tracking-wider text-right w-28">Thao tác</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedTickets.map((ticket, idx) => (
+                      <TableRow key={ticket.soPhieuDichVu} className="hover:bg-accent/15 border-b border-border/60">
+                        <TableCell className="py-1.5 px-3 text-center font-bold text-xs text-muted-foreground">
+                          {(currentPage - 1) * itemsPerPage + idx + 1}
+                        </TableCell>
+                        <TableCell className="py-1.5 px-3 text-xs font-semibold">{ticket.soPhieuDichVu}</TableCell>
+                        <TableCell className="py-1.5 px-3 text-xs text-muted-foreground">{ticket.ngayLapPhieuDichVu}</TableCell>
+                        <TableCell className="py-1.5 px-3 text-xs">
+                          {ticket.khachHang?.tenKhachHang ?? ticket.maKhachHang}
+                        </TableCell>
+                        <TableCell className="py-1.5 px-3 text-xs font-bold text-emerald-600 dark:text-emerald-400 text-right">
+                          {formatCurrency(ticket.tongTien)}
+                        </TableCell>
+                        <TableCell className="py-1.5 px-3 text-xs text-center">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold border ${
+                            ticket.tinhTrangDichVu.toLowerCase().includes("da giao") || ticket.tinhTrangDichVu.toLowerCase().includes("hoan thanh") || ticket.tinhTrangDichVu.toLowerCase().includes("hoàn thành")
+                              ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-800"
+                              : "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-800"
+                          }`}>
+                            {formatVietnameseStatus(ticket.tinhTrangDichVu)}
+                          </span>
+                        </TableCell>
+                        <TableCell className="py-1.5 px-3 text-xs text-right">
+                          <div className="flex justify-end gap-1">
+                            <Button variant="outline" size="sm" className="h-7 w-7 p-0 cursor-pointer" title="Xem chi tiết" onClick={() => setSelectedTicket(ticket)}>
+                              <Eye className="h-3.5 w-3.5" />
+                            </Button>
+                            {!ticket.tinhTrangDichVu.toLowerCase().includes("da giao") ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-7 w-7 p-0 cursor-pointer"
+                                title={t("serviceOrders.deliverAll")}
+                                onClick={() => deliverAll(ticket)}
+                              >
+                                <Truck className="h-3.5 w-3.5" />
+                              </Button>
+                            ) : (
+                              <span className="text-[10px] text-muted-foreground italic font-semibold px-2">Đã giao</span>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-center border-t border-border/60 pt-4 mt-4">
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 px-3 rounded-lg border border-border/80 hover:bg-muted/50 disabled:opacity-40 disabled:cursor-not-allowed select-none cursor-pointer"
+                      onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      <ChevronLeft className="h-4 w-4 mr-1" />
+                      Trước
+                    </Button>
+                    
+                    {/* Page numbers */}
+                    <div className="flex items-center space-x-1">
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                        if (
+                          totalPages > 5 &&
+                          page !== 1 &&
+                          page !== totalPages &&
+                          Math.abs(page - currentPage) > 1
+                        ) {
+                          if (page === 2 && currentPage > 3) {
+                            return <span key="ellipsis-start" className="text-muted-foreground px-1 text-sm select-none">...</span>;
+                          }
+                          if (page === totalPages - 1 && currentPage < totalPages - 2) {
+                            return <span key="ellipsis-end" className="text-muted-foreground px-1 text-sm select-none">...</span>;
+                          }
+                          return null;
+                        }
+
+                        return (
+                          <Button
+                            key={page}
+                            variant={currentPage === page ? "default" : "outline"}
+                            size="sm"
+                            className={`h-8 w-8 p-0 rounded-lg select-none cursor-pointer ${
+                              currentPage === page
+                                ? "bg-gold-gradient text-gold-foreground font-bold border-none"
+                                : "border border-border/80 hover:bg-muted/50 font-medium"
+                            }`}
+                            onClick={() => setCurrentPage(page)}
+                          >
+                            {page}
+                          </Button>
+                        );
+                      })}
+                    </div>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 px-3 rounded-lg border border-border/80 hover:bg-muted/50 disabled:opacity-40 disabled:cursor-not-allowed select-none cursor-pointer"
+                      onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                      disabled={currentPage === totalPages}
+                    >
+                      Sau
+                      <ChevronRight className="h-4 w-4 ml-1" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>

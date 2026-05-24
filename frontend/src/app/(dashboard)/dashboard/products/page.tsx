@@ -28,7 +28,6 @@ import { Pencil, Plus, Search, Trash2, X, Loader2 } from "lucide-react";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useVirtualizer } from "@tanstack/react-virtual";
 import { useRef } from "react";
 
 const productSchema = z.object({
@@ -79,6 +78,7 @@ export default function ProductsPage() {
   const searchParams = useSearchParams();
   const role = useAuthStore((state) => state.user?.role ?? "STAFF");
   const { t } = useTranslation();
+  const isSearchMode = false;
 
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<ProductResponse[]>([]);
@@ -97,7 +97,6 @@ export default function ProductsPage() {
 
   const [deleting, setDeleting] = useState<ProductResponse | null>(null);
 
-  const parentRef = useRef<HTMLDivElement>(null);
 
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productSchema),
@@ -111,12 +110,6 @@ export default function ProductsPage() {
     },
   });
 
-  const virtualizer = useVirtualizer({
-    count: items.length,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => 64, // Approximate row height
-    overscan: 5,
-  });
 
   async function loadOptions() {
     try {
@@ -255,19 +248,21 @@ export default function ProductsPage() {
   return (
     <div className="space-y-3">
       <PageHeader
-        eyebrow="BM8"
-        title={t("products.title")}
-        description={t("products.description")}
+        eyebrow={isSearchMode ? "Tra cứu" : "BM8"}
+        title={isSearchMode ? t("nav.productSearch") : t("products.title")}
+        description={isSearchMode ? "Tra cứu thông tin sản phẩm và tình trạng tồn kho trong hệ thống" : t("products.description")}
         badges={<Badge variant="outline">{t("common.page")} {page + 1}/{totalPages}</Badge>}
         actions={
-          <Button
-            size="default"
-            className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-extrabold hover:from-blue-500 hover:to-indigo-500 hover:shadow-blue-500/35 active:scale-95 shadow-lg shadow-blue-500/20 gap-2 h-11 px-6 rounded-xl cursor-pointer transition-all text-sm sm:text-base border-none"
-            onClick={openCreate}
-          >
-            <Plus className="h-5 w-5 stroke-[3]" />
-            {t("common.add")}
-          </Button>
+          !isSearchMode && (
+            <Button
+              size="default"
+              className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-extrabold hover:from-blue-500 hover:to-indigo-500 hover:shadow-blue-500/35 active:scale-95 shadow-lg shadow-blue-500/20 gap-2 h-11 px-6 rounded-xl cursor-pointer transition-all text-sm sm:text-base border-none"
+              onClick={openCreate}
+            >
+              <Plus className="h-5 w-5 stroke-[3]" />
+              {t("common.add")}
+            </Button>
+          )
         }
       />
 
@@ -339,58 +334,53 @@ export default function ProductsPage() {
               <EmptyState title={t("common.emptyTitle")} description={t("common.emptyFilterDesc")} />
             </div>
           ) : (
-            <div
-                ref={parentRef}
-                className="max-h-[600px] overflow-auto app-scrollbar"
-                style={{
-                    contain: 'strict',
-                }}
-            >
-                <div
-                    style={{
-                        height: `${virtualizer.getTotalSize()}px`,
-                        width: '100%',
-                        position: 'relative',
-                    }}
-                >
-                    <Table>
-                        <TableHeader className="sticky top-0 z-10 bg-background shadow-sm">
-                            <TableRow>
-                            <TableHead className="w-16 pl-5">{t("common.stt")}</TableHead>
-                            <TableHead className="w-28">{t("products.productCode")}</TableHead>
-                            <TableHead className="w-60 min-w-[200px]">{t("products.name")}</TableHead>
-                            <TableHead className="w-40">{t("products.productType")}</TableHead>
-                            <TableHead className="w-36">{t("products.sellingPrice")}</TableHead>
-                            <TableHead className="w-28">{t("products.stock")}</TableHead>
-                            <TableHead className="w-32">{t("common.unit")}</TableHead>
-                            <TableHead className="w-64 pl-4">{t("common.status") || "Trạng thái"}</TableHead>
-                            <TableHead className="w-28 pr-5 text-right">{t("common.actions")}</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {virtualizer.getVirtualItems().map((virtualRow) => {
-                                const item = items[virtualRow.index];
-                                return (
-                                    <TableRow
-                                        key={item.maSanPham}
-                                        className={cn(
-                                            "absolute top-0 left-0 w-full hover:bg-muted/30 transition-colors",
-                                            item.isActive === false ? "opacity-60 bg-slate-50/40 dark:bg-slate-900/10" : ""
-                                        )}
-                                        style={{
-                                            height: `${virtualRow.size}px`,
-                                            transform: `translateY(${virtualRow.start}px)`,
-                                        }}
-                                    >
-                                        <TableCell className="font-semibold text-muted-foreground pl-5">{page * PAGE_SIZE + virtualRow.index + 1}</TableCell>
-                                        <TableCell>{item.maSanPham}</TableCell>
-                                        <TableCell className="font-semibold text-foreground truncate max-w-[240px]">{item.tenSanPham}</TableCell>
-                                        <TableCell>{item.loaiSanPham?.tenLoaiSanPham ?? item.maLoaiSanPham}</TableCell>
-                                        <TableCell>{formatCurrency(item.donGiaBan)}</TableCell>
-                                        <TableCell>{formatNumber(item.tonKho)}</TableCell>
-                                        <TableCell>{item.donViTinh?.tenDonViTinh ?? item.maDonViTinh}</TableCell>
-                                        <TableCell className="pl-4">
-                                            <div className="flex items-center gap-2">
+            <div className="overflow-x-auto">
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                        <TableHead className="w-16 pl-5">{t("common.stt")}</TableHead>
+                        <TableHead className="w-28">{t("products.productCode")}</TableHead>
+                        <TableHead className="w-60 min-w-[200px]">{t("products.name")}</TableHead>
+                        <TableHead className="w-40">{t("products.productType")}</TableHead>
+                        <TableHead className="w-36">{t("products.sellingPrice")}</TableHead>
+                        <TableHead className="w-28">{t("products.stock")}</TableHead>
+                        <TableHead className="w-32">{t("common.unit")}</TableHead>
+                        <TableHead className="w-64 pl-4">{t("common.status") || "Trạng thái"}</TableHead>
+                        {!isSearchMode && <TableHead className="w-28 pr-5 text-right">{t("common.actions")}</TableHead>}
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {items.map((item, index) => (
+                            <TableRow
+                                key={item.maSanPham}
+                                className={cn(
+                                    "hover:bg-muted/30 transition-colors",
+                                    item.isActive === false ? "opacity-60 bg-slate-50/40 dark:bg-slate-900/10" : ""
+                                )}
+                            >
+                                <TableCell className="font-semibold text-muted-foreground pl-5">{page * PAGE_SIZE + index + 1}</TableCell>
+                                <TableCell>{item.maSanPham}</TableCell>
+                                <TableCell className="font-semibold text-foreground truncate max-w-[240px]">{item.tenSanPham}</TableCell>
+                                <TableCell>{item.loaiSanPham?.tenLoaiSanPham ?? item.maLoaiSanPham}</TableCell>
+                                <TableCell>{formatCurrency(item.donGiaBan)}</TableCell>
+                                <TableCell>{formatNumber(item.tonKho)}</TableCell>
+                                <TableCell>{item.donViTinh?.tenDonViTinh ?? item.maDonViTinh}</TableCell>
+                                <TableCell className="pl-4">
+                                    <div className="flex items-center gap-2">
+                                        {isSearchMode ? (
+                                            <Badge
+                                                variant="outline"
+                                                className={cn(
+                                                    "text-[10px] font-bold uppercase tracking-tight select-none",
+                                                    item.isActive !== false
+                                                        ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                                                        : "border-slate-500/20 bg-slate-500/10 text-slate-600 dark:text-slate-400"
+                                                )}
+                                            >
+                                                {item.isActive !== false ? "Active" : "Paused"}
+                                            </Badge>
+                                        ) : (
+                                            <>
                                                 <button
                                                 type="button"
                                                 onClick={() => toggleActive(item)}
@@ -411,26 +401,29 @@ export default function ProductsPage() {
                                                 <span className={`text-[10px] font-bold uppercase tracking-tight select-none ${item.isActive !== false ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"}`}>
                                                 {item.isActive !== false ? "Active" : "Paused"}
                                                 </span>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className="pr-5">
-                                            <div className="flex justify-end gap-1.5">
-                                                <Button variant="outline" size="icon-xs" className="h-7 w-7" onClick={() => openEdit(item)}>
-                                                <Pencil className="h-3 w-3" />
-                                                </Button>
-                                                {role === "ADMIN" && (
-                                                <Button variant="destructive" size="icon-xs" className="h-7 w-7" onClick={() => setDeleting(item)}>
-                                                    <Trash2 className="h-3 w-3" />
-                                                </Button>
-                                                )}
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                );
-                            })}
-                        </TableBody>
-                    </Table>
-                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                </TableCell>
+                                {!isSearchMode && (
+                                    <TableCell className="pr-5">
+                                        <div className="flex justify-end gap-1.5">
+                                            <Button variant="outline" size="icon-xs" className="h-7 w-7" onClick={() => openEdit(item)}>
+                                            <Pencil className="h-3 w-3" />
+                                            </Button>
+                                            {role === "ADMIN" && (
+                                            <Button variant="destructive" size="icon-xs" className="h-7 w-7" onClick={() => setDeleting(item)}>
+                                                <Trash2 className="h-3 w-3" />
+                                            </Button>
+                                            )}
+                                        </div>
+                                    </TableCell>
+                                )}
+
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
             </div>
           )}
         </CardContent>

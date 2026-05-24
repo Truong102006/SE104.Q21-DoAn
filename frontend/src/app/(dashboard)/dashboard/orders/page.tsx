@@ -23,7 +23,7 @@ import type {
 import { getApiErrorMessage } from "@/lib/api-error";
 import { formatCurrency, formatNumber, todayIsoDate, toPositiveInt } from "@/lib/format";
 import { useTranslation } from "@/i18n/i18n-context";
-import { ClipboardList, Eye, Plus, ReceiptText, Trash2, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, ClipboardList, Eye, Plus, ReceiptText, Trash2, X } from "lucide-react";
 
 type SaleItemDraft = {
   keyId: string;
@@ -55,6 +55,9 @@ export default function SalesPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [historyQuery, setHistoryQuery] = useState("");
   const [selectedSale, setSelectedSale] = useState<SaleResponse | null>(null);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => {
     if (maKhachHang) {
@@ -90,6 +93,18 @@ export default function SalesPage() {
       || (item.khachHang?.tenKhachHang ?? item.maKhachHang).toLowerCase().includes(query),
     );
   }, [historyQuery, salesList]);
+
+  // Reset page when search query changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [historyQuery]);
+
+  const totalPages = Math.ceil(filteredSalesList.length / itemsPerPage) || 1;
+
+  const paginatedSalesList = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredSalesList.slice(start, start + itemsPerPage);
+  }, [filteredSalesList, currentPage, itemsPerPage]);
 
   async function loadData() {
     setLoading(true);
@@ -446,38 +461,107 @@ export default function SalesPage() {
           ) : filteredSalesList.length === 0 ? (
             <EmptyState title={t("salesOrders.emptyTitle")} description={t("salesOrders.emptyDesc")} />
           ) : (
-            <div className="rounded-md border border-border/80 overflow-hidden">
-              <Table>
-                <TableHeader className="bg-muted/30">
-                  <TableRow className="hover:bg-transparent">
-                    <TableHead className="w-14 text-center py-3 px-4 h-10 text-xs font-bold uppercase tracking-wider">{t("common.stt")}</TableHead>
-                    <TableHead className="py-3 px-4 h-10 text-xs font-bold uppercase tracking-wider">{t("common.voucherNumber")}</TableHead>
-                    <TableHead className="py-3 px-4 h-10 text-xs font-bold uppercase tracking-wider">{t("common.dateCreated")}</TableHead>
-                    <TableHead className="py-3 px-4 h-10 text-xs font-bold uppercase tracking-wider">{t("common.customer")}</TableHead>
-                    <TableHead className="py-3 px-4 h-10 text-xs font-bold uppercase tracking-wider text-center">{t("salesOrders.lineCount")}</TableHead>
-                    <TableHead className="py-3 px-4 h-10 text-xs font-bold uppercase tracking-wider text-right">{t("common.total")}</TableHead>
-                    <TableHead className="py-3 px-4 h-10 text-xs font-bold uppercase tracking-wider text-right w-20">Thao tác</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredSalesList.map((item, idx) => (
-                    <TableRow key={item.soPhieuBan} className="table-row-hover border-b border-border/60">
-                      <TableCell className="py-3.5 px-4 text-center font-bold text-sm text-muted-foreground">{idx + 1}</TableCell>
-                      <TableCell className="py-3.5 px-4 text-sm font-semibold">{item.soPhieuBan}</TableCell>
-                      <TableCell className="py-3.5 px-4 text-sm text-muted-foreground">{item.ngayLapPhieuBan}</TableCell>
-                      <TableCell className="py-3.5 px-4 text-sm">{item.khachHang?.tenKhachHang ?? item.maKhachHang}</TableCell>
-                      <TableCell className="py-3.5 px-4 text-sm text-center font-medium text-muted-foreground">{formatNumber(item.items.length)}</TableCell>
-                      <TableCell className="py-3.5 px-4 text-sm font-bold text-emerald-600 dark:text-emerald-400 text-right">{formatCurrency(item.tongTien)}</TableCell>
-                      <TableCell className="py-3.5 px-4 text-right">
-                        <Button variant="outline" size="sm" className="h-8 w-8 p-0 cursor-pointer" title="Xem chi tiết" onClick={() => setSelectedSale(item)}>
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
+            <>
+              <div className="rounded-md border border-border/80 overflow-hidden">
+                <Table>
+                  <TableHeader className="bg-muted/30">
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead className="w-14 text-center py-2 px-3 h-8 text-[11px] font-bold uppercase tracking-wider">{t("common.stt")}</TableHead>
+                      <TableHead className="py-2 px-3 h-8 text-[11px] font-bold uppercase tracking-wider">{t("common.voucherNumber")}</TableHead>
+                      <TableHead className="py-2 px-3 h-8 text-[11px] font-bold uppercase tracking-wider">{t("common.dateCreated")}</TableHead>
+                      <TableHead className="py-2 px-3 h-8 text-[11px] font-bold uppercase tracking-wider">{t("common.customer")}</TableHead>
+                      <TableHead className="py-2 px-3 h-8 text-[11px] font-bold uppercase tracking-wider text-center">{t("salesOrders.lineCount")}</TableHead>
+                      <TableHead className="py-2 px-3 h-8 text-[11px] font-bold uppercase tracking-wider text-right">{t("common.total")}</TableHead>
+                      <TableHead className="py-2 px-3 h-8 text-[11px] font-bold uppercase tracking-wider text-right w-20">Thao tác</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedSalesList.map((item, idx) => (
+                      <TableRow key={item.soPhieuBan} className="table-row-hover border-b border-border/60">
+                        <TableCell className="py-1.5 px-3 text-center font-bold text-xs text-muted-foreground">
+                          {(currentPage - 1) * itemsPerPage + idx + 1}
+                        </TableCell>
+                        <TableCell className="py-1.5 px-3 text-xs font-semibold">{item.soPhieuBan}</TableCell>
+                        <TableCell className="py-1.5 px-3 text-xs text-muted-foreground">{item.ngayLapPhieuBan}</TableCell>
+                        <TableCell className="py-1.5 px-3 text-xs">{item.khachHang?.tenKhachHang ?? item.maKhachHang}</TableCell>
+                        <TableCell className="py-1.5 px-3 text-xs text-center font-medium text-muted-foreground">{formatNumber(item.items.length)}</TableCell>
+                        <TableCell className="py-1.5 px-3 text-xs font-bold text-emerald-600 dark:text-emerald-400 text-right">{formatCurrency(item.tongTien)}</TableCell>
+                        <TableCell className="py-1.5 px-3 text-right">
+                          <Button variant="outline" size="sm" className="h-7 w-7 p-0 cursor-pointer" title="Xem chi tiết" onClick={() => setSelectedSale(item)}>
+                            <Eye className="h-3.5 w-3.5" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-center border-t border-border/60 pt-4 mt-4">
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 px-3 rounded-lg border border-border/80 hover:bg-muted/50 disabled:opacity-40 disabled:cursor-not-allowed select-none cursor-pointer"
+                      onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      <ChevronLeft className="h-4 w-4 mr-1" />
+                      Trước
+                    </Button>
+                    
+                    {/* Page numbers */}
+                    <div className="flex items-center space-x-1">
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                        if (
+                          totalPages > 5 &&
+                          page !== 1 &&
+                          page !== totalPages &&
+                          Math.abs(page - currentPage) > 1
+                        ) {
+                          if (page === 2 && currentPage > 3) {
+                            return <span key="ellipsis-start" className="text-muted-foreground px-1 text-sm select-none">...</span>;
+                          }
+                          if (page === totalPages - 1 && currentPage < totalPages - 2) {
+                            return <span key="ellipsis-end" className="text-muted-foreground px-1 text-sm select-none">...</span>;
+                          }
+                          return null;
+                        }
+
+                        return (
+                          <Button
+                            key={page}
+                            variant={currentPage === page ? "default" : "outline"}
+                            size="sm"
+                            className={`h-8 w-8 p-0 rounded-lg select-none cursor-pointer ${
+                              currentPage === page
+                                ? "bg-gold-gradient text-gold-foreground font-bold border-none"
+                                : "border border-border/80 hover:bg-muted/50 font-medium"
+                            }`}
+                            onClick={() => setCurrentPage(page)}
+                          >
+                            {page}
+                          </Button>
+                        );
+                      })}
+                    </div>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 px-3 rounded-lg border border-border/80 hover:bg-muted/50 disabled:opacity-40 disabled:cursor-not-allowed select-none cursor-pointer"
+                      onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                      disabled={currentPage === totalPages}
+                    >
+                      Sau
+                      <ChevronRight className="h-4 w-4 ml-1" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
