@@ -16,24 +16,13 @@ interface PageHeaderProps {
   badges?: React.ReactNode;
 }
 
-function PageHeader({ eyebrow, title, description, actions, badges }: PageHeaderProps) {
+function PageHeader({ actions }: PageHeaderProps) {
+  if (!actions) {
+    return null;
+  }
   return (
-    <div className="rounded-xl border border-border/70 bg-card px-5 py-4 shadow-xs">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="min-w-0 border-l-4 border-primary/70 pl-4">
-          {eyebrow && (
-            <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-              {eyebrow}
-            </p>
-          )}
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground">{title}</h1>
-            {badges}
-          </div>
-          {description && <p className="mt-1 max-w-3xl text-sm leading-6 text-muted-foreground">{description}</p>}
-        </div>
-        {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
-      </div>
+    <div className="flex justify-end gap-2 pb-3 pt-1">
+      {actions}
     </div>
   );
 }

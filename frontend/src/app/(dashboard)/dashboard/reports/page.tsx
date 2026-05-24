@@ -291,44 +291,38 @@ export default function ReportsPage() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-20">
-      <PageHeader
-        title={t("reports.title") || "Báo Cáo & Kết Toán"}
-        description="Tổng hợp số liệu tồn kho, doanh số bán hàng và dịch vụ theo từng kỳ."
-        badges={<Badge variant="outline" className="font-bold border-primary/30 text-primary bg-primary/5">Phòng Kế Toán</Badge>}
-        actions={
-          <div className="flex gap-2">
-            <Button
-               className="bg-emerald-600 hover:bg-emerald-700 text-white font-black shadow-lg shadow-emerald-600/20 rounded-xl"
-               onClick={() => {
-                 if (inventory) exportToCsv(`baocao_tonghop_${selectedMonth}_${selectedYear}.csv`, inventory.chiTiet);
-               }}
-            >
-              <FileDown className="mr-2 h-4 w-4" />
-              XUẤT TỔNG HỢP
-            </Button>
-          </div>
-        }
-      />
-
-      {/* Date Filter Card */}
+      {/* Date Filter & Global Action Card */}
       <Card className="border-none shadow-sm">
-        <CardContent className="flex flex-wrap items-center gap-4 p-4 bg-muted/10 rounded-2xl border">
-          <div className="flex items-center gap-2 pr-4 border-r border-border/50">
-            <Calendar className="h-5 w-5 text-primary" />
-            <span className="text-sm font-black text-foreground uppercase tracking-wider">Kỳ báo cáo:</span>
+        <CardContent className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 bg-muted/10 rounded-2xl border">
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex items-center gap-2 pr-4 border-r border-border/50">
+              <Calendar className="h-5 w-5 text-primary" />
+              <span className="text-sm font-black text-foreground uppercase tracking-wider">Kỳ báo cáo:</span>
+            </div>
+            <div className="w-48">
+              <MonthPickerInput
+                value={`${selectedYear}-${String(selectedMonth).padStart(2, "0")}`}
+                onValueChange={(val) => {
+                  if (val) {
+                    const [year, month] = val.split("-").map(Number);
+                    setSelectedYear(year);
+                    setSelectedMonth(month);
+                  }
+                }}
+              />
+            </div>
           </div>
-          <div className="w-48">
-            <MonthPickerInput
-              value={`${selectedYear}-${String(selectedMonth).padStart(2, "0")}`}
-              onValueChange={(val) => {
-                if (val) {
-                  const [year, month] = val.split("-").map(Number);
-                  setSelectedYear(year);
-                  setSelectedMonth(month);
-                }
-              }}
-            />
-          </div>
+
+          <Button
+             className="bg-emerald-600 hover:bg-emerald-700 text-white font-black shadow-lg shadow-emerald-600/20 rounded-xl h-11 px-6 gap-2 w-full sm:w-auto"
+             onClick={() => {
+               if (inventory) exportToCsv(`baocao_tonghop_${selectedMonth}_${selectedYear}.csv`, inventory.chiTiet);
+             }}
+             disabled={!inventory}
+          >
+            <FileDown className="h-5 w-5" />
+            XUẤT TỔNG HỢP
+          </Button>
         </CardContent>
       </Card>
 

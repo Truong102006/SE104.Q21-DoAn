@@ -14,7 +14,7 @@ import { getApiErrorMessage } from "@/lib/api-error";
 import { isValidPhone10Digits } from "@/lib/format";
 import { useAuthStore } from "@/stores/auth-store";
 import { useTranslation } from "@/i18n/i18n-context";
-import { Pencil, Plus, Search, Trash2, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Pencil, Plus, Search, Trash2, X } from "lucide-react";
 
 const EMPTY_FORM: CustomerRequest = {
   tenKhachHang: "",
@@ -31,6 +31,9 @@ export default function CustomersPage() {
   const [error, setError] = useState<string | null>(null);
   const [items, setItems] = useState<CustomerResponse[]>([]);
   const [keyword, setKeyword] = useState("");
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const [openForm, setOpenForm] = useState(false);
   const [editing, setEditing] = useState<CustomerResponse | null>(null);
@@ -68,6 +71,18 @@ export default function CustomersPage() {
         .includes(q),
     );
   }, [items, keyword]);
+
+  // Reset page when keyword changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [keyword]);
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage) || 1;
+
+  const paginatedItems = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filtered.slice(start, start + itemsPerPage);
+  }, [filtered, currentPage, itemsPerPage]);
 
   function openCreate() {
     setEditing(null);
@@ -205,43 +220,110 @@ export default function CustomersPage() {
               <EmptyState title={t("common.emptyTitle")} description={t("common.emptyDesc")} />
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t("common.stt")}</TableHead>
-                  <TableHead>{t("common.code")}</TableHead>
-                  <TableHead>{t("common.name")}</TableHead>
-                  <TableHead>{t("common.phone")}</TableHead>
-                  <TableHead>{t("common.address")}</TableHead>
-                  <TableHead>{t("common.note")}</TableHead>
-                  <TableHead className="text-right">{t("common.actions")}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.map((item, index) => (
-                  <TableRow key={item.maKhachHang}>
-                    <TableCell>{index + 1}</TableCell>
-                    <TableCell>{item.maKhachHang}</TableCell>
-                    <TableCell>{item.tenKhachHang}</TableCell>
-                    <TableCell>{item.soDienThoaiKhachHang}</TableCell>
-                    <TableCell>{item.diaChiKhachHang || "-"}</TableCell>
-                    <TableCell>{item.ghiChu || "-"}</TableCell>
-                    <TableCell>
-                      <div className="flex justify-end gap-1">
-                        <Button variant="outline" size="icon-sm" onClick={() => openEdit(item)}>
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        {role === "ADMIN" && (
-                          <Button variant="destructive" size="icon-sm" onClick={() => setDeleting(item)}>
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
+            <>
+              <Table>
+                <TableHeader className="bg-muted/30">
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="w-14 text-center py-2 px-3 h-8 text-[11px] font-bold uppercase tracking-wider">{t("common.stt")}</TableHead>
+                    <TableHead className="py-2 px-3 h-8 text-[11px] font-bold uppercase tracking-wider">{t("common.code")}</TableHead>
+                    <TableHead className="py-2 px-3 h-8 text-[11px] font-bold uppercase tracking-wider">{t("common.name")}</TableHead>
+                    <TableHead className="py-2 px-3 h-8 text-[11px] font-bold uppercase tracking-wider">{t("common.phone")}</TableHead>
+                    <TableHead className="py-2 px-3 h-8 text-[11px] font-bold uppercase tracking-wider">{t("common.address")}</TableHead>
+                    <TableHead className="py-2 px-3 h-8 text-[11px] font-bold uppercase tracking-wider">{t("common.note")}</TableHead>
+                    <TableHead className="py-2 px-3 h-8 text-[11px] font-bold uppercase tracking-wider text-right w-24">{t("common.actions")}</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {paginatedItems.map((item, index) => (
+                    <TableRow key={item.maKhachHang} className="table-row-hover border-b border-border/60">
+                      <TableCell className="py-1.5 px-3 text-center font-bold text-xs text-muted-foreground">{(currentPage - 1) * itemsPerPage + index + 1}</TableCell>
+                      <TableCell className="py-1.5 px-3 text-xs font-semibold">{item.maKhachHang}</TableCell>
+                      <TableCell className="py-1.5 px-3 text-xs">{item.tenKhachHang}</TableCell>
+                      <TableCell className="py-1.5 px-3 text-xs">{item.soDienThoaiKhachHang}</TableCell>
+                      <TableCell className="py-1.5 px-3 text-xs truncate max-w-[200px]">{item.diaChiKhachHang || "-"}</TableCell>
+                      <TableCell className="py-1.5 px-3 text-xs truncate max-w-[200px]">{item.ghiChu || "-"}</TableCell>
+                      <TableCell className="py-1.5 px-3 text-right">
+                        <div className="flex justify-end gap-1">
+                          <Button variant="outline" size="icon-xs" className="h-7 w-7" onClick={() => openEdit(item)}>
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                          {role === "ADMIN" && (
+                            <Button variant="destructive" size="icon-xs" className="h-7 w-7" onClick={() => setDeleting(item)}>
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-center border-t border-border/60 pt-4 mt-4 px-4">
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 px-3 rounded-lg border border-border/80 hover:bg-muted/50 disabled:opacity-40 disabled:cursor-not-allowed select-none cursor-pointer"
+                      onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      <ChevronLeft className="h-4 w-4 mr-1" />
+                      Trước
+                    </Button>
+                    
+                    {/* Page numbers */}
+                    <div className="flex items-center space-x-1">
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                        if (
+                          totalPages > 5 &&
+                          page !== 1 &&
+                          page !== totalPages &&
+                          Math.abs(page - currentPage) > 1
+                        ) {
+                          if (page === 2 && currentPage > 3) {
+                            return <span key="ellipsis-start" className="text-muted-foreground px-1 text-sm select-none">...</span>;
+                          }
+                          if (page === totalPages - 1 && currentPage < totalPages - 2) {
+                            return <span key="ellipsis-end" className="text-muted-foreground px-1 text-sm select-none">...</span>;
+                          }
+                          return null;
+                        }
+
+                        return (
+                          <Button
+                            key={page}
+                            variant={currentPage === page ? "default" : "outline"}
+                            size="sm"
+                            className={`h-8 w-8 p-0 rounded-lg select-none cursor-pointer ${
+                              currentPage === page
+                                ? "bg-gold-gradient text-gold-foreground font-bold border-none"
+                                : "border border-border/80 hover:bg-muted/50 font-medium"
+                            }`}
+                            onClick={() => setCurrentPage(page)}
+                          >
+                            {page}
+                          </Button>
+                        );
+                      })}
+                    </div>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 px-3 rounded-lg border border-border/80 hover:bg-muted/50 disabled:opacity-40 disabled:cursor-not-allowed select-none cursor-pointer"
+                      onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                      disabled={currentPage === totalPages}
+                    >
+                      Sau
+                      <ChevronRight className="h-4 w-4 ml-1" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>

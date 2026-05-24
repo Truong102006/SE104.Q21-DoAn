@@ -65,7 +65,6 @@ const MENU_SECTIONS: MenuSection[] = [
     key: "nav.lookupScreen",
     icon: Search,
     items: [
-      { key: "nav.productSearch", href: "/dashboard/products?mode=search", icon: Search, roles: ["ADMIN", "STAFF"] },
       { key: "nav.serviceSearch", href: "/dashboard/service-voucher-lookup", icon: Search, roles: ["ADMIN", "STAFF"] },
     ],
   },
