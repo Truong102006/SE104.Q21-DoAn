@@ -4,7 +4,7 @@ import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { EmptyState, PageHeader, TableToolbar } from "@/components/dashboard/management";
+import { EmptyState, TableToolbar } from "@/components/dashboard/management";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DatePickerInput } from "@/components/ui/date-picker";
@@ -24,7 +24,9 @@ import type {
 import { getApiErrorMessage } from "@/lib/api-error";
 import { formatCurrency, formatNumber, todayIsoDate, toPositiveInt } from "@/lib/format";
 import { useTranslation } from "@/i18n/i18n-context";
-import { ChevronLeft, ChevronRight, ClipboardList, Eye, Plus, ReceiptText, Trash2, X } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { ClipboardList, Eye, Plus, ReceiptText, Trash2 } from "lucide-react";
+
 
 type SaleItemDraft = {
   keyId: string;
@@ -285,12 +287,16 @@ export default function SalesPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        eyebrow="BM6"
-        title={t("salesOrders.title")}
-        description={t("salesOrders.description")}
-      />
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-lg font-bold tracking-tight text-foreground flex items-center gap-2">
+            {t("salesOrders.title")}
+            <Badge variant="outline" className="text-[10px] font-bold px-1.5 py-0 h-5 bg-muted/50 border-muted">BM6</Badge>
+          </h1>
+          <p className="text-xs text-muted-foreground">{t("salesOrders.description")}</p>
+        </div>
+      </div>
 
       {/* KHỐI FORM LẬP PHIẾU BÁN HÀNG - Ở TRÊN */}
       <Card className="glass-card hover-elevate shadow-sm">
@@ -469,13 +475,13 @@ export default function SalesPage() {
           search={<Input value={historyQuery} onChange={(e) => setHistoryQuery(e.target.value)} placeholder="Tìm mã phiếu hoặc khách hàng" className="h-9" />}
         />
         <CardContent className="p-6">
-          {loading ? (
+          {salesList.length === 0 && loading ? (
             <p className="py-4 text-sm text-muted-foreground">{t("common.loading")}</p>
           ) : salesList.length === 0 ? (
             <EmptyState title={t("salesOrders.emptyTitle")} description={t("salesOrders.emptyDesc")} />
           ) : (
             <>
-              <div className="rounded-md border border-border/80 overflow-hidden">
+              <div className={cn("rounded-md border border-border/80 overflow-hidden transition-opacity duration-200", loading && "opacity-50 pointer-events-none")}>
                 <Table>
                   <TableHeader className="bg-muted/30">
                     <TableRow className="hover:bg-transparent">

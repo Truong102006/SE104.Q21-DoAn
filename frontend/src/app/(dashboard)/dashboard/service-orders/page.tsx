@@ -4,7 +4,7 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { EmptyState, PageHeader, TableToolbar, StatusBadge } from "@/components/dashboard/management";
+import { EmptyState, TableToolbar, StatusBadge } from "@/components/dashboard/management";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
@@ -26,16 +26,19 @@ import type {
 import { getApiErrorMessage } from "@/lib/api-error";
 import { formatCurrency, todayIsoDate, toPositiveInt, toPositiveNumber, formatVNCurrencyInput, parseVNCurrencyInput, formatVietnameseStatus } from "@/lib/format";
 import { useTranslation } from "@/i18n/i18n-context";
-import { ChevronLeft, ChevronRight, ClipboardList, Eye, Filter, Plus, ReceiptText, RotateCcw, Search, Truck, Trash2, X } from "lucide-react";
+import { ClipboardList, Eye, Filter, Plus, ReceiptText, RotateCcw, Search, Truck, Trash2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 function getStatusBadge(statusStr: string) {
-  const s = statusStr.toLowerCase();
+  const s = statusStr.toLowerCase().trim();
   const displayStatus = formatVietnameseStatus(statusStr);
-  if (s.includes("hoan thanh") || s.includes("hoàn thành") || s.includes("da giao") || s.includes("đã giao")) {
+  if (s === "chua hoan thanh" || s === "chưa hoàn thành" || s === "chua giao" || s === "chưa giao") {
+    return <StatusBadge tone="warning">{displayStatus}</StatusBadge>;
+  }
+  if (s === "hoan thanh" || s === "hoàn thành" || s === "da giao" || s === "đã giao") {
     return <StatusBadge tone="success">{displayStatus}</StatusBadge>;
   }
-  return <StatusBadge tone="warning">{displayStatus}</StatusBadge>;
+  return <StatusBadge tone="neutral">{displayStatus}</StatusBadge>;
 }
 
 function ServiceStatusStepper({ status }: { status: string }) {
@@ -46,12 +49,12 @@ function ServiceStatusStepper({ status }: { status: string }) {
     { label: "Đã giao khách", desc: "Hoàn tất giao" }
   ];
 
-  const lowerStatus = status.toLowerCase();
+  const lowerStatus = status.toLowerCase().trim();
   let activeStep = 1;
-  if (lowerStatus.includes("hoan thanh") || lowerStatus.includes("hoàn thành")) {
+  if (lowerStatus === "hoan thanh" || lowerStatus === "hoàn thành") {
     activeStep = 2;
   }
-  if (lowerStatus.includes("da giao") || lowerStatus.includes("đã giao")) {
+  if (lowerStatus === "da giao" || lowerStatus === "đã giao") {
     activeStep = 3;
   }
 
@@ -188,7 +191,10 @@ export default function ServiceOrdersPage() {
     try {
       const [serviceTypeData, prepayment] = await Promise.all([
         backendApi.serviceTypes.list(),
-        backendApi.settings.getServicePrepaymentRate(),
+        backendApi.settings.getServicePrepaymentRate().catch((err) => {
+          console.warn("Failed to load prepayment rate, using default 50%:", err);
+          return { key: "SERVICE_PREPAYMENT_RATE", value: 50 };
+        }),
       ]);
 
       setServiceTypes(serviceTypeData);
@@ -436,14 +442,19 @@ export default function ServiceOrdersPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        eyebrow="BM7"
-        title={t("serviceOrders.title")}
-        description={t("serviceOrders.description")}
-        badges={<Badge variant="outline" className="text-xs py-0.5 h-6">{t("serviceOrders.minPrepaymentRate")}: {prepaymentRate}%</Badge>}
-      />
-
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-lg font-bold tracking-tight text-foreground flex items-center gap-2">
+            {t("serviceOrders.title")}
+            <Badge variant="outline" className="text-[10px] font-bold px-1.5 py-0 h-5 bg-muted/50 border-muted">BM7</Badge>
+          </h1>
+          <p className="text-xs text-muted-foreground">{t("serviceOrders.description")}</p>
+        </div>
+        <Badge variant="outline" className="text-xs py-0.5 h-6 font-semibold">
+          {t("serviceOrders.minPrepaymentRate")}: {prepaymentRate}%
+        </Badge>
+      </div>
       {/* KHỐI FORM LẬP PHIẾU DỊCH VỤ - Ở TRÊN */}
       <Card className="shadow-sm border-border/80">
         <CardContent className="space-y-6 p-6">
@@ -784,7 +795,7 @@ export default function ServiceOrdersPage() {
         />
 
         <CardContent className="p-0">
-          {historyLoading ? (
+          {historyTickets.length === 0 && historyLoading ? (
             <div className="flex items-center justify-center py-20">
               <div className="flex flex-col items-center gap-3">
                 <span className="h-8 w-8 rounded-full border-4 border-gold/30 border-t-gold animate-spin" />
@@ -797,7 +808,7 @@ export default function ServiceOrdersPage() {
             </div>
           ) : (
             <>
-            <div className="overflow-x-auto">
+            <div className={cn("overflow-x-auto transition-opacity duration-200", historyLoading && "opacity-50 pointer-events-none")}>
               <Table>
                 <TableHeader className="bg-muted/10">
                   <TableRow>

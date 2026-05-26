@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ConfirmDialog, EmptyState, PageHeader, TableToolbar } from "@/components/dashboard/management";
+import { ConfirmDialog, EmptyState, TableToolbar } from "@/components/dashboard/management";
 import { Pagination } from "@/components/dashboard/pagination";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
@@ -178,27 +178,11 @@ export default function ServiceTypesPage() {
 
   return (
     <div className="space-y-3">
-      <PageHeader
-        eyebrow="BM4"
-        title={t("serviceTypes.title")}
-        description={t("serviceTypes.description")}
-        badges={<Badge variant="outline">{items.length} {t("common.records")}</Badge>}
-        actions={
-          <Button
-            size="default"
-            className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-extrabold hover:from-blue-500 hover:to-indigo-500 hover:shadow-blue-500/35 active:scale-95 shadow-lg shadow-blue-500/20 gap-2 h-11 px-6 rounded-xl cursor-pointer transition-all text-sm sm:text-base border-none"
-            onClick={openCreate}
-          >
-            <Plus className="h-5 w-5 stroke-[3]" />
-            {t("common.add")}
-          </Button>
-        }
-      />
-
       <Card>
         <TableToolbar
-          title={t("common.list")}
-          description={t("serviceTypes.searchDesc")}
+          title={t("serviceTypes.title")}
+          description={t("serviceTypes.description")}
+          meta={<Badge variant="outline">{items.length} {t("common.records")}</Badge>}
           search={
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -218,6 +202,16 @@ export default function ServiceTypesPage() {
                 </button>
               )}
             </div>
+          }
+          actions={
+            <Button
+              size="sm"
+              className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold hover:from-blue-500 hover:to-indigo-500 hover:shadow-blue-500/35 active:scale-95 shadow-md shadow-blue-500/20 gap-1.5 h-9 px-4 rounded-xl cursor-pointer transition-all text-xs border-none"
+              onClick={openCreate}
+            >
+              <Plus className="h-4 w-4 stroke-[3]" />
+              {t("common.add")}
+            </Button>
           }
         />
         <CardContent className="px-0">

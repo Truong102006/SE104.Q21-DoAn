@@ -4,11 +4,12 @@ import { useState, useMemo, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { EmptyState, PageHeader } from "@/components/dashboard/management";
+import { EmptyState } from "@/components/dashboard/management";
 import { cn } from "@/lib/utils";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { MonthPickerInput } from "@/components/ui/date-picker";
 import { backendApi } from "@/services/backend-api";
+import { Pagination } from "@/components/dashboard/pagination";
 import type {
   InventoryReportResponse,
   ProductRevenueReportResponse,
@@ -16,21 +17,15 @@ import type {
 } from "@/types/backend";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { currentMonthYear, formatCurrency, formatNumber } from "@/lib/format";
-import { useTranslation } from "@/i18n/i18n-context";
 import {
   BarChart3,
   Boxes,
-  Sparkles,
   Calendar,
-  Wrench,
   PieChart,
   Info,
   Layers,
-  ArrowDownToLine,
-  ArrowUpFromLine,
   FileDown
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
 import {
   BarChart,
   Bar,
@@ -55,6 +50,7 @@ function safeRatio(value: number): string {
 }
 
 // Professional & Clean Tooltip
+/* eslint-disable-next-line @typescript-eslint/no-explicit-any */
 const ChartTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
@@ -76,6 +72,7 @@ const ChartTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
+/* eslint-disable-next-line @typescript-eslint/no-explicit-any */
 function exportToCsv(filename: string, rows: any[]) {
   if (!rows || !rows.length) return;
   const separator = ",";
@@ -119,19 +116,41 @@ interface DrillDownProps {
   year: number;
 }
 
+interface DrillDownItem {
+  soPhieu: string;
+  ngayLap: string;
+  khachHang?: string;
+  nhaCungCap?: string;
+  soLuong: number;
+  donGia: number;
+  thanhTien: number;
+  tinhTrang?: string;
+}
+
 function DrillDownModal({ open, onOpenChange, type, id, name, month, year }: DrillDownProps) {
   const [loading, setLoading] = useState(false);
-  const [data, setData] = useState<any[]>([]);
+  const [data, setData] = useState<DrillDownItem[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 8;
 
   useEffect(() => {
     if (open && id) {
       setLoading(true);
       backendApi.search
         .drillDown({ type, id, month, year })
-        .then(setData)
+        .then((res) => {
+          setData(res as DrillDownItem[]);
+          setCurrentPage(1);
+        })
         .finally(() => setLoading(false));
     }
   }, [open, type, id, month, year]);
+
+  const totalPages = Math.ceil(data.length / itemsPerPage) || 1;
+  const paginatedData = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return data.slice(start, start + itemsPerPage);
+  }, [data, currentPage]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -143,8 +162,8 @@ function DrillDownModal({ open, onOpenChange, type, id, name, month, year }: Dri
           </DialogTitle>
           <p className="text-sm text-muted-foreground font-medium">Kỳ báo cáo: Tháng {month}/{year}</p>
         </DialogHeader>
-        <div className="flex-1 overflow-auto px-6 py-2">
-          <div className="rounded-xl border shadow-sm bg-card overflow-hidden">
+        <div className="flex-1 overflow-auto px-6 py-2 flex flex-col">
+          <div className="rounded-xl border shadow-sm bg-card overflow-hidden flex-1">
             {loading ? (
               <div className="p-12 text-center text-muted-foreground animate-pulse font-bold">Đang truy xuất dữ liệu...</div>
             ) : data.length === 0 ? (
@@ -152,31 +171,31 @@ function DrillDownModal({ open, onOpenChange, type, id, name, month, year }: Dri
             ) : (
               <Table>
                 <TableHeader className="bg-muted/50 sticky top-0 backdrop-blur-sm">
-                  <TableRow>
-                    <TableHead className="font-bold">Số Phiếu</TableHead>
-                    <TableHead className="font-bold">Ngày Lập</TableHead>
-                    <TableHead className="font-bold">{type.includes("purchase") ? "Nhà Cung Cấp" : "Khách Hàng"}</TableHead>
-                    <TableHead className="text-right font-bold">Số Lượng</TableHead>
-                    <TableHead className="text-right font-bold">Đơn Giá</TableHead>
-                    <TableHead className="text-right font-bold">Thành Tiền</TableHead>
-                    {type === "service" && <TableHead className="font-bold">Tình Trạng</TableHead>}
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400">Số phiếu</TableHead>
+                    <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400">Ngày lập</TableHead>
+                    <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400">{type.includes("purchase") ? "Nhà cung cấp" : "Khách hàng"}</TableHead>
+                    <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400 text-right">Số lượng</TableHead>
+                    <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400 text-right">Đơn giá</TableHead>
+                    <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400 text-right">Thành tiền</TableHead>
+                    {type === "service" && <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400">Tình trạng</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {data.map((item, idx) => (
-                    <TableRow key={idx} className="hover:bg-muted/30 transition-colors">
-                      <TableCell className="font-bold text-blue-600">{item.soPhieu}</TableCell>
-                      <TableCell className="text-muted-foreground text-xs">{item.ngayLap}</TableCell>
-                      <TableCell className="font-medium">{item.khachHang || item.nhaCungCap}</TableCell>
-                      <TableCell className="text-right font-bold">{formatNumber(item.soLuong)}</TableCell>
-                      <TableCell className="text-right text-xs text-muted-foreground">{formatCurrency(item.donGia)}</TableCell>
-                      <TableCell className="text-right font-black text-emerald-600">{formatCurrency(item.thanhTien)}</TableCell>
+                  {paginatedData.map((item, idx) => (
+                    <TableRow key={idx} className="hover:bg-muted/30 transition-colors border-b border-border/60">
+                      <TableCell className="py-1.5 px-3 text-xs text-blue-600">{item.soPhieu}</TableCell>
+                      <TableCell className="py-1.5 px-3 text-muted-foreground text-xs">{item.ngayLap}</TableCell>
+                      <TableCell className="py-1.5 px-3 text-xs text-foreground">{item.khachHang || item.nhaCungCap}</TableCell>
+                      <TableCell className="py-1.5 px-3 text-xs text-right text-foreground">{formatNumber(item.soLuong)}</TableCell>
+                      <TableCell className="py-1.5 px-3 text-xs text-right text-muted-foreground">{formatCurrency(item.donGia)}</TableCell>
+                      <TableCell className="py-1.5 px-3 text-xs text-right text-emerald-600">{formatCurrency(item.thanhTien)}</TableCell>
                       {type === "service" && (
-                        <TableCell>
+                        <TableCell className="py-1.5 px-3">
                           <Badge
                             variant="outline"
                             className={cn(
-                              "text-[9px] font-black uppercase border",
+                              "text-[9px] font-black uppercase border px-1.5 py-0.5",
                               item.tinhTrang === "Da giao"
                                 ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
                                 : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
@@ -192,6 +211,15 @@ function DrillDownModal({ open, onOpenChange, type, id, name, month, year }: Dri
               </Table>
             )}
           </div>
+          {data.length > itemsPerPage && (
+            <div className="flex items-center justify-center py-4 mt-2">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+              />
+            </div>
+          )}
         </div>
         <div className="p-6 flex justify-end gap-3 border-t bg-muted/20">
           <Button
@@ -208,25 +236,7 @@ function DrillDownModal({ open, onOpenChange, type, id, name, month, year }: Dri
   );
 }
 
-function SkeletonLoader() {
-  return (
-    <div className="space-y-4 animate-pulse p-4 rounded-xl border bg-card">
-      <div className="h-4 w-1/3 bg-muted rounded" />
-      <div className="grid grid-cols-3 gap-3">
-        <div className="h-16 bg-muted/50 rounded-lg" />
-        <div className="h-16 bg-muted/50 rounded-lg" />
-        <div className="h-16 bg-muted/50 rounded-lg" />
-      </div>
-      <div className="space-y-2 pt-2">
-        <div className="h-8 w-full bg-muted/30 rounded" />
-        <div className="h-8 w-full bg-muted/30 rounded" />
-      </div>
-    </div>
-  );
-}
-
 export default function ReportsPage() {
-  const { t } = useTranslation();
   const now = currentMonthYear();
   const [selectedMonth, setSelectedMonth] = useState(now.month);
   const [selectedYear, setSelectedYear] = useState(now.year);
@@ -237,6 +247,29 @@ export default function ReportsPage() {
   const [inventory, setInventory] = useState<InventoryReportResponse | null>(null);
   const [productRevenue, setProductRevenue] = useState<ProductRevenueReportResponse | null>(null);
   const [serviceRevenue, setServiceRevenue] = useState<ServiceRevenueReportResponse | null>(null);
+
+  // Pagination states
+  const [inventoryPage, setInventoryPage] = useState(1);
+  const inventoryItemsPerPage = 10;
+
+  const [productRevenuePage, setProductRevenuePage] = useState(1);
+  const productRevenueItemsPerPage = 5;
+
+  const [serviceRevenuePage, setServiceRevenuePage] = useState(1);
+  const serviceRevenueItemsPerPage = 5;
+
+  // Reset pagination on data change
+  useEffect(() => {
+    setInventoryPage(1);
+  }, [inventory]);
+
+  useEffect(() => {
+    setProductRevenuePage(1);
+  }, [productRevenue]);
+
+  useEffect(() => {
+    setServiceRevenuePage(1);
+  }, [serviceRevenue]);
 
   const [drillDown, setDrillDown] = useState<{
     open: boolean;
@@ -271,6 +304,37 @@ export default function ReportsPage() {
     };
     loadAllReports();
   }, [selectedMonth, selectedYear]);
+
+  // Client-side pagination calculations
+  const totalInventoryPages = useMemo(() => {
+    return Math.ceil((inventory?.chiTiet?.length ?? 0) / inventoryItemsPerPage) || 1;
+  }, [inventory, inventoryItemsPerPage]);
+
+  const paginatedInventory = useMemo(() => {
+    if (!inventory?.chiTiet) return [];
+    const start = (inventoryPage - 1) * inventoryItemsPerPage;
+    return inventory.chiTiet.slice(start, start + inventoryItemsPerPage);
+  }, [inventory, inventoryPage, inventoryItemsPerPage]);
+
+  const totalProductRevenuePages = useMemo(() => {
+    return Math.ceil((productRevenue?.chiTiet?.length ?? 0) / productRevenueItemsPerPage) || 1;
+  }, [productRevenue, productRevenueItemsPerPage]);
+
+  const paginatedProductRevenue = useMemo(() => {
+    if (!productRevenue?.chiTiet) return [];
+    const start = (productRevenuePage - 1) * productRevenueItemsPerPage;
+    return productRevenue.chiTiet.slice(start, start + productRevenueItemsPerPage);
+  }, [productRevenue, productRevenuePage, productRevenueItemsPerPage]);
+
+  const totalServiceRevenuePages = useMemo(() => {
+    return Math.ceil((serviceRevenue?.chiTiet?.length ?? 0) / serviceRevenueItemsPerPage) || 1;
+  }, [serviceRevenue, serviceRevenueItemsPerPage]);
+
+  const paginatedServiceRevenue = useMemo(() => {
+    if (!serviceRevenue?.chiTiet) return [];
+    const start = (serviceRevenuePage - 1) * serviceRevenueItemsPerPage;
+    return serviceRevenue.chiTiet.slice(start, start + serviceRevenueItemsPerPage);
+  }, [serviceRevenue, serviceRevenuePage, serviceRevenueItemsPerPage]);
 
   async function runGenerate(action: "inventory" | "product-revenue" | "service-revenue") {
     setLoading(true);
@@ -348,41 +412,52 @@ export default function ReportsPage() {
                 <Button size="sm" variant="outline" onClick={() => runGenerate("inventory")} className="font-bold rounded-xl h-9 border-primary/50 text-primary">Chốt Kho</Button>
               </div>
             </CardHeader>
-            <CardContent className="p-0">
+            <CardContent className="px-0 py-0">
               {!inventory ? (
                 <div className="p-10"><EmptyState title="Dữ liệu kỳ này chưa chốt" description="Dữ liệu kho chưa được chốt cho tháng này." /></div>
               ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader className="bg-muted/20">
-                      <TableRow>
-                        <TableHead className="w-12 text-center font-bold">STT</TableHead>
-                        <TableHead className="font-bold">Sản Phẩm</TableHead>
-                        <TableHead className="text-right font-bold">Tồn Đầu</TableHead>
-                        <TableHead className="text-right font-bold text-blue-600">Nhập</TableHead>
-                        <TableHead className="text-right font-bold text-orange-600">Xuất</TableHead>
-                        <TableHead className="text-right font-black">Tồn Cuối</TableHead>
-                        <TableHead className="text-center font-bold">ĐVT</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {inventory.chiTiet.map((item, idx) => (
-                        <TableRow
-                          key={idx}
-                          className="hover:bg-muted/20 cursor-pointer h-14 transition-colors"
-                          onClick={() => setDrillDown({ open: true, type: "product-purchase", id: item.maSanPham, name: item.tenSanPham })}
-                        >
-                          <TableCell className="text-center text-muted-foreground font-medium">{idx + 1}</TableCell>
-                          <TableCell className="font-black text-slate-700 dark:text-slate-200">{item.tenSanPham}</TableCell>
-                          <TableCell className="text-right font-medium">{formatNumber(item.tonDau)}</TableCell>
-                          <TableCell className="text-right text-blue-600 font-bold">+{formatNumber(item.soLuongMuaVao)}</TableCell>
-                          <TableCell className="text-right text-orange-600 font-bold">-{formatNumber(item.soLuongBanRa)}</TableCell>
-                          <TableCell className="text-right font-black text-base">{formatNumber(item.tonCuoi)}</TableCell>
-                          <TableCell className="text-center text-xs text-muted-foreground font-black uppercase">{item.tenDonViTinh}</TableCell>
+                <div className="flex flex-col">
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader className="bg-muted/30">
+                        <TableRow className="hover:bg-transparent">
+                          <TableHead className="w-14 text-center py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400">STT</TableHead>
+                          <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400">Sản phẩm</TableHead>
+                          <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400 text-right">Tồn đầu</TableHead>
+                          <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400 text-right text-blue-600">Nhập</TableHead>
+                          <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400 text-right text-orange-600">Xuất</TableHead>
+                          <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400 text-right text-foreground">Tồn cuối</TableHead>
+                          <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400 text-center">ĐVT</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {paginatedInventory.map((item, idx) => (
+                          <TableRow
+                            key={idx}
+                            className="hover:bg-muted/20 cursor-pointer transition-colors border-b border-border/60"
+                            onClick={() => setDrillDown({ open: true, type: "product-purchase", id: item.maSanPham, name: item.tenSanPham })}
+                          >
+                            <TableCell className="py-1.5 px-3 text-center text-xs text-muted-foreground">{(inventoryPage - 1) * inventoryItemsPerPage + idx + 1}</TableCell>
+                            <TableCell className="py-1.5 px-3 text-xs text-foreground">{item.tenSanPham}</TableCell>
+                            <TableCell className="py-1.5 px-3 text-xs text-right text-foreground">{formatNumber(item.tonDau)}</TableCell>
+                            <TableCell className="py-1.5 px-3 text-xs text-right text-blue-600">+{formatNumber(item.soLuongMuaVao)}</TableCell>
+                            <TableCell className="py-1.5 px-3 text-xs text-right text-orange-600">-{formatNumber(item.soLuongBanRa)}</TableCell>
+                            <TableCell className="py-1.5 px-3 text-xs text-right text-foreground">{formatNumber(item.tonCuoi)}</TableCell>
+                            <TableCell className="py-1.5 px-3 text-center text-xs text-muted-foreground">{item.tenDonViTinh}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  {inventory.chiTiet.length > inventoryItemsPerPage && (
+                    <div className="flex items-center justify-center border-t border-border/60 py-4">
+                      <Pagination
+                        currentPage={inventoryPage}
+                        totalPages={totalInventoryPages}
+                        onPageChange={setInventoryPage}
+                      />
+                    </div>
+                  )}
                 </div>
               )}
             </CardContent>
@@ -425,6 +500,7 @@ export default function ReportsPage() {
                             fill="oklch(0.56 0.18 261)"
                             radius={[0, 6, 6, 0]}
                             barSize={24}
+                             /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
                              onClick={(entry: any) => setDrillDown({ open: true, type: "product-sale", id: entry.maSanPham, name: entry.tenSanPham })}
                             className="cursor-pointer"
                           />
@@ -432,24 +508,33 @@ export default function ReportsPage() {
                       </ResponsiveContainer>
                     </div>
                     <div className="rounded-xl border shadow-sm overflow-hidden bg-card">
-                      <Table className="text-xs">
+                      <Table>
                         <TableHeader className="bg-muted/40">
-                          <TableRow>
-                            <TableHead className="font-bold">Sản phẩm</TableHead>
-                            <TableHead className="text-right font-bold">Doanh thu</TableHead>
-                            <TableHead className="text-right font-bold w-16">%</TableHead>
+                          <TableRow className="hover:bg-transparent">
+                            <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400">Sản phẩm</TableHead>
+                            <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400 text-right">Doanh thu</TableHead>
+                            <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400 text-right w-16">%</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {productRevenue.chiTiet.slice(0, 5).map((item, i) => (
-                            <TableRow key={i} className="hover:bg-muted/20 cursor-pointer h-12 transition-colors" onClick={() => setDrillDown({ open: true, type: "product-sale", id: item.maSanPham, name: item.tenSanPham })}>
-                              <TableCell className="font-bold text-slate-600 dark:text-slate-300 truncate max-w-[120px]">{item.tenSanPham}</TableCell>
-                              <TableCell className="text-right font-black text-emerald-600">{formatCurrency(item.doanhThu)}</TableCell>
-                              <TableCell className="text-right font-black text-amber-600">{Math.round(Number(item.tiLe))}%</TableCell>
+                          {paginatedProductRevenue.map((item, i) => (
+                            <TableRow key={i} className="hover:bg-muted/20 cursor-pointer transition-colors border-b border-border/60" onClick={() => setDrillDown({ open: true, type: "product-sale", id: item.maSanPham, name: item.tenSanPham })}>
+                              <TableCell className="py-1.5 px-3 text-xs text-slate-600 dark:text-slate-300 truncate max-w-[120px]">{item.tenSanPham}</TableCell>
+                              <TableCell className="py-1.5 px-3 text-xs text-right text-emerald-600">{formatCurrency(item.doanhThu)}</TableCell>
+                              <TableCell className="py-1.5 px-3 text-xs text-right text-amber-600">{Math.round(Number(item.tiLe))}%</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
                       </Table>
+                      {productRevenue.chiTiet.length > productRevenueItemsPerPage && (
+                        <div className="flex items-center justify-center border-t border-border/60 py-3 bg-muted/5">
+                          <Pagination
+                            currentPage={productRevenuePage}
+                            totalPages={totalProductRevenuePages}
+                            onPageChange={setProductRevenuePage}
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -493,6 +578,7 @@ export default function ReportsPage() {
                             dataKey="doanhThu"
                             nameKey="tenLoaiDichVu"
                             stroke="none"
+                             /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
                              onClick={(entry: any) => setDrillDown({ open: true, type: "service", id: entry.maLoaiDichVu, name: entry.tenLoaiDichVu })}
                             className="cursor-pointer outline-none"
                           >
@@ -505,24 +591,33 @@ export default function ReportsPage() {
                       </ResponsiveContainer>
                     </div>
                     <div className="rounded-xl border shadow-sm overflow-hidden bg-card">
-                      <Table className="text-xs">
+                      <Table>
                         <TableHeader className="bg-muted/40">
-                          <TableRow>
-                            <TableHead className="font-bold">Dịch vụ</TableHead>
-                            <TableHead className="text-right font-bold">Doanh thu</TableHead>
-                            <TableHead className="text-right font-bold w-16">%</TableHead>
+                          <TableRow className="hover:bg-transparent">
+                            <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400">Dịch vụ</TableHead>
+                            <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400 text-right">Doanh thu</TableHead>
+                            <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400 text-right w-16">%</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {serviceRevenue.chiTiet.slice(0, 5).map((item, i) => (
-                            <TableRow key={i} className="hover:bg-muted/20 cursor-pointer h-12 transition-colors" onClick={() => setDrillDown({ open: true, type: "service", id: item.maLoaiDichVu, name: item.tenLoaiDichVu })}>
-                              <TableCell className="font-bold text-slate-600 dark:text-slate-300 truncate max-w-[120px]">{item.tenLoaiDichVu}</TableCell>
-                              <TableCell className="text-right font-black text-emerald-600">{formatCurrency(item.doanhThu)}</TableCell>
-                              <TableCell className="text-right font-black text-amber-600">{Math.round(Number(item.tiLe))}%</TableCell>
+                          {paginatedServiceRevenue.map((item, i) => (
+                            <TableRow key={i} className="hover:bg-muted/20 cursor-pointer transition-colors border-b border-border/60" onClick={() => setDrillDown({ open: true, type: "service", id: item.maLoaiDichVu, name: item.tenLoaiDichVu })}>
+                              <TableCell className="py-1.5 px-3 text-xs text-slate-600 dark:text-slate-300 truncate max-w-[120px]">{item.tenLoaiDichVu}</TableCell>
+                              <TableCell className="py-1.5 px-3 text-xs text-right text-emerald-600">{formatCurrency(item.doanhThu)}</TableCell>
+                              <TableCell className="py-1.5 px-3 text-xs text-right text-amber-600">{Math.round(Number(item.tiLe))}%</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
                       </Table>
+                      {serviceRevenue.chiTiet.length > serviceRevenueItemsPerPage && (
+                        <div className="flex items-center justify-center border-t border-border/60 py-3 bg-muted/5">
+                          <Pagination
+                            currentPage={serviceRevenuePage}
+                            totalPages={totalServiceRevenuePages}
+                            onPageChange={setServiceRevenuePage}
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
