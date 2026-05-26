@@ -79,11 +79,30 @@ function isServiceTicketCompleted(ticket: ServiceTicketResponse): boolean {
   return s === "hoan thanh" || s === "hoàn thành" || s === "da giao" || s === "đã giao";
 }
 
-function formatServiceStatus(status: string, t: any): string {
-  const s = status.toLowerCase().trim();
-  if (s === "hoan thanh" || s === "hoàn thành" || s === "da giao" || s === "đã giao") {
+function formatServiceStatus(ticket: ServiceTicketResponse, t: any): string {
+  const s = ticket.tinhTrangDichVu.toLowerCase().trim();
+  const isDone = s === "hoan thanh" || s === "hoàn thành" || s === "da giao" || s === "đã giao";
+
+  if (isDone) {
     return t("serviceLookup.completed") || "Đã giao";
   }
+
+  // Logic cho phiếu chưa giao
+  const earliestNgayGiao = ticket.items?.length > 0
+    ? ticket.items.map(i => i.ngayGiao).filter(Boolean).sort()[0]
+    : null;
+
+  if (earliestNgayGiao) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const delivery = new Date(earliestNgayGiao);
+    delivery.setHours(0, 0, 0, 0);
+
+    if (delivery < today) return "Trễ hẹn";
+    if (delivery.getTime() === today.getTime()) return "Cần giao ngay";
+    return "Đang xử lý";
+  }
+
   return t("serviceLookup.incomplete") || "Chưa giao";
 }
 
@@ -507,7 +526,7 @@ export default function DashboardPage() {
         type: "service",
         id: s.soPhieuDichVu,
         title: `${t("common.serviceOrder") || "Nhận gia công"} #${s.soPhieuDichVu}`,
-        desc: `${t("common.customer") || "Khách hàng"}: ${s.khachHang?.tenKhachHang || t("common.guest") || "Khách vãng lai"} • ${t("common.total") || "Tổng tiền"}: ${formatCurrency(s.tongTien)} • ${t("common.status") || "Trạng thái"}: ${formatServiceStatus(s.tinhTrangDichVu, t)}`,
+        desc: `${t("common.customer") || "Khách hàng"}: ${s.khachHang?.tenKhachHang || t("common.guest") || "Khách vãng lai"} • ${t("common.total") || "Tổng tiền"}: ${formatCurrency(s.tongTien)} • ${t("common.status") || "Trạng thái"}: ${formatServiceStatus(s, t)}`,
         time: formatDateTime(s.ngayLapPhieuDichVu, s.soPhieuDichVu),
         rawDate: s.ngayLapPhieuDichVu,
         tagColor: "bg-primary/10 text-primary border-primary/20",

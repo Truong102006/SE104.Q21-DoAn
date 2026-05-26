@@ -441,6 +441,7 @@ export default function ReportsPage() {
                       <TableHeader className="bg-muted/30">
                         <TableRow className="hover:bg-transparent">
                           <TableHead className="w-14 text-center py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400">STT</TableHead>
+                          <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400">Mã SP</TableHead>
                           <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400">Sản phẩm</TableHead>
                           <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400 text-right">Tồn đầu</TableHead>
                           <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400 text-right text-blue-600">Nhập</TableHead>
@@ -457,6 +458,7 @@ export default function ReportsPage() {
                             onClick={() => setDrillDown({ open: true, type: "product-purchase", id: item.maSanPham, name: item.tenSanPham })}
                           >
                             <TableCell className="py-1.5 px-3 text-center text-xs text-muted-foreground">{(inventoryPage - 1) * inventoryItemsPerPage + idx + 1}</TableCell>
+                            <TableCell className="py-1.5 px-3 text-[10px] font-mono font-bold text-blue-600">{item.maSanPham}</TableCell>
                             <TableCell className="py-1.5 px-3 text-xs text-foreground">{item.tenSanPham}</TableCell>
                             <TableCell className="py-1.5 px-3 text-xs text-right text-foreground">{formatNumber(item.tonDau)}</TableCell>
                             <TableCell className="py-1.5 px-3 text-xs text-right text-blue-600">+{formatNumber(item.soLuongMuaVao)}</TableCell>
@@ -576,6 +578,7 @@ export default function ReportsPage() {
                       <Table>
                         <TableHeader className="bg-muted/40">
                           <TableRow className="hover:bg-transparent">
+                            <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400">Mã SP</TableHead>
                             <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400">Sản phẩm</TableHead>
                             <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400 text-right">Doanh thu</TableHead>
                             <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400 text-right w-16">%</TableHead>
@@ -584,6 +587,7 @@ export default function ReportsPage() {
                         <TableBody>
                           {paginatedProductRevenue.map((item, i) => (
                             <TableRow key={i} className="hover:bg-muted/20 cursor-pointer transition-colors border-b border-border/60" onClick={() => setDrillDown({ open: true, type: "product-sale", id: item.maSanPham, name: item.tenSanPham })}>
+                              <TableCell className="py-1.5 px-3 text-[10px] font-mono font-bold text-blue-600">{item.maSanPham}</TableCell>
                               <TableCell className="py-1.5 px-3 text-xs text-slate-600 dark:text-slate-300 truncate max-w-[120px]">{item.tenSanPham}</TableCell>
                               <TableCell className="py-1.5 px-3 text-xs text-right text-emerald-600">{formatCurrency(item.doanhThu)}</TableCell>
                               <TableCell className="py-1.5 px-3 text-xs text-right text-amber-600">{Math.round(Number(item.tiLe))}%</TableCell>

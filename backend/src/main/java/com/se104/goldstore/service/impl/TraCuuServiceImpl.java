@@ -32,6 +32,7 @@ public class TraCuuServiceImpl implements TraCuuService {
     private static final String TINH_TRANG_DA_GIAO = "Da giao";
     private static final String TINH_TRANG_HOAN_THANH = "Hoan thanh";
     private static final String TINH_TRANG_CHUA_HOAN_THANH = "Chua hoan thanh";
+    private static final String TINH_TRANG_DANG_GIAO = "Dang giao";
 
     private final SanPhamRepository sanPhamRepository;
     private final PhieuDichVuRepository phieuDichVuRepository;
@@ -172,6 +173,25 @@ public class TraCuuServiceImpl implements TraCuuService {
         response.setTongTienConLai(entity.getTongTienConLai());
         response.setTinhTrangDichVu(entity.getTinhTrangDichVu());
         response.setTenKhachHang(entity.getKhachHang() != null ? entity.getKhachHang().getTenKhachHang() : null);
+
+        // Fetch items to find the earliest delivery date
+        List<ChiTietPhieuDichVu> details = chiTietPhieuDichVuRepository.findBySoPhieuDichVu(entity.getSoPhieuDichVu());
+        if (!details.isEmpty()) {
+            boolean allDelivered = details.stream().allMatch(d -> TINH_TRANG_DA_GIAO.equalsIgnoreCase(d.getTinhTrang()));
+            response.setTinhTrangDichVu(resolveTicketStatus(details));
+            if (allDelivered) {
+                response.setNgayGiao(null);
+            } else {
+                LocalDate earliestDelivery = details.stream()
+                    .filter(d -> !TINH_TRANG_DA_GIAO.equalsIgnoreCase(d.getTinhTrang()))
+                    .map(ChiTietPhieuDichVu::getNgayGiao)
+                    .filter(java.util.Objects::nonNull)
+                    .min(LocalDate::compareTo)
+                    .orElse(null);
+                response.setNgayGiao(earliestDelivery);
+            }
+        }
+
         return response;
     }
 
@@ -179,7 +199,20 @@ public class TraCuuServiceImpl implements TraCuuService {
         if (details.isEmpty()) {
             return TINH_TRANG_CHUA_HOAN_THANH;
         }
-        boolean allDelivered = details.stream().allMatch(item -> TINH_TRANG_DA_GIAO.equalsIgnoreCase(item.getTinhTrang()));
-        return allDelivered ? TINH_TRANG_HOAN_THANH : TINH_TRANG_CHUA_HOAN_THANH;
+        int totalItems = details.size();
+        int deliveredItems = 0;
+        for (ChiTietPhieuDichVu item : details) {
+            if (TINH_TRANG_DA_GIAO.equalsIgnoreCase(item.getTinhTrang())) {
+                deliveredItems++;
+            }
+        }
+
+        if (deliveredItems == totalItems) {
+            return TINH_TRANG_HOAN_THANH;
+        } else if (deliveredItems > 0) {
+            return TINH_TRANG_DANG_GIAO;
+        } else {
+            return TINH_TRANG_CHUA_HOAN_THANH;
+        }
     }
 }

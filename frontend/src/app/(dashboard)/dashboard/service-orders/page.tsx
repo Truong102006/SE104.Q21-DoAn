@@ -29,33 +29,61 @@ import { useTranslation } from "@/i18n/i18n-context";
 import { ClipboardList, Eye, Filter, Plus, ReceiptText, RotateCcw, Search, Truck, Trash2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-function getStatusBadge(statusStr: string) {
-  const s = statusStr.toLowerCase().trim();
+function getStatusBadge(statusStr: string, ngayGiao?: string | null) {
   const displayStatus = formatVietnameseStatus(statusStr);
-  if (s === "chua hoan thanh" || s === "chưa hoàn thành" || s === "chua giao" || s === "chưa giao") {
-    return <StatusBadge tone="warning">{displayStatus}</StatusBadge>;
+  const isDone = displayStatus === "Đã giao";
+
+  if (isDone) {
+    return <StatusBadge tone="success">Đã giao</StatusBadge>;
   }
-  if (s === "hoan thanh" || s === "hoàn thành" || s === "da giao" || s === "đã giao") {
-    return <StatusBadge tone="success">{displayStatus}</StatusBadge>;
+
+  if (displayStatus === "Đang giao") {
+    return <StatusBadge tone="info">Đang giao</StatusBadge>;
   }
-  return <StatusBadge tone="neutral">{displayStatus}</StatusBadge>;
+
+  // Logic cho phiếu chưa giao
+  if (ngayGiao) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const delivery = new Date(ngayGiao);
+    delivery.setHours(0, 0, 0, 0);
+
+    if (delivery < today) {
+      return <StatusBadge tone="danger">Trễ hẹn</StatusBadge>;
+    }
+    if (delivery.getTime() === today.getTime()) {
+      return <StatusBadge tone="warning">Cần giao ngay</StatusBadge>;
+    }
+    return <StatusBadge tone="neutral">Đang xử lý</StatusBadge>;
+  }
+
+  return <StatusBadge tone="warning">Chưa giao</StatusBadge>;
 }
 
-function ServiceStatusStepper({ status }: { status: string }) {
+function ServiceStatusStepper({ status, ngayGiao }: { status: string, ngayGiao?: string | null }) {
   const steps = [
-    { label: "Lập phiếu", desc: "Tạo yêu cầu" },
-    { label: "Nhận máy / Gia công", desc: "Đang xử lý" },
-    { label: "Đã hoàn thành", desc: "Sẵn sàng giao" },
-    { label: "Đã giao khách", desc: "Hoàn tất giao" }
+    { label: "Tiếp nhận", desc: "Đã lập phiếu" },
+    { label: "Đang xử lý", desc: "Đang gia công" },
+    { label: "Sẵn sàng", desc: "Chờ bàn giao" },
+    { label: "Hoàn tất", desc: "Đã giao khách" }
   ];
 
   const lowerStatus = status.toLowerCase().trim();
-  let activeStep = 1;
-  if (lowerStatus === "hoan thanh" || lowerStatus === "hoàn thành") {
-    activeStep = 2;
-  }
-  if (lowerStatus === "da giao" || lowerStatus === "đã giao") {
-    activeStep = 3;
+  const isCompleted = lowerStatus === "hoan thanh" || lowerStatus === "hoàn thành" || lowerStatus === "da giao" || lowerStatus === "đã giao";
+
+  let activeStep = 1; // Mặc định là đang xử lý
+
+  if (isCompleted) {
+    activeStep = 3; // Hoàn tất
+  } else if (ngayGiao) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const delivery = new Date(ngayGiao);
+    delivery.setHours(0, 0, 0, 0);
+
+    if (delivery <= today) {
+      activeStep = 2; // Sẵn sàng
+    }
   }
 
   return (
@@ -123,7 +151,7 @@ const createEmptyItem = (): ServiceItemDraft => ({
   maLoaiDichVu: "",
   soLuongDichVu: "1",
   donGiaDuocTinh: "0",
-  ngayGiao: "",
+  ngayGiao: todayIsoDate(),
 });
 
 export default function ServiceOrdersPage() {
@@ -294,6 +322,9 @@ export default function ServiceOrdersPage() {
     if (toPositiveNumber(item.donGiaDuocTinh) < 0) {
       return "Đơn giá được tính không hợp lệ";
     }
+    if (!item.ngayGiao) {
+      return "Vui lòng chọn ngày hẹn giao";
+    }
     return null;
   }
 
@@ -351,6 +382,11 @@ export default function ServiceOrdersPage() {
       const donGiaDuocTinh = toPositiveNumber(item.donGiaDuocTinh);
       if (donGiaDuocTinh < 0) {
         setFormError("Đơn giá được tính không hợp lệ");
+        return;
+      }
+
+      if (!item.ngayGiao) {
+        setFormError("Vui lòng chọn ngày hẹn giao cho tất cả các dịch vụ");
         return;
       }
     }
@@ -411,12 +447,9 @@ export default function ServiceOrdersPage() {
 
   async function deliverItem(soPhieuDichVu: string, maLoaiDichVu: string) {
     try {
-      await backendApi.serviceTickets.deliverItem(soPhieuDichVu, maLoaiDichVu);
+      const updated = await backendApi.serviceTickets.deliverItem(soPhieuDichVu, maLoaiDichVu);
+      setSelectedTicket(updated);
       await loadHistory(historyPage);
-      if (selectedTicket && selectedTicket.soPhieuDichVu === soPhieuDichVu) {
-        const updated = await backendApi.serviceTickets.getById(soPhieuDichVu);
-        setSelectedTicket(updated);
-      }
       useToastStore.getState().success(`Đã bàn giao sản phẩm dịch vụ thành công cho phiếu ${soPhieuDichVu}!`);
     } catch (err) {
       setError(getApiErrorMessage(err, t("serviceOrders.deliverError")));
@@ -425,12 +458,9 @@ export default function ServiceOrdersPage() {
 
   async function deliverAll(soPhieuDichVu: string) {
     try {
-      await backendApi.serviceTickets.deliverAll(soPhieuDichVu);
+      const updated = await backendApi.serviceTickets.deliverAll(soPhieuDichVu);
+      setSelectedTicket(updated);
       await loadHistory(historyPage);
-      if (selectedTicket && selectedTicket.soPhieuDichVu === soPhieuDichVu) {
-        const updated = await backendApi.serviceTickets.getById(soPhieuDichVu);
-        setSelectedTicket(updated);
-      }
       useToastStore.getState().success(`Đã bàn giao toàn bộ sản phẩm dịch vụ cho phiếu ${soPhieuDichVu}!`);
     } catch (err) {
       setError(getApiErrorMessage(err, t("serviceOrders.deliverAllError")));
@@ -840,7 +870,7 @@ export default function ServiceOrdersPage() {
                         )}>
                           {formatCurrency(remains)}
                         </TableCell>
-                        <TableCell className="py-1.5 px-3 text-xs text-center">{getStatusBadge(item.tinhTrangDichVu)}</TableCell>
+                        <TableCell className="py-1.5 px-3 text-xs text-center">{getStatusBadge(item.tinhTrangDichVu, item.ngayGiao)}</TableCell>
                         <TableCell className="py-1.5 px-3 text-xs text-right">
                           <div className="flex justify-end gap-1">
                             <Button
@@ -852,7 +882,7 @@ export default function ServiceOrdersPage() {
                             >
                               <Eye className="h-3.5 w-3.5" />
                             </Button>
-                            {!item.tinhTrangDichVu.toLowerCase().includes("da giao") ? (
+                            {item.tinhTrangDichVu.toLowerCase() !== "hoan thanh" && item.tinhTrangDichVu.toLowerCase() !== "hoàn thành" ? (
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -863,7 +893,7 @@ export default function ServiceOrdersPage() {
                                 <Truck className="h-3.5 w-3.5" />
                               </Button>
                             ) : (
-                              <span className="text-[10px] text-muted-foreground italic font-semibold px-2">Đã giao</span>
+                              <span className="text-[10px] text-muted-foreground italic font-semibold px-2">Hoàn tất</span>
                             )}
                           </div>
                         </TableCell>
@@ -898,7 +928,15 @@ export default function ServiceOrdersPage() {
             {/* Visual Stepper Progress Pipeline */}
             <div className="space-y-1">
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Tiến độ thực hiện</p>
-              <ServiceStatusStepper status={selectedTicket.tinhTrangDichVu} />
+              <ServiceStatusStepper
+                status={selectedTicket.tinhTrangDichVu}
+                ngayGiao={selectedTicket.items
+                  .filter(i => !i.tinhTrang.toLowerCase().includes("da giao"))
+                  .map(i => i.ngayGiao)
+                  .filter(Boolean)
+                  .sort()[0] || null
+                }
+              />
             </div>
 
             {/* General Info Grid */}
@@ -920,7 +958,7 @@ export default function ServiceOrdersPage() {
             <div className="space-y-2">
               <div className="flex justify-between items-center">
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Danh sách dịch vụ chi tiết</p>
-                {!selectedTicket.tinhTrangDichVu.toLowerCase().includes("da giao") && (
+                {!selectedTicket.tinhTrangDichVu.toLowerCase().includes("hoan thanh") && (
                   <Button
                     variant="outline"
                     size="sm"
@@ -965,7 +1003,7 @@ export default function ServiceOrdersPage() {
                           )}>
                             {formatCurrency(itemRemains)}
                           </TableCell>
-                          <TableCell className="text-center">{getStatusBadge(item.tinhTrang)}</TableCell>
+                          <TableCell className="text-center">{getStatusBadge(item.tinhTrang, item.ngayGiao)}</TableCell>
                           <TableCell className="text-right">
                             {!isDelivered ? (
                               <Button

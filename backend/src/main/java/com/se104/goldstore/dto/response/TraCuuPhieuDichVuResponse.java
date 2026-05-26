@@ -12,6 +12,7 @@ public class TraCuuPhieuDichVuResponse {
     private BigDecimal tongTienTraTruoc;
     private BigDecimal tongTienConLai;
     private String tinhTrangDichVu;
+    private LocalDate ngayGiao;
 
     public String getSoPhieuDichVu() {
         return soPhieuDichVu;
@@ -67,5 +68,13 @@ public class TraCuuPhieuDichVuResponse {
 
     public void setTinhTrangDichVu(String tinhTrangDichVu) {
         this.tinhTrangDichVu = tinhTrangDichVu;
+    }
+
+    public LocalDate getNgayGiao() {
+        return ngayGiao;
+    }
+
+    public void setNgayGiao(LocalDate ngayGiao) {
+        this.ngayGiao = ngayGiao;
     }
 }
