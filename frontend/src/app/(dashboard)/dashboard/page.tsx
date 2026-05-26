@@ -54,12 +54,7 @@ import { useTranslation } from "@/i18n/i18n-context";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 
-interface GoldPrice {
-  type: string;
-  buy: number;
-  sell: number;
-  change: number;
-}
+
 
 interface ChartPoint {
   label: string;
@@ -236,15 +231,7 @@ export default function DashboardPage() {
   const [activitySearchQuery, setActivitySearchQuery] = useState("");
   const [activityTypeFilter, setActivityTypeFilter] = useState<"all" | "sale" | "service" | "purchase" | "system">("all");
 
-  // Gold Price Ticker State
-  const [goldPrices, setGoldPrices] = useState<GoldPrice[]>([
-    { type: "Vàng SJC (99.99)", buy: 82500000, sell: 84500000, change: 0 },
-    { type: "Vàng Nhẫn 9999", buy: 73200000, sell: 74800000, change: 0 },
-    { type: "Vàng Nữ Trang 24K", buy: 72100000, sell: 73600000, change: 0 },
-    { type: "Vàng Nữ Trang 18K", buy: 53500000, sell: 55500000, change: 0 },
-  ]);
-  const [flashRow, setFlashRow] = useState<string | null>(null);
-  const [flashDirection, setFlashDirection] = useState<"up" | "down" | null>(null);
+
 
   // Time filter for chart
   const [timeFilter, setTimeFilter] = useState<"thisWeek" | "lastWeek" | "last30Days">("thisWeek");
@@ -256,42 +243,7 @@ export default function DashboardPage() {
 
   const role = useAuthStore((state) => state.user?.role ?? "STAFF");
   const isAdmin = role === "ADMIN";
-  const [isEditingPrices, setIsEditingPrices] = useState(false);
-  const [editPricesDraft, setEditPricesDraft] = useState<GoldPrice[]>([]);
-  const toast = useToastStore();
 
-  function handleOpenEditPrices() {
-    setEditPricesDraft(JSON.parse(JSON.stringify(goldPrices)));
-    setIsEditingPrices(true);
-  }
-
-  function handleSavePrices() {
-    // Calculate delta changes to trigger green/red flashes dynamically
-    setGoldPrices(prev => prev.map((oldItem, idx) => {
-      const newItem = editPricesDraft[idx];
-      const change = newItem.sell - oldItem.sell;
-      return {
-        ...newItem,
-        change: change
-      };
-    }));
-
-    // Trigger flash highlighting on the first modified gold type
-    const changedItem = editPricesDraft.find((item, idx) => item.sell !== goldPrices[idx].sell);
-    if (changedItem) {
-      const idx = editPricesDraft.findIndex(item => item.type === changedItem.type);
-      const isUp = editPricesDraft[idx].sell > goldPrices[idx].sell;
-      setFlashRow(changedItem.type);
-      setFlashDirection(isUp ? "up" : "down");
-      setTimeout(() => {
-        setFlashRow(null);
-        setFlashDirection(null);
-      }, 2000);
-    }
-
-    setIsEditingPrices(false);
-    toast.success("Cập nhật bảng giá vàng thành công!");
-  }
 
   // Load Data
   useEffect(() => {
@@ -1091,155 +1043,11 @@ export default function DashboardPage() {
                 )}
               </Card>
 
-              {/* Live Gold Price Board */}
-              <Card className="shadow-xs border-border/70 flex flex-col justify-between">
-                <div>
-                  <CardHeader className="pb-3 border-b bg-muted/10">
-                    <CardTitle className="text-base font-bold flex items-center justify-between">
-                      <span className="flex items-center gap-2">
-                        <Sparkles className="h-4 w-4 text-amber-500" />
-                        {t("dashboard.goldPriceLive")}
-                      </span>
-                      <Badge variant="outline" className="animate-pulse bg-emerald-500/15 text-emerald-600 border-emerald-500/20 text-[9px] py-0.5 px-2">
-                        {t("dashboard.live").toUpperCase()}
-                      </Badge>
-                    </CardTitle>
-                    <p className="text-xs text-muted-foreground">{t("dashboard.goldPriceDesc")}</p>
-                  </CardHeader>
-                  <CardContent className="p-0">
-                    <div className="divide-y divide-border/60">
-                      {goldPrices.map((gold) => {
-                        const isFlashing = flashRow === gold.type;
-                        return (
-                          <div
-                            key={gold.type}
-                            className={`flex items-center justify-between p-3.5 transition-all duration-500 ${
-                              isFlashing
-                                ? flashDirection === "up"
-                                  ? "bg-emerald-500/10"
-                                  : "bg-rose-500/10"
-                                : "hover:bg-muted/30"
-                            }`}
-                          >
-                            <div className="min-w-0">
-                              <span className="block text-xs font-bold text-foreground">{gold.type}</span>
-                              <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                                <Clock className="h-2.5 w-2.5" />
-                                {t("common.updatedJustNow")}
-                              </span>
-                            </div>
-                            <div className="flex gap-4 text-right">
-                              <div>
-                                <span className="block text-[9px] uppercase font-bold text-muted-foreground">{t("common.buy")}</span>
-                                <span className="text-xs font-bold">{formatNumber(gold.buy / 1000)}k</span>
-                              </div>
-                              <div>
-                                <span className="block text-[9px] uppercase font-bold text-muted-foreground">{t("common.sell")}</span>
-                                <span className={`text-xs font-bold transition-all duration-300 ${
-                                  isFlashing
-                                    ? flashDirection === "up"
-                                      ? "text-emerald-600 font-extrabold"
-                                      : "text-rose-600 font-extrabold"
-                                    : "text-foreground"
-                                }`}>
-                                  {formatNumber(gold.sell / 1000)}k
-                                </span>
-                              </div>
-                            </div>
-                            {/* Fluctuating mini indicator */}
-                            <div className="w-14 flex flex-col items-end justify-center">
-                              {gold.change !== 0 && (
-                                <div className={`flex items-center gap-0.5 text-[10px] font-bold ${gold.change > 0 ? "text-emerald-600" : "text-rose-600"}`}>
-                                  {gold.change > 0 ? <ArrowUp className="h-2.5 w-2.5" /> : <ArrowDown className="h-2.5 w-2.5" />}
-                                  {formatNumber(Math.abs(gold.change) / 1000)}k
-                                </div>
-                              )}
-                              {gold.change === 0 && <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/35" />}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </CardContent>
-                </div>
-                {isAdmin && (
-                  <div className="p-3 border-t bg-muted/10 text-center">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full text-xs font-bold hover:bg-muted cursor-pointer rounded-lg border h-8.5"
-                      onClick={handleOpenEditPrices}
-                    >
-                      Cập nhật bảng giá vàng
-                      <ArrowUpRight className="ml-1.5 h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                )}
-              </Card>
             </div>
           </div>
         </>
       )}
-      {isEditingPrices && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl animate-in zoom-in-95 duration-200">
-            <h3 className="text-base font-extrabold text-foreground mb-1">Cập nhật bảng giá vàng</h3>
-            <p className="text-xs text-muted-foreground mb-4">Thay đổi giá mua và giá bán của các loại vàng đang giao dịch.</p>
 
-            <div className="space-y-4">
-              {editPricesDraft.map((gold, index) => (
-                <div key={gold.type} className="space-y-1.5 p-3 rounded-xl border border-border/80 bg-muted/20">
-                  <span className="text-xs font-bold text-foreground block">{gold.type}</span>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-muted-foreground uppercase">Giá mua (đ)</label>
-                      <input
-                        type="number"
-                        value={gold.buy}
-                        onChange={(e) => {
-                          const val = Number(e.target.value);
-                          setEditPricesDraft(prev => prev.map((item, idx) => idx === index ? { ...item, buy: val } : item));
-                        }}
-                        className="w-full h-8.5 rounded-lg border border-border/80 bg-background px-2.5 py-1 text-xs font-semibold focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-muted-foreground uppercase">Giá bán (đ)</label>
-                      <input
-                        type="number"
-                        value={gold.sell}
-                        onChange={(e) => {
-                          const val = Number(e.target.value);
-                          setEditPricesDraft(prev => prev.map((item, idx) => idx === index ? { ...item, sell: val } : item));
-                        }}
-                        className="w-full h-8.5 rounded-lg border border-border/80 bg-background px-2.5 py-1 text-xs font-semibold focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-6 flex justify-end gap-2.5">
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8.5 text-xs font-bold px-4 rounded-lg cursor-pointer"
-                onClick={() => setIsEditingPrices(false)}
-              >
-                Hủy bỏ
-              </Button>
-              <Button
-                size="sm"
-                className="h-8.5 text-xs font-bold px-4 rounded-lg cursor-pointer bg-primary text-primary-foreground hover:brightness-105"
-                onClick={handleSavePrices}
-              >
-                Lưu thay đổi
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* View All Activities Premium Dialog */}
       <AnimatePresence>

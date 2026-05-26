@@ -131,6 +131,16 @@ export default function PurchaseOrdersPage() {
     }
   }
 
+  async function openDetail(soPhieuMua: string) {
+    try {
+      const response = await backendApi.purchases.getById(soPhieuMua);
+      setSelectedPurchase(response);
+    } catch (err) {
+      useToastStore.getState().error(getApiErrorMessage(err, "Không thể tải chi tiết phiếu mua"));
+    }
+  }
+
+
   useEffect(() => {
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -561,7 +571,7 @@ export default function PurchaseOrdersPage() {
                         <TableCell className="py-1.5 px-3 text-xs text-center font-medium text-muted-foreground">{formatNumber(item.items?.length ?? 0)}</TableCell>
                         <TableCell className="py-1.5 px-3 text-xs font-bold text-emerald-600 dark:text-emerald-400 text-right">{formatCurrency(item.tongTien)}</TableCell>
                         <TableCell className="py-1.5 px-3 text-right">
-                          <Button variant="outline" size="sm" className="h-7 w-7 p-0 cursor-pointer" title="Xem chi tiết" onClick={() => setSelectedPurchase(item)}>
+                          <Button variant="outline" size="sm" className="h-7 w-7 p-0 cursor-pointer" title="Xem chi tiết" onClick={() => openDetail(item.soPhieuMua)}>
                             <Eye className="h-3.5 w-3.5" />
                           </Button>
                         </TableCell>
