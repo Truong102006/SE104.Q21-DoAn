@@ -35,8 +35,7 @@
 | `/dashboard/products` | `.../products/page.tsx` | Active | Backend API | Paged list/filter + CRUD |
 | `/dashboard/purchase-orders` | `.../purchase-orders/page.tsx` | Active | Backend API | Create voucher + history + print data |
 | `/dashboard/orders` | `.../orders/page.tsx` | Active | Backend API | Sales voucher creation + history |
-| `/dashboard/service-orders` | `.../service-orders/page.tsx` | Active | Backend API | Service voucher create + deliver item/all |
-| `/dashboard/service-voucher-lookup` | `.../service-voucher-lookup/page.tsx` | Active | Backend API | Lookup with filters/paging + detail modal |
+| `/dashboard/service-orders` | `.../service-orders/page.tsx` | Active | Backend API | Service voucher create + deliver item/all + integrated lookup/history (filters, paging, detail modal) |
 | `/dashboard/reports` | `.../reports/page.tsx` | Active | Backend API | Generate/get 3 monthly reports |
 | `/dashboard/settings` | `.../settings/page.tsx` | Active | Backend API | Admin settings + prepayment rate |
 | `/dashboard/staff` | `.../staff/page.tsx` | Active | Backend API | Uses `/api/v1/nguoi-dung` and `/api/v1/nhom-nguoi-dung` |
@@ -53,7 +52,7 @@
   - ADMIN only: `staff`, `settings`, `reports`
 - Lookup mode:
   - Product lookup uses `/dashboard/products?mode=search`
-  - Service lookup uses dedicated page route
+  - Service lookup is integrated in `/dashboard/service-orders` (history/advanced lookup section)
 
 ## State Management
 - `auth-store.ts`: JWT/user persistence and role helpers
@@ -89,4 +88,7 @@
 - Env naming mismatch:
   - code uses `NEXT_PUBLIC_API_BASE_URL`
   - docs/env examples mention `NEXT_PUBLIC_API_URL`
+- Stale route references:
+  - `/dashboard/service-voucher-lookup` is referenced in dashboard quick actions and header title map
+  - route file is currently absent, so direct navigation can lead to 404
 - Playwright e2e file (`tests/e2e/main-flows.spec.ts`) appears out-of-sync with current labels/UI behavior.

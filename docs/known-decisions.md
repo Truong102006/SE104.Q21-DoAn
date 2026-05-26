@@ -119,6 +119,17 @@ Capture decisions already encoded in code so future changes do not accidentally 
 - Implication:
   - preserve key-based translation workflow, avoid hardcoding strings in new UI logic
 
+## Decision 13: Service Ticket Lookup Is Embedded In Service Orders Page
+- Status: Active
+- Evidence:
+  - `frontend/src/app/(dashboard)/dashboard/service-orders/page.tsx` calls `backendApi.search.serviceTickets(...)`
+  - no dedicated `service-voucher-lookup` route file currently exists under dashboard routes
+- Why:
+  - consolidate create/deliver/lookup flow for service vouchers in one module
+- Implication:
+  - avoid introducing new parallel lookup UX without clear reason
+  - stale links to `/dashboard/service-voucher-lookup` should be considered cleanup candidates
+
 ## Open Items Needing Verification
 1. Env variable naming mismatch:
 - FE code reads `NEXT_PUBLIC_API_BASE_URL`, while docs/examples mention `NEXT_PUBLIC_API_URL`.

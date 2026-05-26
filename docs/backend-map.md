@@ -4,7 +4,7 @@
 - Framework: Spring Boot 4 (`backend/src/main/java/com/se104/goldstore`)
 - Pattern: Controller -> Service -> Repository -> Entity
 - Persistence: PostgreSQL + Spring Data JPA
-- Schema lifecycle: Flyway migrations (`V1__init_schema.sql`, `V2__seed_core_data.sql`)
+- Schema lifecycle: Flyway migrations (`V1__init_schema.sql` -> `V4__add_is_active_to_more_tables.sql`)
 - API contract: `ApiResponse<T>` envelope
 
 ## Package Structure
@@ -66,7 +66,8 @@
   - Recalculate remaining amount and ticket status
 
 ### 5. Lookup & Reports
-- Product lookup and service-voucher lookup with filters/paging
+- Product lookup and service-ticket lookup with filters/paging
+- Report drill-down lookup endpoint for product sale/purchase and service details by month/year
 - Monthly reports:
   - Inventory (`BM10`)
   - Product revenue (`BM11`)
@@ -106,7 +107,9 @@
 - Unit tests in `backend/src/test/java/com/se104/goldstore/unit`
   - Service tests: auth, catalog, vouchers, lookup, reports, settings
   - Controller tests: auth, security on report endpoint, sale controller
-- Integration test folder exists but currently only `.gitkeep`
+- Integration tests:
+  - `backend/src/test/java/com/se104/goldstore/integration/CustomerSearchIntegrationTest.java`
+  - currently profile-specific (`@ActiveProfiles("supabase")`) and focused on repository search behavior
 
 ## Build/Run
 - Dev run: `mvn -f backend/pom.xml spring-boot:run`

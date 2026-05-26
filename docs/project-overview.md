@@ -89,6 +89,6 @@ Build an end-to-end management system for a gold/silver/jewelry store:
   - Unauthenticated access redirects to `/login` with `callbackUrl`.
 
 ## Current Known Gaps
-- `docs/` was empty before this documentation pass.
 - Some pages still rely on mock/local state (see `frontend-map.md`).
+- Stale UI references to `/dashboard/service-voucher-lookup` still exist while dedicated route file is absent.
 - E2E spec selectors/content appear stale compared to current UI text/structure (needs verification).
