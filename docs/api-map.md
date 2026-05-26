@@ -30,7 +30,7 @@ Most endpoints return:
 ### Customers (new + legacy)
 - Base paths: `/api/customers`, `/api/v1/khach-hang`
 - Methods:
-  - `GET /` (`q` optional)
+  - `GET /` (`q`, `page`, `size` optional)
   - `GET /{maKhachHang}`
   - `POST /`
   - `PUT /{maKhachHang}`
@@ -82,7 +82,7 @@ Most endpoints return:
 ### Purchase vouchers (new + legacy)
 - Base paths: `/api/purchases`, `/api/v1/phieu-mua-hang`
 - Methods:
-  - `GET /` (`keyword` or legacy `q`)
+  - `GET /` (`keyword` or legacy `q`, optional `page`, `size`)
   - `GET /{soPhieuMua}`
   - `GET /{soPhieuMua}/print-data`
   - `POST /`
@@ -90,14 +90,14 @@ Most endpoints return:
 ### Sales vouchers (new + legacy)
 - Base paths: `/api/sales`, `/api/v1/phieu-ban-hang`
 - Methods:
-  - `GET /` (`keyword` or legacy `q`)
+  - `GET /` (`keyword` or legacy `q`, optional `page`, `size`)
   - `GET /{soPhieuBan}`
   - `POST /`
 
 ### Service vouchers (new + legacy)
 - Base paths: `/api/service-tickets`, `/api/v1/phieu-dich-vu`
 - Methods:
-  - `GET /` (`keyword` or legacy `q`)
+  - `GET /` (`keyword` or legacy `q`, optional `page`, `size`)
   - `GET /{soPhieuDichVu}`
   - `POST /`
   - `PATCH /{soPhieuDichVu}/items/{maLoaiDichVu}/deliver` (body optional `ngayGiao`)
@@ -110,7 +110,10 @@ Most endpoints return:
     - `keyword`, `page`, `size`
   - `GET /service-tickets`
     - `keyword`, `status`, `fromDate`, `toDate`, `page`, `size`
-    - status supports normalized completed/incomplete filters
+    - status supports accent-insensitive `Hoan thanh` / `Chua hoan thanh`
+  - `GET /drill-down`
+    - `type`, `id`, `month`, `year`
+    - type currently supports: `product-sale`, `product-purchase`, `service`
 
 ## Report Endpoints (ADMIN)
 
