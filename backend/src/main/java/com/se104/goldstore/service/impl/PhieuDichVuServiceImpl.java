@@ -47,6 +47,7 @@ public class PhieuDichVuServiceImpl implements PhieuDichVuService {
     private static final String TINH_TRANG_CHUA_GIAO = "Chua giao";
     private static final String TINH_TRANG_HOAN_THANH = "Hoan thanh";
     private static final String TINH_TRANG_CHUA_HOAN_THANH = "Chua hoan thanh";
+    private static final String TINH_TRANG_DANG_GIAO = "Dang giao";
 
     private final PhieuDichVuRepository phieuDichVuRepository;
     private final ChiTietPhieuDichVuRepository chiTietPhieuDichVuRepository;
@@ -139,6 +140,9 @@ public class PhieuDichVuServiceImpl implements PhieuDichVuService {
             if (tienTraTruoc.compareTo(thanhTien) > 0) {
                 throw new BusinessException("Tiền trả trước không được lớn hơn thành tiền của loại dịch vụ: " + maLoaiDichVu);
             }
+            if (item.getNgayGiao() == null) {
+                throw new BusinessException("Ngày hẹn giao không được để trống cho loại dịch vụ: " + maLoaiDichVu);
+            }
             BigDecimal tienConLai = thanhTien.subtract(tienTraTruoc).setScale(2, RoundingMode.HALF_UP);
 
             ChiTietPhieuDichVu detail = new ChiTietPhieuDichVu();
@@ -176,21 +180,13 @@ public class PhieuDichVuServiceImpl implements PhieuDichVuService {
     @Transactional
     public PhieuDichVuResponse deliverItem(String soPhieuDichVu, String maLoaiDichVu, LocalDate ngayGiao) {
         PhieuDichVu voucher = findByIdOrThrow(soPhieuDichVu);
-        String normalizedServiceTypeId = maLoaiDichVu == null ? "" : maLoaiDichVu.trim();
-        if (normalizedServiceTypeId.isEmpty()) {
-            throw new BusinessException("Mã loại dịch vụ không được để trống");
-        }
+        List<ChiTietPhieuDichVu> details = loadDetails(soPhieuDichVu);
 
-        ChiTietPhieuDichVu.ChiTietPhieuDichVuId detailId = new ChiTietPhieuDichVu.ChiTietPhieuDichVuId(
-            soPhieuDichVu,
-            normalizedServiceTypeId
-        );
-        ChiTietPhieuDichVu detail = chiTietPhieuDichVuRepository.findById(detailId)
-            .orElseThrow(
-                () -> new ResourceNotFoundException(
-                    "Không tìm thấy chi tiết phiếu dịch vụ: " + soPhieuDichVu + " - " + normalizedServiceTypeId
-                )
-            );
+        String targetMa = maLoaiDichVu == null ? "" : maLoaiDichVu.trim();
+        ChiTietPhieuDichVu detail = details.stream()
+            .filter(d -> d.getMaLoaiDichVu().equalsIgnoreCase(targetMa))
+            .findFirst()
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy chi tiết phiếu dịch vụ: " + soPhieuDichVu + " - " + targetMa));
 
         if (!TINH_TRANG_DA_GIAO.equalsIgnoreCase(detail.getTinhTrang())) {
             detail.setTinhTrang(TINH_TRANG_DA_GIAO);
@@ -200,7 +196,6 @@ public class PhieuDichVuServiceImpl implements PhieuDichVuService {
             chiTietPhieuDichVuRepository.save(detail);
         }
 
-        List<ChiTietPhieuDichVu> details = loadDetails(soPhieuDichVu);
         recalculateVoucher(voucher, details);
         PhieuDichVu savedVoucher = phieuDichVuRepository.save(voucher);
         return buildResponse(savedVoucher, details);
@@ -222,9 +217,10 @@ public class PhieuDichVuServiceImpl implements PhieuDichVuService {
                 detail.setNgayGiao(deliveryDate);
                 detail.setTienTraTruoc(normalizeMoney(detail.getThanhTien(), "Thành tiền phải >= 0"));
                 detail.setTienConLai(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP));
+                chiTietPhieuDichVuRepository.save(detail);
             }
         }
-        chiTietPhieuDichVuRepository.saveAll(details);
+
         recalculateVoucher(voucher, details);
         PhieuDichVu savedVoucher = phieuDichVuRepository.save(voucher);
         return buildResponse(savedVoucher, details);
@@ -306,7 +302,9 @@ public class PhieuDichVuServiceImpl implements PhieuDichVuService {
         BigDecimal tongTien = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
         BigDecimal tongTienTraTruoc = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
         BigDecimal tongTienConLai = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
-        boolean allDelivered = !details.isEmpty();
+
+        int totalItems = details.size();
+        int deliveredItems = 0;
 
         for (ChiTietPhieuDichVu detail : details) {
             BigDecimal thanhTien = normalizeMoney(detail.getThanhTien(), "Thành tiền phải >= 0");
@@ -324,15 +322,24 @@ public class PhieuDichVuServiceImpl implements PhieuDichVuService {
             tongTienTraTruoc = tongTienTraTruoc.add(tienTraTruoc).setScale(2, RoundingMode.HALF_UP);
             tongTienConLai = tongTienConLai.add(tienConLai).setScale(2, RoundingMode.HALF_UP);
 
-            if (!TINH_TRANG_DA_GIAO.equalsIgnoreCase(detail.getTinhTrang())) {
-                allDelivered = false;
+            if (TINH_TRANG_DA_GIAO.equalsIgnoreCase(detail.getTinhTrang())) {
+                deliveredItems++;
             }
         }
 
         voucher.setTongTien(tongTien);
         voucher.setTongTienTraTruoc(tongTienTraTruoc);
         voucher.setTongTienConLai(tongTienConLai);
-        voucher.setTinhTrangDichVu(allDelivered ? TINH_TRANG_HOAN_THANH : TINH_TRANG_CHUA_HOAN_THANH);
+
+        if (totalItems == 0) {
+            voucher.setTinhTrangDichVu(TINH_TRANG_CHUA_HOAN_THANH);
+        } else if (deliveredItems == totalItems) {
+            voucher.setTinhTrangDichVu(TINH_TRANG_HOAN_THANH);
+        } else if (deliveredItems > 0) {
+            voucher.setTinhTrangDichVu(TINH_TRANG_DANG_GIAO);
+        } else {
+            voucher.setTinhTrangDichVu(TINH_TRANG_CHUA_HOAN_THANH);
+        }
     }
 
     private PhieuDichVuResponse buildResponse(PhieuDichVu voucher, List<ChiTietPhieuDichVu> details) {

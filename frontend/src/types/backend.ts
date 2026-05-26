@@ -277,6 +277,7 @@ export interface SearchServiceTicketResponse {
   tongTienTraTruoc: number;
   tongTienConLai: number;
   tinhTrangDichVu: string;
+  ngayGiao?: string;
 }
 
 export interface InventoryReportResponse {
