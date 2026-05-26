@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { MonthPickerInput } from "@/components/ui/date-picker";
 import { backendApi } from "@/services/backend-api";
 import { Pagination } from "@/components/dashboard/pagination";
+import { useAuthStore } from "@/stores/auth-store";
 import type {
   InventoryReportResponse,
   ProductRevenueReportResponse,
@@ -237,6 +238,9 @@ function DrillDownModal({ open, onOpenChange, type, id, name, month, year }: Dri
 }
 
 export default function ReportsPage() {
+  const role = useAuthStore((state) => state.user?.role ?? "STAFF");
+  const isAdmin = role === "ADMIN";
+
   const now = currentMonthYear();
   const [selectedMonth, setSelectedMonth] = useState(now.month);
   const [selectedYear, setSelectedYear] = useState(now.year);
@@ -247,6 +251,8 @@ export default function ReportsPage() {
   const [inventory, setInventory] = useState<InventoryReportResponse | null>(null);
   const [productRevenue, setProductRevenue] = useState<ProductRevenueReportResponse | null>(null);
   const [serviceRevenue, setServiceRevenue] = useState<ServiceRevenueReportResponse | null>(null);
+  const [bm11ChartType, setBm11ChartType] = useState<"bar" | "pie">("bar");
+  const [bm12ChartType, setBm12ChartType] = useState<"pie" | "bar">("pie");
 
   // Pagination states
   const [inventoryPage, setInventoryPage] = useState(1);
@@ -284,6 +290,8 @@ export default function ReportsPage() {
   });
 
   useEffect(() => {
+    if (!isAdmin) return;
+
     const loadAllReports = async () => {
       setLoading(true);
       setError(null);
@@ -303,7 +311,7 @@ export default function ReportsPage() {
       }
     };
     loadAllReports();
-  }, [selectedMonth, selectedYear]);
+  }, [selectedMonth, selectedYear, isAdmin]);
 
   // Client-side pagination calculations
   const totalInventoryPages = useMemo(() => {
@@ -353,6 +361,17 @@ export default function ReportsPage() {
     }
   }
 
+  if (!isAdmin) {
+    return (
+      <div className="flex h-[70vh] items-center justify-center">
+        <EmptyState
+          title="Quyền truy cập bị từ chối"
+          description="Chỉ quản trị viên (Admin) mới có quyền xem các báo cáo doanh thu và tồn kho của hệ thống."
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-20">
       {/* Date Filter & Global Action Card */}
@@ -378,11 +397,11 @@ export default function ReportsPage() {
           </div>
 
           <Button
-             className="bg-emerald-600 hover:bg-emerald-700 text-white font-black shadow-lg shadow-emerald-600/20 rounded-xl h-11 px-6 gap-2 w-full sm:w-auto"
-             onClick={() => {
-               if (inventory) exportToCsv(`baocao_tonghop_${selectedMonth}_${selectedYear}.csv`, inventory.chiTiet);
-             }}
-             disabled={!inventory}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white font-black shadow-lg shadow-emerald-600/20 rounded-xl h-11 px-6 gap-2 w-full sm:w-auto"
+            onClick={() => {
+              if (inventory) exportToCsv(`baocao_tonghop_${selectedMonth}_${selectedYear}.csv`, inventory.chiTiet);
+            }}
+            disabled={!inventory}
           >
             <FileDown className="h-5 w-5" />
             XUẤT TỔNG HỢP
@@ -471,16 +490,38 @@ export default function ReportsPage() {
                   <BarChart3 className="h-5 w-5 text-primary" />
                   Doanh Thu Bán Hàng (BM11)
                 </CardTitle>
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 font-black gap-1 p-0 px-2"
-                    onClick={() => productRevenue && exportToCsv(`doanh_thu_sp_${selectedMonth}_${selectedYear}.csv`, productRevenue.chiTiet)}
-                  >
-                    <FileDown className="h-4 w-4" /> EXCEL
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => runGenerate("product-revenue")} className="text-[10px] font-black rounded-lg h-7">KẾT TOÁN</Button>
+                <div className="flex items-center gap-4">
+                  <div className="flex border rounded-lg overflow-hidden p-0.5 bg-muted/50">
+                    <button
+                      onClick={() => setBm11ChartType("bar")}
+                      className={cn(
+                        "px-2.5 py-1 text-[10px] font-black rounded-md transition-all uppercase tracking-wider",
+                        bm11ChartType === "bar" ? "bg-primary text-primary-foreground shadow-sm" : "hover:bg-muted text-muted-foreground"
+                      )}
+                    >
+                      Cột ngang
+                    </button>
+                    <button
+                      onClick={() => setBm11ChartType("pie")}
+                      className={cn(
+                        "px-2.5 py-1 text-[10px] font-black rounded-md transition-all uppercase tracking-wider",
+                        bm11ChartType === "pie" ? "bg-primary text-primary-foreground shadow-sm" : "hover:bg-muted text-muted-foreground"
+                      )}
+                    >
+                      Hình tròn
+                    </button>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 font-black gap-1 p-0 px-2"
+                      onClick={() => productRevenue && exportToCsv(`doanh_thu_sp_${selectedMonth}_${selectedYear}.csv`, productRevenue.chiTiet)}
+                    >
+                      <FileDown className="h-4 w-4" /> EXCEL
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => runGenerate("product-revenue")} className="text-[10px] font-black rounded-lg h-7">KẾT TOÁN</Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="p-6">
@@ -489,23 +530,47 @@ export default function ReportsPage() {
                 ) : (
                   <div className="space-y-6">
                     <div className="h-[260px] w-full bg-muted/5 rounded-xl border border-dashed p-2">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={productRevenue.chiTiet.slice(0, 5)} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                          <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} opacity={0.1} />
-                          <XAxis type="number" hide />
-                          <YAxis dataKey="tenSanPham" type="category" width={100} fontSize={10} fontWeight={800} tick={{ fill: 'currentColor' }} />
-                          <RechartsTooltip content={<ChartTooltip />} cursor={{ fill: 'currentColor', opacity: 0.05 }} />
-                          <Bar
-                            dataKey="doanhThu"
-                            fill="oklch(0.56 0.18 261)"
-                            radius={[0, 6, 6, 0]}
-                            barSize={24}
-                             /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-                             onClick={(entry: any) => setDrillDown({ open: true, type: "product-sale", id: entry.maSanPham, name: entry.tenSanPham })}
-                            className="cursor-pointer"
-                          />
-                        </BarChart>
-                      </ResponsiveContainer>
+                      {bm11ChartType === "bar" ? (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={productRevenue.chiTiet.slice(0, 5)} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                            <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} opacity={0.1} />
+                            <XAxis type="number" hide />
+                            <YAxis dataKey="tenSanPham" type="category" width={100} fontSize={10} fontWeight={800} tick={{ fill: 'currentColor' }} />
+                            <RechartsTooltip content={<ChartTooltip />} cursor={{ fill: 'currentColor', opacity: 0.05 }} />
+                            <Bar
+                              dataKey="doanhThu"
+                              fill="oklch(0.56 0.18 261)"
+                              radius={[0, 6, 6, 0]}
+                              barSize={24}
+                              onClick={(entry: any) => setDrillDown({ open: true, type: "product-sale", id: entry.maSanPham, name: entry.tenSanPham })}
+                              className="cursor-pointer"
+                            />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      ) : (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <RechartsPieChart>
+                            <Pie
+                              data={productRevenue.chiTiet.slice(0, 5)}
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={60}
+                              outerRadius={90}
+                              paddingAngle={4}
+                              dataKey="doanhThu"
+                              nameKey="tenSanPham"
+                              stroke="none"
+                              onClick={(entry: any) => setDrillDown({ open: true, type: "product-sale", id: entry.maSanPham, name: entry.tenSanPham })}
+                              className="cursor-pointer outline-none"
+                            >
+                              {productRevenue.chiTiet.slice(0, 5).map((_, i) => (
+                                <Cell key={i} fill={["#6366f1", "#f59e0b", "#10b981", "#3b82f6", "#ec4899", "#8b5cf6", "#ef4444"][i % 7]} className="hover:opacity-80 transition-opacity" />
+                              ))}
+                            </Pie>
+                            <RechartsTooltip content={<ChartTooltip />} />
+                          </RechartsPieChart>
+                        </ResponsiveContainer>
+                      )}
                     </div>
                     <div className="rounded-xl border shadow-sm overflow-hidden bg-card">
                       <Table>
@@ -541,23 +606,44 @@ export default function ReportsPage() {
               </CardContent>
             </Card>
 
-            {/* SECTION 3: BM12 Service Revenue */}
             <Card className="border-none shadow-lg overflow-hidden border rounded-2xl">
               <CardHeader className="flex flex-row items-center justify-between border-b px-6 py-5 bg-muted/5">
                 <CardTitle className="text-lg font-black flex items-center gap-2 uppercase tracking-tight">
                   <PieChart className="h-5 w-5 text-primary" />
                   Doanh Thu Dịch Vụ (BM12)
                 </CardTitle>
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 font-black gap-1 p-0 px-2"
-                    onClick={() => serviceRevenue && exportToCsv(`doanh_thu_dv_${selectedMonth}_${selectedYear}.csv`, serviceRevenue.chiTiet)}
-                  >
-                    <FileDown className="h-4 w-4" /> EXCEL
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => runGenerate("service-revenue")} className="text-[10px] font-black rounded-lg h-7">QUYẾT TOÁN</Button>
+                <div className="flex items-center gap-4">
+                  <div className="flex border rounded-lg overflow-hidden p-0.5 bg-muted/50">
+                    <button
+                      onClick={() => setBm12ChartType("pie")}
+                      className={cn(
+                        "px-2.5 py-1 text-[10px] font-black rounded-md transition-all uppercase tracking-wider",
+                        bm12ChartType === "pie" ? "bg-primary text-primary-foreground shadow-sm" : "hover:bg-muted text-muted-foreground"
+                      )}
+                    >
+                      Hình tròn
+                    </button>
+                    <button
+                      onClick={() => setBm12ChartType("bar")}
+                      className={cn(
+                        "px-2.5 py-1 text-[10px] font-black rounded-md transition-all uppercase tracking-wider",
+                        bm12ChartType === "bar" ? "bg-primary text-primary-foreground shadow-sm" : "hover:bg-muted text-muted-foreground"
+                      )}
+                    >
+                      Cột ngang
+                    </button>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 font-black gap-1 p-0 px-2"
+                      onClick={() => serviceRevenue && exportToCsv(`doanh_thu_dv_${selectedMonth}_${selectedYear}.csv`, serviceRevenue.chiTiet)}
+                    >
+                      <FileDown className="h-4 w-4" /> EXCEL
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => runGenerate("service-revenue")} className="text-[10px] font-black rounded-lg h-7">QUYẾT TOÁN</Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="p-6">
@@ -566,29 +652,47 @@ export default function ReportsPage() {
                 ) : (
                   <div className="space-y-6">
                     <div className="h-[260px] w-full flex items-center justify-center">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <RechartsPieChart>
-                          <Pie
-                            data={serviceRevenue.chiTiet}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={70}
-                            outerRadius={100}
-                            paddingAngle={5}
-                            dataKey="doanhThu"
-                            nameKey="tenLoaiDichVu"
-                            stroke="none"
-                             /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-                             onClick={(entry: any) => setDrillDown({ open: true, type: "service", id: entry.maLoaiDichVu, name: entry.tenLoaiDichVu })}
-                            className="cursor-pointer outline-none"
-                          >
-                            {serviceRevenue.chiTiet.map((_, i) => (
-                              <Cell key={i} fill={["#6366f1", "#f59e0b", "#10b981", "#3b82f6", "#ec4899"][i % 5]} className="hover:opacity-80 transition-opacity" />
-                            ))}
-                          </Pie>
-                          <RechartsTooltip content={<ChartTooltip />} />
-                        </RechartsPieChart>
-                      </ResponsiveContainer>
+                      {bm12ChartType === "pie" ? (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <RechartsPieChart>
+                            <Pie
+                              data={serviceRevenue.chiTiet}
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={70}
+                              outerRadius={100}
+                              paddingAngle={5}
+                              dataKey="doanhThu"
+                              nameKey="tenLoaiDichVu"
+                              stroke="none"
+                              onClick={(entry: any) => setDrillDown({ open: true, type: "service", id: entry.maLoaiDichVu, name: entry.tenLoaiDichVu })}
+                              className="cursor-pointer outline-none"
+                            >
+                              {serviceRevenue.chiTiet.map((_, i) => (
+                                <Cell key={i} fill={["#6366f1", "#f59e0b", "#10b981", "#3b82f6", "#ec4899"][i % 5]} className="hover:opacity-80 transition-opacity" />
+                              ))}
+                            </Pie>
+                            <RechartsTooltip content={<ChartTooltip />} />
+                          </RechartsPieChart>
+                        </ResponsiveContainer>
+                      ) : (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={serviceRevenue.chiTiet} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                            <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} opacity={0.1} />
+                            <XAxis type="number" hide />
+                            <YAxis dataKey="tenLoaiDichVu" type="category" width={100} fontSize={10} fontWeight={800} tick={{ fill: 'currentColor' }} />
+                            <RechartsTooltip content={<ChartTooltip />} cursor={{ fill: 'currentColor', opacity: 0.05 }} />
+                            <Bar
+                              dataKey="doanhThu"
+                              fill="oklch(0.56 0.18 261)"
+                              radius={[0, 6, 6, 0]}
+                              barSize={24}
+                              onClick={(entry: any) => setDrillDown({ open: true, type: "service", id: entry.maLoaiDichVu, name: entry.tenLoaiDichVu })}
+                              className="cursor-pointer"
+                            />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      )}
                     </div>
                     <div className="rounded-xl border shadow-sm overflow-hidden bg-card">
                       <Table>

@@ -15,7 +15,7 @@ interface BackendAuthPayload {
   permissions?: string[];
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
 function normalizeRole(payload: BackendAuthPayload): UserRole {
   const normalizedGroup = payload.groupCode.trim().toUpperCase();

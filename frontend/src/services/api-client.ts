@@ -3,7 +3,7 @@
 import { useAuthStore } from "@/stores/auth-store";
 import type { ApiEnvelope, ApiErrorItem } from "@/types/backend";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 const AUTH_STORAGE_KEY = "gold-store-auth";
 
 export class ApiClientError extends Error {

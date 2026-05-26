@@ -12,6 +12,8 @@ public interface ChiTietPhieuBanRepository extends JpaRepository<ChiTietPhieuBan
 
     List<ChiTietPhieuBan> findBySoPhieuBan(String soPhieuBan);
 
+    List<ChiTietPhieuBan> findBySoPhieuBanIn(java.util.Collection<String> soPhieuBans);
+
     @Query(
         """
         SELECT ct

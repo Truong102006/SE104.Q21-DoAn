@@ -14,6 +14,8 @@ public interface ChiTietPhieuMuaRepository extends JpaRepository<ChiTietPhieuMua
 
     List<ChiTietPhieuMua> findBySoPhieuMua(String soPhieuMua);
 
+    List<ChiTietPhieuMua> findBySoPhieuMuaIn(java.util.Collection<String> soPhieuMuas);
+
     @Query(
         """
         SELECT ct
