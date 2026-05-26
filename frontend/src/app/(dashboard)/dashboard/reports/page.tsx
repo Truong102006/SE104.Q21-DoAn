@@ -38,6 +38,8 @@ import {
   PieChart as RechartsPieChart,
   Pie,
   Cell,
+  LabelList,
+  Sector,
 } from "recharts";
 import {
   Dialog,
@@ -50,13 +52,44 @@ function safeRatio(value: number): string {
   return `${Number(value ?? 0).toFixed(2)}%`;
 }
 
+function formatCompactVND(value: number): string {
+  const safe = Number(value ?? 0);
+  if (safe === 0) return "0 ₫";
+  if (safe >= 1_000_000_000) {
+    return `${(safe / 1_000_000_000).toFixed(1).replace(/\.0$/, "")} Tỷ`;
+  }
+  if (safe >= 1_000_000) {
+    return `${(safe / 1_000_000).toFixed(1).replace(/\.0$/, "")} Tr`;
+  }
+  if (safe >= 1_000) {
+    return `${(safe / 1_000).toFixed(0)}k`;
+  }
+  return `${safe} ₫`;
+}
+
+/* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+const renderActiveShape = (props: any) => {
+  const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } = props;
+  return (
+    <Sector
+      cx={cx}
+      cy={cy}
+      innerRadius={innerRadius}
+      outerRadius={outerRadius + 6}
+      startAngle={startAngle}
+      endAngle={endAngle}
+      fill={fill}
+    />
+  );
+};
+
 // Professional & Clean Tooltip
 /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
 const ChartTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
       <div className="rounded-lg border bg-background p-2 shadow-md text-xs">
-        <p className="font-bold border-b pb-1 mb-1">{label}</p>
+        <p className="font-bold border-b pb-1 mb-1">{label || payload[0].name}</p>
         <div className="flex items-center justify-between gap-4">
           <span className="text-muted-foreground">Doanh thu:</span>
           <span className="font-bold text-primary">{formatCurrency(payload[0].value)}</span>
@@ -253,6 +286,12 @@ export default function ReportsPage() {
   const [serviceRevenue, setServiceRevenue] = useState<ServiceRevenueReportResponse | null>(null);
   const [bm11ChartType, setBm11ChartType] = useState<"bar" | "pie">("bar");
   const [bm12ChartType, setBm12ChartType] = useState<"pie" | "bar">("pie");
+
+  const [productHoveredIndex, setProductHoveredIndex] = useState<number | null>(null);
+  const [serviceHoveredIndex, setServiceHoveredIndex] = useState<number | null>(null);
+
+  const [productMousePos, setProductMousePos] = useState<{ x: number; y: number } | null>(null);
+  const [serviceMousePos, setServiceMousePos] = useState<{ x: number; y: number } | null>(null);
 
   // Pagination states
   const [inventoryPage, setInventoryPage] = useState(1);
@@ -534,44 +573,119 @@ export default function ReportsPage() {
                     <div className="h-[260px] w-full bg-muted/5 rounded-xl border border-dashed p-2">
                       {bm11ChartType === "bar" ? (
                         <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={productRevenue.chiTiet.slice(0, 5)} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                          <BarChart
+                            data={productRevenue.chiTiet.slice(0, 5)}
+                            layout="vertical"
+                            margin={{ top: 5, right: 55, left: 10, bottom: 5 }}
+                            onMouseMove={(state: any) => {
+                              if (state && state.chartX !== undefined && state.chartY !== undefined) {
+                                setProductMousePos({ x: state.chartX + 15, y: state.chartY + 15 });
+                              }
+                            }}
+                            onMouseLeave={() => setProductMousePos(null)}
+                          >
+                            <defs>
+                              <linearGradient id="productBarGradient" x1="0" y1="0" x2="1" y2="0">
+                                <stop offset="0%" stopColor="#6366f1" stopOpacity={0.85} />
+                                <stop offset="100%" stopColor="#4f46e5" stopOpacity={1} />
+                              </linearGradient>
+                            </defs>
                             <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} opacity={0.1} />
                             <XAxis type="number" hide />
                             <YAxis dataKey="tenSanPham" type="category" width={100} fontSize={10} fontWeight={800} tick={{ fill: 'currentColor' }} />
-                            <RechartsTooltip content={<ChartTooltip />} cursor={{ fill: 'currentColor', opacity: 0.05 }} />
+                            <RechartsTooltip
+                              content={<ChartTooltip />}
+                              cursor={{ fill: 'currentColor', opacity: 0.04 }}
+                              isAnimationActive={true}
+                              animationDuration={100}
+                              animationEasing="ease-out"
+                              useTranslate3d={true}
+                              shared={true}
+                              position={productMousePos !== null ? productMousePos : undefined}
+                            />
                             <Bar
                               dataKey="doanhThu"
-                              fill="oklch(0.56 0.18 261)"
+                              fill="url(#productBarGradient)"
                               radius={[0, 6, 6, 0]}
-                              barSize={24}
+                              barSize={18}
                               onClick={(entry: any) => setDrillDown({ open: true, type: "product-sale", id: entry.maSanPham, name: entry.tenSanPham })}
                               className="cursor-pointer"
-                            />
+                            >
+                              <LabelList
+                                dataKey="doanhThu"
+                                position="right"
+                                formatter={(val: any) => formatCompactVND(Number(val))}
+                                style={{ fontSize: '10px', fontWeight: 'bold', fill: 'currentColor', opacity: 0.8 }}
+                              />
+                            </Bar>
                           </BarChart>
                         </ResponsiveContainer>
                       ) : (
-                        <ResponsiveContainer width="100%" height="100%">
-                          <RechartsPieChart>
-                            <Pie
-                              data={productRevenue.chiTiet.slice(0, 5)}
-                              cx="50%"
-                              cy="50%"
-                              innerRadius={60}
-                              outerRadius={90}
-                              paddingAngle={4}
-                              dataKey="doanhThu"
-                              nameKey="tenSanPham"
-                              stroke="none"
-                              onClick={(entry: any) => setDrillDown({ open: true, type: "product-sale", id: entry.maSanPham, name: entry.tenSanPham })}
-                              className="cursor-pointer outline-none"
-                            >
-                              {productRevenue.chiTiet.slice(0, 5).map((_, i) => (
-                                <Cell key={i} fill={["#6366f1", "#f59e0b", "#10b981", "#3b82f6", "#ec4899", "#8b5cf6", "#ef4444"][i % 7]} className="hover:opacity-80 transition-opacity" />
-                              ))}
-                            </Pie>
-                            <RechartsTooltip content={<ChartTooltip />} />
-                          </RechartsPieChart>
-                        </ResponsiveContainer>
+                        <div className="flex flex-col sm:flex-row items-center justify-between h-full w-full gap-4 px-2">
+                          <div className="w-full sm:w-1/2 h-[180px] sm:h-full relative">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <RechartsPieChart
+                                onMouseMove={(state: any) => {
+                                  if (state && state.chartX !== undefined && state.chartY !== undefined) {
+                                    setProductMousePos({ x: state.chartX + 15, y: state.chartY + 15 });
+                                  }
+                                }}
+                                onMouseLeave={() => setProductMousePos(null)}
+                              >
+                                <Pie
+                                  data={productRevenue.chiTiet.slice(0, 5)}
+                                  cx="50%"
+                                  cy="50%"
+                                  innerRadius={50}
+                                  outerRadius={75}
+                                  paddingAngle={0}
+                                  dataKey="doanhThu"
+                                  nameKey="tenSanPham"
+                                  stroke="var(--card)"
+                                  strokeWidth={2}
+                                  isAnimationActive={true}
+                                  animationDuration={300}
+                                  animationEasing="ease-out"
+                                  onMouseEnter={(_, index) => setProductHoveredIndex(index)}
+                                  onMouseLeave={() => setProductHoveredIndex(null)}
+                                  onClick={(entry: any) => setDrillDown({ open: true, type: "product-sale", id: entry.maSanPham, name: entry.tenSanPham })}
+                                  className="cursor-pointer outline-none"
+                                  {...({ activeIndex: productHoveredIndex !== null ? productHoveredIndex : undefined, activeShape: renderActiveShape } as any)}
+                                >
+                                  {productRevenue.chiTiet.slice(0, 5).map((_, i) => (
+                                    <Cell key={i} fill={["#6366f1", "#f59e0b", "#10b981", "#3b82f6", "#ec4899", "#8b5cf6", "#ef4444"][i % 7]} className="hover:opacity-80 transition-opacity" />
+                                  ))}
+                                </Pie>
+                                <RechartsTooltip
+                                  content={<ChartTooltip />}
+                                  isAnimationActive={true}
+                                  animationDuration={100}
+                                  animationEasing="ease-out"
+                                  useTranslate3d={true}
+                                  position={productMousePos !== null ? productMousePos : undefined}
+                                />
+                              </RechartsPieChart>
+                            </ResponsiveContainer>
+                          </div>
+                          <div className="w-full sm:w-1/2 flex flex-col justify-center gap-2 max-h-full overflow-y-auto pr-2">
+                            {productRevenue.chiTiet.slice(0, 5).map((item, i) => {
+                              const colors = ["#6366f1", "#f59e0b", "#10b981", "#3b82f6", "#ec4899", "#8b5cf6", "#ef4444"];
+                              return (
+                                <div
+                                  key={i}
+                                  className="flex items-center justify-between gap-2 p-1.5 rounded-lg hover:bg-muted/30 transition-colors cursor-pointer"
+                                  onClick={() => setDrillDown({ open: true, type: "product-sale", id: item.maSanPham, name: item.tenSanPham })}
+                                >
+                                  <div className="flex items-center gap-2 truncate">
+                                    <span className="w-3 h-3 rounded-full shrink-0 border border-background shadow-sm" style={{ backgroundColor: colors[i % colors.length] }} />
+                                    <span className="text-[11px] font-black text-foreground truncate">{item.tenSanPham}</span>
+                                  </div>
+                                  <span className="text-[11px] font-bold text-muted-foreground shrink-0">{Math.round(Number(item.tiLe))}%</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
                       )}
                     </div>
                     <div className="rounded-xl border shadow-sm overflow-hidden bg-card">
@@ -657,43 +771,118 @@ export default function ReportsPage() {
                   <div className="space-y-6">
                     <div className="h-[260px] w-full flex items-center justify-center">
                       {bm12ChartType === "pie" ? (
-                        <ResponsiveContainer width="100%" height="100%">
-                          <RechartsPieChart>
-                            <Pie
-                              data={serviceRevenue.chiTiet}
-                              cx="50%"
-                              cy="50%"
-                              innerRadius={70}
-                              outerRadius={100}
-                              paddingAngle={5}
-                              dataKey="doanhThu"
-                              nameKey="tenLoaiDichVu"
-                              stroke="none"
-                              onClick={(entry: any) => setDrillDown({ open: true, type: "service", id: entry.maLoaiDichVu, name: entry.tenLoaiDichVu })}
-                              className="cursor-pointer outline-none"
-                            >
-                              {serviceRevenue.chiTiet.map((_, i) => (
-                                <Cell key={i} fill={["#6366f1", "#f59e0b", "#10b981", "#3b82f6", "#ec4899"][i % 5]} className="hover:opacity-80 transition-opacity" />
-                              ))}
-                            </Pie>
-                            <RechartsTooltip content={<ChartTooltip />} />
-                          </RechartsPieChart>
-                        </ResponsiveContainer>
+                        <div className="flex flex-col sm:flex-row items-center justify-between h-full w-full gap-4 px-2">
+                          <div className="w-full sm:w-1/2 h-[180px] sm:h-full relative">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <RechartsPieChart
+                                onMouseMove={(state: any) => {
+                                  if (state && state.chartX !== undefined && state.chartY !== undefined) {
+                                    setServiceMousePos({ x: state.chartX + 15, y: state.chartY + 15 });
+                                  }
+                                }}
+                                onMouseLeave={() => setServiceMousePos(null)}
+                              >
+                                <Pie
+                                  data={serviceRevenue.chiTiet}
+                                  cx="50%"
+                                  cy="50%"
+                                  innerRadius={50}
+                                  outerRadius={75}
+                                  paddingAngle={0}
+                                  dataKey="doanhThu"
+                                  nameKey="tenLoaiDichVu"
+                                  stroke="var(--card)"
+                                  strokeWidth={2}
+                                  isAnimationActive={true}
+                                  animationDuration={300}
+                                  animationEasing="ease-out"
+                                  onMouseEnter={(_, index) => setServiceHoveredIndex(index)}
+                                  onMouseLeave={() => setServiceHoveredIndex(null)}
+                                  onClick={(entry: any) => setDrillDown({ open: true, type: "service", id: entry.maLoaiDichVu, name: entry.tenLoaiDichVu })}
+                                  className="cursor-pointer outline-none"
+                                  {...({ activeIndex: serviceHoveredIndex !== null ? serviceHoveredIndex : undefined, activeShape: renderActiveShape } as any)}
+                                >
+                                  {serviceRevenue.chiTiet.map((_, i) => (
+                                    <Cell key={i} fill={["#6366f1", "#f59e0b", "#10b981", "#3b82f6", "#ec4899"][i % 5]} className="hover:opacity-80 transition-opacity" />
+                                  ))}
+                                </Pie>
+                                <RechartsTooltip
+                                  content={<ChartTooltip />}
+                                  isAnimationActive={true}
+                                  animationDuration={100}
+                                  animationEasing="ease-out"
+                                  useTranslate3d={true}
+                                  position={serviceMousePos !== null ? serviceMousePos : undefined}
+                                />
+                              </RechartsPieChart>
+                            </ResponsiveContainer>
+                          </div>
+                          <div className="w-full sm:w-1/2 flex flex-col justify-center gap-2 max-h-full overflow-y-auto pr-2">
+                            {serviceRevenue.chiTiet.map((item, i) => {
+                              const colors = ["#6366f1", "#f59e0b", "#10b981", "#3b82f6", "#ec4899"];
+                              return (
+                                <div
+                                  key={i}
+                                  className="flex items-center justify-between gap-2 p-1.5 rounded-lg hover:bg-muted/30 transition-colors cursor-pointer"
+                                  onClick={() => setDrillDown({ open: true, type: "service", id: item.maLoaiDichVu, name: item.tenLoaiDichVu })}
+                                >
+                                  <div className="flex items-center gap-2 truncate">
+                                    <span className="w-3 h-3 rounded-full shrink-0 border border-background shadow-sm" style={{ backgroundColor: colors[i % colors.length] }} />
+                                    <span className="text-[11px] font-black text-foreground truncate">{item.tenLoaiDichVu}</span>
+                                  </div>
+                                  <span className="text-[11px] font-bold text-muted-foreground shrink-0">{Math.round(Number(item.tiLe))}%</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
                       ) : (
                         <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={serviceRevenue.chiTiet} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                          <BarChart
+                            data={serviceRevenue.chiTiet}
+                            layout="vertical"
+                            margin={{ top: 5, right: 55, left: 10, bottom: 5 }}
+                            onMouseMove={(state: any) => {
+                              if (state && state.chartX !== undefined && state.chartY !== undefined) {
+                                setServiceMousePos({ x: state.chartX + 15, y: state.chartY + 15 });
+                              }
+                            }}
+                            onMouseLeave={() => setServiceMousePos(null)}
+                          >
+                            <defs>
+                              <linearGradient id="serviceBarGradient" x1="0" y1="0" x2="1" y2="0">
+                                <stop offset="0%" stopColor="#10b981" stopOpacity={0.85} />
+                                <stop offset="100%" stopColor="#059669" stopOpacity={1} />
+                              </linearGradient>
+                            </defs>
                             <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} opacity={0.1} />
                             <XAxis type="number" hide />
                             <YAxis dataKey="tenLoaiDichVu" type="category" width={100} fontSize={10} fontWeight={800} tick={{ fill: 'currentColor' }} />
-                            <RechartsTooltip content={<ChartTooltip />} cursor={{ fill: 'currentColor', opacity: 0.05 }} />
+                            <RechartsTooltip
+                              content={<ChartTooltip />}
+                              cursor={{ fill: 'currentColor', opacity: 0.04 }}
+                              isAnimationActive={true}
+                              animationDuration={100}
+                              animationEasing="ease-out"
+                              useTranslate3d={true}
+                              shared={true}
+                              position={serviceMousePos !== null ? serviceMousePos : undefined}
+                            />
                             <Bar
                               dataKey="doanhThu"
-                              fill="oklch(0.56 0.18 261)"
+                              fill="url(#serviceBarGradient)"
                               radius={[0, 6, 6, 0]}
-                              barSize={24}
+                              barSize={18}
                               onClick={(entry: any) => setDrillDown({ open: true, type: "service", id: entry.maLoaiDichVu, name: entry.tenLoaiDichVu })}
                               className="cursor-pointer"
-                            />
+                            >
+                              <LabelList
+                                dataKey="doanhThu"
+                                position="right"
+                                formatter={(val: any) => formatCompactVND(Number(val))}
+                                style={{ fontSize: '10px', fontWeight: 'bold', fill: 'currentColor', opacity: 0.8 }}
+                              />
+                            </Bar>
                           </BarChart>
                         </ResponsiveContainer>
                       )}
