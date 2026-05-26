@@ -85,7 +85,7 @@ public class PhieuMuaHangServiceImpl implements PhieuMuaHangService {
         );
 
         return phieuMuaHangRepository.findByKeyword(normalized, pageRequest)
-            .map(entity -> buildResponse(entity, List.of()));
+            .map(entity -> buildResponse(entity, loadDetails(entity.getSoPhieuMua())));
     }
 
     @Override

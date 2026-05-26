@@ -85,7 +85,7 @@ public class PhieuBanHangServiceImpl implements PhieuBanHangService {
         );
 
         return phieuBanHangRepository.findByKeyword(normalized, pageRequest)
-            .map(entity -> buildResponse(entity, List.of()));
+            .map(entity -> buildResponse(entity, loadDetails(entity.getSoPhieuBan())));
     }
 
     @Override

@@ -127,6 +127,7 @@
         "title": "Tổng quan vận hành",
         "description": "Số liệu nhanh theo thời gian thực từ hệ thống",
         "productCount": "Số sản phẩm",
+        "orderCount": "Số đơn hàng",
         "totalStock": "Tổng tồn kho",
         "monthRevenue": "Doanh thu tháng nay",
         "pendingService": "Phiếu dịch vụ chưa hoàn thành",
@@ -157,7 +158,7 @@
         "growthProduct": "+1.2% so với tháng trước",
         "growthStock": "+3 chiếc vừa nhập kho",
         "growthRevenue": "+14.8% chỉ tiêu tháng",
-        "growthUrgent": "Cần chế tác gấp",
+        "growthUrgent": "Cần xử lý gấp",
         "thisWeek": "Tuần này",
         "lastWeek": "Tuần trước",
         "last30Days": "30 ngày qua"
@@ -307,7 +308,7 @@
         "historyDesc": "Danh sách phiếu mua đã tạo",
         "emptyTitle": "Chưa có phiếu mua",
         "emptyDesc": "Tạo phiếu mua đầu tiên",
-        "lineCount": "Số dòng"
+        "lineCount": "Số sản phẩm"
     },
     "salesOrders": {
         "title": "Lập phiếu bán hàng",
@@ -326,7 +327,7 @@
         "historyDesc": "Danh sách phiếu bán đã tạo",
         "emptyTitle": "Chưa có phiếu bán",
         "emptyDesc": "Tạo phiếu bán đầu tiên",
-        "lineCount": "Số dòng"
+        "lineCount": "Số sản phẩm"
     },
     "serviceOrders": {
         "title": "Lập phiếu dịch vụ",

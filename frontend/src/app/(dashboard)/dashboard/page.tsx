@@ -219,7 +219,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [productCount, setProductCount] = useState(0);
+  const [orderCount, setOrderCount] = useState(0);
   const [totalStock, setTotalStock] = useState(0);
   const [currentMonthRevenue, setCurrentMonthRevenue] = useState(0);
   const [pendingServiceTickets, setPendingServiceTickets] = useState(0);
@@ -270,7 +270,7 @@ export default function DashboardPage() {
         setSalesList(sales);
         setServicesList(serviceTickets);
         setPurchasesList(purchases);
-        setProductCount(products.length);
+        setOrderCount(sales.length);
         setTotalStock(products.reduce((sum, item) => sum + Number(item.tonKho ?? 0), 0));
         setCurrentMonthRevenue(calcCurrentMonthRevenue(sales));
         setPendingServiceTickets(serviceTickets.filter((item) => !isServiceTicketCompleted(item)).length);
@@ -593,7 +593,7 @@ export default function DashboardPage() {
     return `+${currentMonthImportedCount} đơn nhập kho tháng này`;
   }, [purchasesList]);
 
-  // 2. Dynamic product growth (percentage of sales transaction count this month vs last month)
+  // 2. Dynamic product growth (sales transaction count difference this month vs last month)
   const productGrowthText = useMemo(() => {
     const now = new Date();
     const thisMonth = now.getMonth();
@@ -615,11 +615,8 @@ export default function DashboardPage() {
     const thisMonthSalesCount = getSalesCountForPeriod(thisMonth, thisYear);
     const lastMonthSalesCount = getSalesCountForPeriod(lastMonth, lastYear);
 
-    if (lastMonthSalesCount > 0) {
-      const diff = ((thisMonthSalesCount - lastMonthSalesCount) / lastMonthSalesCount) * 100;
-      return `${diff >= 0 ? "+" : ""}${diff.toFixed(1)}% đơn hàng so với tháng trước`;
-    }
-    return thisMonthSalesCount > 0 ? `+${thisMonthSalesCount} đơn lẻ mới` : "+0.0% so với tháng trước";
+    const diff = thisMonthSalesCount - lastMonthSalesCount;
+    return `${diff >= 0 ? "+" : ""}${diff} đơn hàng so với tháng trước`;
   }, [salesList]);
 
   // 3. Dynamic monthly revenue and growth compared to last month (sales + services combined)
@@ -680,8 +677,8 @@ export default function DashboardPage() {
         growth: string;
       }> = [
         {
-          label: t("dashboard.productCount"),
-          value: formatNumber(productCount),
+          label: t("dashboard.orderCount"),
+          value: formatNumber(orderCount),
           icon: Package,
           tone: "neutral" as const,
           growth: productGrowthText,
@@ -715,7 +712,7 @@ export default function DashboardPage() {
 
       return base;
     },
-    [monthlyRevenueStats, pendingServiceTickets, productCount, totalStock, productGrowthText, stockGrowthText, t, isAdmin]
+    [monthlyRevenueStats, pendingServiceTickets, orderCount, totalStock, productGrowthText, stockGrowthText, t, isAdmin]
   );
 
   return (
@@ -788,7 +785,6 @@ export default function DashboardPage() {
                         <BarChart3 className="h-4 w-4 text-amber-500" />
                         {t("dashboard.revenueAnalysis")}
                       </CardTitle>
-                      <p className="text-xs text-muted-foreground">{t("dashboard.revenueAnalysisDesc") || t("dashboard.revenueDesc")}</p>
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -1000,12 +996,12 @@ export default function DashboardPage() {
                         </Button>
                       </Link>
                     ) : (
-                      <Link href="/dashboard/service-voucher-lookup">
+                      <Link href="/dashboard/purchase-orders">
                         <Button variant="outline" className="h-auto py-4 flex-col gap-2 w-full hover:border-emerald-500/40 hover:bg-emerald-500/5 group shadow-xs">
                           <div className="rounded-full bg-emerald-500/10 p-2 group-hover:bg-emerald-500/20 transition-colors">
-                            <Eye className="h-5 w-5 text-emerald-600" />
+                            <Package className="h-5 w-5 text-emerald-600" />
                           </div>
-                          <span className="text-xs font-bold text-foreground">{t("common.serviceSearch")}</span>
+                          <span className="text-xs font-bold text-foreground">{t("nav.purchaseOrders") || "Lập phiếu mua"}</span>
                         </Button>
                       </Link>
                     )}
