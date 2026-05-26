@@ -33,3 +33,5 @@ build/
 .vscode/
 .ui-ux-pro-max-skill/
 .agent/
+.env/
+.env.example/
