@@ -21,7 +21,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping(ApiPaths.SETTINGS)
-@PreAuthorize("hasRole('ADMIN')")
 public class SettingsController {
 
     private final SettingsService settingsService;
@@ -31,6 +30,7 @@ public class SettingsController {
     }
 
     @GetMapping("/product-types")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<List<LoaiSanPhamResponse>>> getProductTypes(
         @RequestParam(name = "q", required = false) String keyword
     ) {
@@ -40,6 +40,7 @@ public class SettingsController {
     }
 
     @GetMapping("/units")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<List<DonViTinhResponse>>> getUnits(
         @RequestParam(name = "q", required = false) String keyword
     ) {
@@ -49,6 +50,7 @@ public class SettingsController {
     }
 
     @GetMapping("/service-types")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<List<LoaiDichVuResponse>>> getServiceTypes(
         @RequestParam(name = "q", required = false) String keyword
     ) {
@@ -58,6 +60,7 @@ public class SettingsController {
     }
 
     @GetMapping("/service-prepayment-rate")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     public ResponseEntity<ApiResponse<ServicePrepaymentRateResponse>> getServicePrepaymentRate() {
         return ResponseEntity.ok(
             ApiResponse.success("Lay ti le tra truoc dich vu thanh cong", settingsService.getServicePrepaymentRate())
@@ -65,6 +68,7 @@ public class SettingsController {
     }
 
     @PutMapping("/service-prepayment-rate")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<ServicePrepaymentRateResponse>> updateServicePrepaymentRate(
         @Valid @RequestBody ServicePrepaymentRateRequest request
     ) {

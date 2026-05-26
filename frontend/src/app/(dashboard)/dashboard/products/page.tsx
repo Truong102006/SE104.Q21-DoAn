@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ConfirmDialog, EmptyState, PageHeader, TableToolbar } from "@/components/dashboard/management";
+import { ConfirmDialog, EmptyState, TableToolbar } from "@/components/dashboard/management";
 import { Pagination } from "@/components/dashboard/pagination";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
@@ -21,7 +21,7 @@ import type {
   UnitResponse,
 } from "@/types/backend";
 import { getApiErrorMessage } from "@/lib/api-error";
-import { formatCurrency, formatNumber, toPositiveInt, toPositiveNumber } from "@/lib/format";
+import { formatCurrency, formatNumber } from "@/lib/format";
 import { useAuthStore } from "@/stores/auth-store";
 import { useToastStore } from "@/stores/toast-store";
 import { useTranslation } from "@/i18n/i18n-context";
@@ -29,7 +29,6 @@ import { Pencil, Plus, Search, Trash2, X, Loader2 } from "lucide-react";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useRef } from "react";
 
 const productSchema = z.object({
   tenSanPham: z.string().min(1, "Tên sản phẩm là bắt buộc"),
@@ -42,7 +41,7 @@ const productSchema = z.object({
 
 type ProductFormValues = z.infer<typeof productSchema>;
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 10;
 
 function ProductSkeleton() {
   return (
@@ -66,14 +65,6 @@ function ProductSkeleton() {
     </div>
   );
 }
-
-const EMPTY_FORM: ProductRequest = {
-  tenSanPham: "",
-  maLoaiSanPham: "",
-  maDonViTinh: "",
-  donGiaMua: 0,
-  tonKho: 0,
-};
 
 export default function ProductsPage() {
   const searchParams = useSearchParams();
@@ -248,29 +239,11 @@ export default function ProductsPage() {
 
   return (
     <div className="space-y-3">
-      <PageHeader
-        eyebrow={isSearchMode ? "Tra cứu" : "BM8"}
-        title={isSearchMode ? t("nav.productSearch") : t("products.title")}
-        description={isSearchMode ? "Tra cứu thông tin sản phẩm và tình trạng tồn kho trong hệ thống" : t("products.description")}
-        badges={<Badge variant="outline">{t("common.page")} {page + 1}/{totalPages}</Badge>}
-        actions={
-          !isSearchMode && (
-            <Button
-              size="default"
-              className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-extrabold hover:from-blue-500 hover:to-indigo-500 hover:shadow-blue-500/35 active:scale-95 shadow-lg shadow-blue-500/20 gap-2 h-11 px-6 rounded-xl cursor-pointer transition-all text-sm sm:text-base border-none"
-              onClick={openCreate}
-            >
-              <Plus className="h-5 w-5 stroke-[3]" />
-              {t("common.add")}
-            </Button>
-          )
-        }
-      />
-
       <Card>
         <TableToolbar
-          title={t("common.list")}
-          description={t("products.searchDesc")}
+          title={isSearchMode ? t("nav.productSearch") : t("products.title")}
+          description={isSearchMode ? "Tra cứu thông tin sản phẩm và tình trạng tồn kho trong hệ thống" : t("products.description")}
+          meta={<Badge variant="outline">{t("common.page")} {page + 1}/{totalPages}</Badge>}
           search={
             <div className="grid gap-2 sm:grid-cols-3">
               <div className="relative sm:col-span-2">
@@ -306,9 +279,21 @@ export default function ProductsPage() {
               />
             </div>
           }
+          actions={
+            !isSearchMode && (
+              <Button
+                size="sm"
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold hover:from-blue-500 hover:to-indigo-500 hover:shadow-blue-500/35 active:scale-95 shadow-md shadow-blue-500/20 gap-1.5 h-9 px-4 rounded-xl cursor-pointer transition-all text-xs border-none"
+                onClick={openCreate}
+              >
+                <Plus className="h-4 w-4 stroke-[3]" />
+                {t("common.add")}
+              </Button>
+            )
+          }
         />
         <CardContent className="px-0">
-          {loading ? (
+          {items.length === 0 && loading ? (
             <div className="px-4 py-6">
               <ProductSkeleton />
             </div>
@@ -318,7 +303,7 @@ export default function ProductsPage() {
             </div>
           ) : (
             <>
-            <div className="overflow-x-auto">
+            <div className={cn("overflow-x-auto transition-opacity duration-200", loading && "opacity-50 pointer-events-none")}>
                 <Table>
                     <TableHeader>
                         <TableRow>

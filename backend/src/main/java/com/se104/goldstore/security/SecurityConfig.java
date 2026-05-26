@@ -116,6 +116,7 @@ public class SecurityConfig {
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
+                .requestMatchers("/api/settings/service-prepayment-rate").hasAnyRole("ADMIN", "STAFF")
                 .requestMatchers(ADMIN_ONLY_ENDPOINTS).hasRole("ADMIN")
                 .requestMatchers(STAFF_OR_ADMIN_ENDPOINTS).hasAnyRole("ADMIN", "STAFF")
                 .anyRequest().authenticated());

@@ -64,8 +64,7 @@ interface StatusBadgeProps {
 
 function StatusBadge({ tone, children, className }: StatusBadgeProps) {
   return (
-    <Badge variant="outline" className={cn("h-5 gap-1 px-2 text-[10px]", STATUS_TONE_CLASS[tone], className)}>
-      <span className={cn("h-1.5 w-1.5 rounded-full", STATUS_DOT_CLASS[tone])} />
+    <Badge variant="outline" className={cn("h-6 px-2.5 text-xs font-semibold rounded-md", STATUS_TONE_CLASS[tone], className)}>
       {children}
     </Badge>
   );

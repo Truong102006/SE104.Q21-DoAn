@@ -56,10 +56,8 @@ export function parseVNCurrencyInput(value: string): string {
 export function formatVietnameseStatus(status: string | undefined | null): string {
   if (!status) return "";
   const s = status.trim().toLowerCase();
-  if (s === "hoan thanh" || s === "hoàn thành") return "Hoàn thành";
-  if (s === "chua hoan thanh" || s === "chưa hoàn thành") return "Chưa hoàn thành";
-  if (s === "da giao" || s === "đã giao") return "Đã giao";
-  if (s === "chua giao" || s === "chưa giao") return "Chưa giao";
+  if (s === "hoan thanh" || s === "hoàn thành" || s === "da giao" || s === "đã giao") return "Đã giao";
+  if (s === "chua hoan thanh" || s === "chưa hoàn thành" || s === "chua giao" || s === "chưa giao") return "Chưa giao";
   return status;
 }
 
