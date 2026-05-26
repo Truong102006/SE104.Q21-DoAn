@@ -125,6 +125,7 @@ export interface ProductResponse {
   donGiaMua: number;
   donGiaBan: number;
   tonKho: number;
+  imageUrl?: string | null;
   isActive?: boolean;
   loaiSanPham?: {
     maLoaiSanPham: string;
@@ -145,7 +146,13 @@ export interface ProductRequest {
   donGiaMua: number;
   donGiaBan?: number;
   tonKho?: number;
+  imageUrl?: string | null;
   isActive?: boolean;
+}
+
+export interface UploadImageResponse {
+  imageUrl: string;
+  publicId?: string | null;
 }
 
 export interface PurchaseRequest {

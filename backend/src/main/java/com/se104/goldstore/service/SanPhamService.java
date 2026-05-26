@@ -9,6 +9,15 @@ public interface SanPhamService {
 
     Page<SanPhamResponse> getAll(String keyword, String productTypeId, int page, int size);
 
+    Page<SanPhamResponse> getCatalog(
+        String keyword,
+        String productTypeId,
+        String stockStatus,
+        String sort,
+        int page,
+        int size
+    );
+
     List<SanPhamResponse> search(String keyword);
 
     SanPhamResponse getById(String maSanPham);

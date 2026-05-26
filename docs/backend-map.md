@@ -52,6 +52,8 @@
 - Selling price computed from purchase price + profit rate
 - Unit compatibility checks by product type
 - Product deletion blocked if referenced by vouchers/reports
+- Product image URL persisted in DB (`image_url`), binary file stored externally (Cloudinary)
+- Product catalog endpoint supports keyword/type/stock-status filter and sort
 
 ### 4. Voucher Flows
 - Purchase vouchers (`PhieuMuaHang` + details)
@@ -96,6 +98,11 @@
 - Settings: `tham_so`
 - Reports: `bao_cao_ton_kho`, `ct_bao_cao_ton_kho`, `bao_cao_doanh_thu_sp`, `ct_bao_cao_doanh_thu_sp`, `bao_cao_doanh_thu_dv`, `ct_bao_cao_doanh_thu_dv`
 - RBAC: `chuc_nang`, `nhom_nguoi_dung`, `nguoi_dung`, `phan_quyen`
+
+## Post-V1 Schema Additions
+- `V3`: `is_active` on `san_pham`, `don_vi_tinh`
+- `V4`: `is_active` on additional catalog/auth tables
+- `V5`: `san_pham.image_url`, `san_pham.created_at`
 
 ## Seed Data (Flyway V2)
 - Groups: ADMIN, STAFF

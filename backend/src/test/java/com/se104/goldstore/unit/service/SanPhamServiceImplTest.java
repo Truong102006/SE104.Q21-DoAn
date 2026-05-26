@@ -1,6 +1,7 @@
 package com.se104.goldstore.unit.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -76,6 +77,7 @@ class SanPhamServiceImplTest {
         request.setMaLoaiSanPham("LSP001");
         request.setMaDonViTinh("DVT001");
         request.setDonGiaMua(new BigDecimal("1000000"));
+        request.setImageUrl("https://res.cloudinary.com/demo/image/upload/ring.jpg");
 
         LoaiSanPham loaiSanPham = new LoaiSanPham();
         loaiSanPham.setMaLoaiSanPham("LSP001");
@@ -96,6 +98,7 @@ class SanPhamServiceImplTest {
 
         assertEquals(new BigDecimal("1050000.00"), response.getDonGiaBan());
         assertEquals(0, response.getTonKho());
+        assertEquals("https://res.cloudinary.com/demo/image/upload/ring.jpg", response.getImageUrl());
     }
 
     @Test
@@ -108,6 +111,7 @@ class SanPhamServiceImplTest {
         existing.setDonGiaMua(new BigDecimal("100000"));
         existing.setDonGiaBan(new BigDecimal("105000.00"));
         existing.setTonKho(12);
+        existing.setImageUrl("https://res.cloudinary.com/demo/image/upload/old.jpg");
 
         SanPhamRequest request = new SanPhamRequest();
         request.setTenSanPham("Nhan vang cap nhat");
@@ -115,6 +119,7 @@ class SanPhamServiceImplTest {
         request.setMaDonViTinh("DVT001");
         request.setDonGiaMua(new BigDecimal("200000"));
         request.setTonKho(12);
+        request.setImageUrl("");
 
         LoaiSanPham loaiSanPham = new LoaiSanPham();
         loaiSanPham.setMaLoaiSanPham("LSP001");
@@ -134,6 +139,7 @@ class SanPhamServiceImplTest {
 
         assertEquals(new BigDecimal("225000.00"), response.getDonGiaBan());
         assertEquals(12, response.getTonKho());
+        assertNull(response.getImageUrl());
     }
 
     @Test
@@ -146,6 +152,7 @@ class SanPhamServiceImplTest {
         sanPham.setDonGiaMua(new BigDecimal("1000000"));
         sanPham.setDonGiaBan(new BigDecimal("1020000"));
         sanPham.setTonKho(5);
+        sanPham.setImageUrl("https://res.cloudinary.com/demo/image/upload/a.jpg");
 
         Page<SanPham> page = new PageImpl<>(List.of(sanPham));
 
@@ -155,6 +162,28 @@ class SanPhamServiceImplTest {
 
         assertEquals(1, result.getTotalElements());
         assertEquals("SP001", result.getContent().getFirst().getMaSanPham());
+        assertEquals("https://res.cloudinary.com/demo/image/upload/a.jpg", result.getContent().getFirst().getImageUrl());
         verify(sanPhamRepository).search(eq("nhan vang"), eq("LSP001"), any(Pageable.class));
+    }
+
+    @Test
+    void getCatalogShouldFilterByStockStatusAndSort() {
+        SanPham sanPham = new SanPham();
+        sanPham.setMaSanPham("SP009");
+        sanPham.setTenSanPham("Vong tay");
+        sanPham.setMaLoaiSanPham("LSP001");
+        sanPham.setMaDonViTinh("DVT001");
+        sanPham.setDonGiaMua(new BigDecimal("1000000"));
+        sanPham.setDonGiaBan(new BigDecimal("1200000"));
+        sanPham.setTonKho(2);
+
+        when(sanPhamRepository.searchCatalog(eq("vong"), eq("LSP001"), eq("LOW_STOCK"), any(Pageable.class)))
+            .thenReturn(new PageImpl<>(List.of(sanPham)));
+
+        Page<SanPhamResponse> result = service.getCatalog("vong", "LSP001", "low_stock", "priceDesc", 0, 20);
+
+        assertEquals(1, result.getTotalElements());
+        assertEquals("SP009", result.getContent().getFirst().getMaSanPham());
+        verify(sanPhamRepository).searchCatalog(eq("vong"), eq("LSP001"), eq("LOW_STOCK"), any(Pageable.class));
     }
 }

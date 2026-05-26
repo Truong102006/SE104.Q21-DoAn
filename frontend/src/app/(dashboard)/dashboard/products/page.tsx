@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,7 +25,7 @@ import { formatCurrency, formatNumber } from "@/lib/format";
 import { useAuthStore } from "@/stores/auth-store";
 import { useToastStore } from "@/stores/toast-store";
 import { useTranslation } from "@/i18n/i18n-context";
-import { Pencil, Plus, Search, Trash2, X, Loader2 } from "lucide-react";
+import { Image as ImageIcon, Loader2, Pencil, Plus, Search, Trash2, UploadCloud, X } from "lucide-react";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -50,13 +50,13 @@ function ProductSkeleton() {
         <Table>
           <TableHeader>
             <TableRow>
-              {[1, 2, 3, 4, 5, 6, 7].map(i => <TableHead key={i}><Skeleton className="h-4 w-20" /></TableHead>)}
+              {[1, 2, 3, 4, 5, 6, 7, 8].map(i => <TableHead key={i}><Skeleton className="h-4 w-20" /></TableHead>)}
             </TableRow>
           </TableHeader>
           <TableBody>
             {[1, 2, 3, 4, 5].map(i => (
               <TableRow key={i}>
-                {[1, 2, 3, 4, 5, 6, 7].map(j => <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>)}
+                {[1, 2, 3, 4, 5, 6, 7, 8].map(j => <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>)}
               </TableRow>
             ))}
           </TableBody>
@@ -86,8 +86,18 @@ export default function ProductsPage() {
   const [openForm, setOpenForm] = useState(false);
   const [editing, setEditing] = useState<ProductResponse | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
+  const [selectedImagePreviewUrl, setSelectedImagePreviewUrl] = useState<string | null>(null);
+  const [removedCurrentImage, setRemovedCurrentImage] = useState(false);
 
   const [deleting, setDeleting] = useState<ProductResponse | null>(null);
+
+  const effectivePreviewUrl = useMemo(() => {
+    if (selectedImagePreviewUrl) return selectedImagePreviewUrl;
+    if (removedCurrentImage) return null;
+    return editing?.imageUrl ?? null;
+  }, [editing?.imageUrl, removedCurrentImage, selectedImagePreviewUrl]);
 
 
   const form = useForm<ProductFormValues>({
@@ -101,6 +111,44 @@ export default function ProductsPage() {
       isActive: true,
     },
   });
+
+  function resetImageState() {
+    setSelectedImageFile(null);
+    setSelectedImagePreviewUrl(null);
+    setRemovedCurrentImage(false);
+  }
+
+  function handleSelectImage(file: File | null) {
+    if (!file) return;
+
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      useToastStore.getState().error("Chỉ hỗ trợ ảnh JPG, PNG hoặc WEBP");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      useToastStore.getState().error("Kích thước ảnh tối đa là 5MB");
+      return;
+    }
+
+    setSelectedImageFile(file);
+    setRemovedCurrentImage(false);
+    if (selectedImagePreviewUrl?.startsWith("blob:")) {
+      URL.revokeObjectURL(selectedImagePreviewUrl);
+    }
+    const objectUrl = URL.createObjectURL(file);
+    setSelectedImagePreviewUrl(objectUrl);
+  }
+
+  function clearSelectedImage() {
+    setSelectedImageFile(null);
+    setSelectedImagePreviewUrl(null);
+    setRemovedCurrentImage(true);
+  }
+
+  function closeForm() {
+    setOpenForm(false);
+    resetImageState();
+  }
 
 
   async function loadOptions() {
@@ -137,6 +185,14 @@ export default function ProductsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    return () => {
+      if (selectedImagePreviewUrl?.startsWith("blob:")) {
+        URL.revokeObjectURL(selectedImagePreviewUrl);
+      }
+    };
+  }, [selectedImagePreviewUrl]);
+
   // Debounced reactive search when keyword or product type changes
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -148,6 +204,7 @@ export default function ProductsPage() {
 
   function openCreate() {
     setEditing(null);
+    resetImageState();
     form.reset({
       tenSanPham: "",
       maLoaiSanPham: productTypes[0]?.maLoaiSanPham ?? "",
@@ -161,6 +218,9 @@ export default function ProductsPage() {
 
   function openEdit(item: ProductResponse) {
     setEditing(item);
+    setSelectedImageFile(null);
+    setSelectedImagePreviewUrl(null);
+    setRemovedCurrentImage(false);
     form.reset({
       tenSanPham: item.tenSanPham,
       maLoaiSanPham: item.maLoaiSanPham,
@@ -182,6 +242,7 @@ export default function ProductsPage() {
         maDonViTinh: item.maDonViTinh,
         donGiaMua: Number(item.donGiaMua ?? 0),
         tonKho: Number(item.tonKho ?? 0),
+        imageUrl: item.imageUrl ?? null,
         isActive: newActive,
       };
 
@@ -199,11 +260,26 @@ export default function ProductsPage() {
 
   const onSubmit: SubmitHandler<ProductFormValues> = async (data) => {
     setSubmitting(true);
+    setUploadingImage(false);
     try {
+      let imageUrlPayload: string | null | undefined = editing?.imageUrl ?? null;
+
+      if (removedCurrentImage) {
+        imageUrlPayload = null;
+      }
+
+      if (selectedImageFile) {
+        setUploadingImage(true);
+        const uploaded = await backendApi.uploads.uploadImage(selectedImageFile);
+        imageUrlPayload = uploaded.imageUrl;
+        setUploadingImage(false);
+      }
+
       const payload: ProductRequest = {
         ...data,
         tenSanPham: data.tenSanPham.trim(),
         maSanPham: editing?.maSanPham,
+        imageUrl: imageUrlPayload,
       };
 
       if (editing) {
@@ -214,8 +290,10 @@ export default function ProductsPage() {
 
       useToastStore.getState().success(editing ? "Đã cập nhật sản phẩm!" : "Đã thêm sản phẩm mới!");
       setOpenForm(false);
+      resetImageState();
       await loadData();
     } catch (err) {
+      setUploadingImage(false);
       useToastStore.getState().error(getApiErrorMessage(err, t("products.saveError")));
     } finally {
       setSubmitting(false);
@@ -308,6 +386,7 @@ export default function ProductsPage() {
                     <TableHeader>
                         <TableRow>
                         <TableHead className="w-16 pl-5">{t("common.stt")}</TableHead>
+                        <TableHead className="w-20">{t("products.image") || "Ảnh"}</TableHead>
                         <TableHead className="w-28">{t("products.productCode")}</TableHead>
                         <TableHead className="w-60 min-w-[200px]">{t("products.name")}</TableHead>
                         <TableHead className="w-40">{t("products.productType")}</TableHead>
@@ -328,6 +407,19 @@ export default function ProductsPage() {
                                 )}
                             >
                                 <TableCell className="font-semibold text-muted-foreground pl-5">{page * PAGE_SIZE + index + 1}</TableCell>
+                                <TableCell>
+                                  {item.imageUrl ? (
+                                    <img
+                                      src={item.imageUrl}
+                                      alt={item.tenSanPham}
+                                      className="h-11 w-11 rounded-md object-cover border border-border/60 bg-muted"
+                                    />
+                                  ) : (
+                                    <div className="h-11 w-11 rounded-md border border-dashed border-border/80 bg-muted/30 flex items-center justify-center text-muted-foreground">
+                                      <ImageIcon className="h-4 w-4" />
+                                    </div>
+                                  )}
+                                </TableCell>
                                 <TableCell>{item.maSanPham}</TableCell>
                                 <TableCell className="font-semibold text-foreground truncate max-w-[240px]">{item.tenSanPham}</TableCell>
                                 <TableCell>{item.loaiSanPham?.tenLoaiSanPham ?? item.maLoaiSanPham}</TableCell>
@@ -407,11 +499,11 @@ export default function ProductsPage() {
       </Card>
 
       {openForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={() => setOpenForm(false)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={closeForm}>
           <div className="w-full max-w-xl rounded-xl border bg-background shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between border-b px-5 py-4">
               <h2 className="text-lg font-semibold">{editing ? t("products.editTitle") : t("products.addTitle")}</h2>
-              <Button variant="ghost" size="icon-sm" onClick={() => setOpenForm(false)}>
+              <Button variant="ghost" size="icon-sm" onClick={closeForm}>
                 <X className="h-4 w-4" />
               </Button>
             </div>
@@ -478,6 +570,58 @@ export default function ProductsPage() {
                   )}
                 </div>
 
+                <div className="space-y-3 sm:col-span-2">
+                  <Label>{t("products.image") || "Ảnh sản phẩm"}</Label>
+                  <div className="flex flex-col gap-3 rounded-lg border border-border/70 p-3">
+                    <div className="flex items-center gap-3">
+                      {effectivePreviewUrl ? (
+                        <img
+                          src={effectivePreviewUrl}
+                          alt={form.watch("tenSanPham") || "Preview"}
+                          className="h-20 w-20 rounded-md object-cover border border-border/60"
+                        />
+                      ) : (
+                        <div className="h-20 w-20 rounded-md border border-dashed border-border/80 bg-muted/30 flex items-center justify-center text-muted-foreground">
+                          <ImageIcon className="h-6 w-6" />
+                        </div>
+                      )}
+                      <div className="space-y-2">
+                        <label className="inline-flex">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            capture="environment"
+                            className="hidden"
+                            onChange={(event) => {
+                              const file = event.target.files?.[0] ?? null;
+                              handleSelectImage(file);
+                              event.currentTarget.value = "";
+                            }}
+                          />
+                          <span className="inline-flex items-center gap-2 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-semibold cursor-pointer hover:bg-muted/40">
+                            <UploadCloud className="h-3.5 w-3.5" />
+                            {effectivePreviewUrl ? (t("products.changeImage") || "Đổi ảnh") : (t("products.selectImage") || "Chọn ảnh")}
+                          </span>
+                        </label>
+
+                        {effectivePreviewUrl && (
+                          <button
+                            type="button"
+                            onClick={clearSelectedImage}
+                            className="inline-flex items-center gap-1 rounded-md border border-border bg-background px-2.5 py-1 text-xs font-semibold text-destructive hover:bg-destructive/10"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                            {t("products.removeImage") || "Xóa ảnh"}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      JPG/PNG/WEBP, tối đa 5MB.
+                    </p>
+                  </div>
+                </div>
+
                 <div className="flex items-center space-x-2 pt-2 sm:col-span-2">
                   <input
                     type="checkbox"
@@ -493,18 +637,18 @@ export default function ProductsPage() {
               </div>
 
               <div className="flex justify-end gap-2.5 border-t pt-4">
-                <Button type="button" variant="outline" onClick={() => setOpenForm(false)} className="px-6 rounded-xl font-bold">
+                <Button type="button" variant="outline" onClick={closeForm} className="px-6 rounded-xl font-bold">
                   {t("common.cancel")}
                 </Button>
                 <Button
                     type="submit"
-                    disabled={submitting}
+                    disabled={submitting || uploadingImage}
                     className="bg-gold-gradient text-gold-foreground font-extrabold px-8 rounded-xl shadow-md shadow-gold/20 border-none"
                 >
-                  {submitting ? (
+                  {submitting || uploadingImage ? (
                     <div className="flex items-center gap-2">
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        {t("common.saving")}
+                        {uploadingImage ? (t("products.uploadingImage") || "Đang upload ảnh...") : t("common.saving")}
                     </div>
                   ) : t("common.save")}
                 </Button>

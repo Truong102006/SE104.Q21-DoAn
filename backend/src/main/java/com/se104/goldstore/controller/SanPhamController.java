@@ -49,6 +49,26 @@ public class SanPhamController {
         );
     }
 
+    @GetMapping("/catalog")
+    @PreAuthorize("hasRole('ADMIN') or hasAnyAuthority('PERM_TRA_CUU', 'PERM_QL_SP')")
+    public ResponseEntity<ApiResponse<Page<SanPhamResponse>>> getCatalog(
+        @RequestParam(name = "keyword", required = false) String keyword,
+        @RequestParam(name = "q", required = false) String keywordLegacy,
+        @RequestParam(name = "productTypeId", required = false) String productTypeId,
+        @RequestParam(name = "stockStatus", required = false) String stockStatus,
+        @RequestParam(name = "sort", required = false) String sort,
+        @RequestParam(name = "page", defaultValue = "0") @Min(0) int page,
+        @RequestParam(name = "size", defaultValue = "20") @Min(1) @Max(100) int size
+    ) {
+        String resolvedKeyword = keyword != null ? keyword : keywordLegacy;
+        return ResponseEntity.ok(
+            ApiResponse.success(
+                "Lay catalog san pham thanh cong",
+                sanPhamService.getCatalog(resolvedKeyword, productTypeId, stockStatus, sort, page, size)
+            )
+        );
+    }
+
     @GetMapping("/search")
     public ResponseEntity<ApiResponse<List<SanPhamResponse>>> search(@RequestParam(name = "keyword") String keyword) {
         return ResponseEntity.ok(ApiResponse.success("Tim kiem san pham thanh cong", sanPhamService.search(keyword)));

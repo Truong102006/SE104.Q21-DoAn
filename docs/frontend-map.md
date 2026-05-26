@@ -33,6 +33,7 @@
 | `/dashboard/product-types` | `.../product-types/page.tsx` | Active | Backend API | CRUD; create/update/delete admin-only |
 | `/dashboard/service-types` | `.../service-types/page.tsx` | Active | Backend API | CRUD; create/update/delete admin-only |
 | `/dashboard/products` | `.../products/page.tsx` | Active | Backend API | Paged list/filter + CRUD |
+| `/dashboard/product-catalog` | `.../product-catalog/page.tsx` | Active | Backend API | Card/grid catalog + temporary sales draft handoff to `/dashboard/orders` |
 | `/dashboard/purchase-orders` | `.../purchase-orders/page.tsx` | Active | Backend API | Create voucher + history + print data |
 | `/dashboard/orders` | `.../orders/page.tsx` | Active | Backend API | Sales voucher creation + history |
 | `/dashboard/service-orders` | `.../service-orders/page.tsx` | Active | Backend API | Service voucher create + deliver item/all + integrated lookup/history (filters, paging, detail modal) |
@@ -58,6 +59,7 @@
 - `auth-store.ts`: JWT/user persistence and role helpers
 - `toast-store.ts`: in-app notification toasts
 - `unit-store.ts`: local unit storage (legacy/local-only; current unit pages use backend API)
+- `sales-draft-store.ts`: temporary sales draft persistence + handoff signal for catalog -> sales order flow
 
 ## Mock/Local-State Areas (Important)
 1. Notifications module:

@@ -4,6 +4,7 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 
 public class SanPhamRequest {
@@ -28,6 +29,9 @@ public class SanPhamRequest {
 
     @Min(value = 0, message = "Ton kho phai >= 0")
     private Integer tonKho;
+
+    @Size(max = 500, message = "Image URL khong duoc vuot qua 500 ky tu")
+    private String imageUrl;
 
     private Boolean isActive;
 
@@ -85,6 +89,14 @@ public class SanPhamRequest {
 
     public void setTonKho(Integer tonKho) {
         this.tonKho = tonKho;
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
     }
 
     public Boolean getIsActive() {

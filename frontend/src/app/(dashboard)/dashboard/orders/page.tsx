@@ -14,6 +14,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { CustomerSelect } from "@/components/dashboard/customer-select";
 import { Pagination } from "@/components/dashboard/pagination";
 import { useToastStore } from "@/stores/toast-store";
+import { useSalesDraftStore } from "@/stores/sales-draft-store";
 import { backendApi } from "@/services/backend-api";
 import type {
   CustomerResponse,
@@ -62,6 +63,11 @@ export default function SalesPage() {
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  const { hydrate: hydrateSalesDraft, hydrated: salesDraftHydrated, consumeHandoff, clearDraft } = useSalesDraftStore();
+
+  useEffect(() => {
+    hydrateSalesDraft();
+  }, [hydrateSalesDraft]);
 
   useEffect(() => {
     if (maKhachHang) {
@@ -141,6 +147,41 @@ export default function SalesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    if (!salesDraftHydrated || products.length === 0) {
+      return;
+    }
+
+    const handoffItems = consumeHandoff();
+    if (!handoffItems.length) {
+      return;
+    }
+
+    const nextItems = handoffItems
+      .map((draft) => {
+        const product = products.find((p) => p.maSanPham === draft.maSanPham);
+        if (!product) {
+          return null;
+        }
+        const maxStock = Math.max(0, Number(product.tonKho ?? 0));
+        if (maxStock <= 0) {
+          return null;
+        }
+        return {
+          keyId: Math.random().toString(36).substring(2, 9),
+          maSanPham: draft.maSanPham,
+          soLuong: String(Math.max(1, Math.min(draft.soLuong, maxStock))),
+        } satisfies SaleItemDraft;
+      })
+      .filter((item): item is SaleItemDraft => Boolean(item));
+
+    if (nextItems.length) {
+      setItems(nextItems);
+      setFormError(null);
+      useToastStore.getState().success("Đã nạp sản phẩm từ phiếu bán tạm");
+    }
+  }, [consumeHandoff, products, salesDraftHydrated]);
+
   // Update history when page or search query changes
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -200,15 +241,6 @@ export default function SalesPage() {
           return updated;
         });
       },
-    });
-  }
-
-  // Define helper function to restore row
-  function restoreRow(index: number, item: SaleItemDraft) {
-    setItems((prev) => {
-      const updated = [...prev];
-      updated.splice(index, 0, item);
-      return updated;
     });
   }
 
@@ -287,6 +319,7 @@ export default function SalesPage() {
       const created = await backendApi.sales.create(payload);
       setSoPhieuBan("");
       setItems([createEmptyItem()]);
+      clearDraft();
       await loadData();
       useToastStore.getState().success(`Đã lập phiếu bán hàng ${created.soPhieuBan} thành công!`);
     } catch (err) {

@@ -26,6 +26,7 @@ import type {
   ServiceTypeResponse,
   SupplierRequest,
   SupplierResponse,
+  UploadImageResponse,
   UnitRequest,
   UnitResponse,
   UserGroupResponse,
@@ -104,12 +105,41 @@ export const backendApi = {
       }),
     search: (keyword: string) =>
       apiRequest<ProductResponse[]>("/api/products/search", { query: { keyword } }),
+    catalog: (params: {
+      keyword?: string;
+      productTypeId?: string;
+      stockStatus?: "IN_STOCK" | "LOW_STOCK" | "OUT_OF_STOCK";
+      sort?: "newest" | "priceAsc" | "priceDesc" | "stockAsc" | "stockDesc";
+      page?: number;
+      size?: number;
+    }) =>
+      apiRequest<PageResponse<ProductResponse>>("/api/products/catalog", {
+        query: {
+          keyword: params.keyword,
+          productTypeId: params.productTypeId,
+          stockStatus: params.stockStatus,
+          sort: params.sort,
+          page: params.page ?? 0,
+          size: params.size ?? 20,
+        },
+      }),
     getById: (id: string) => apiRequest<ProductResponse>(`/api/products/${id}`),
     create: (payload: ProductRequest) =>
       apiRequest<ProductResponse>("/api/products", { method: "POST", body: payload }),
     update: (id: string, payload: ProductRequest) =>
       apiRequest<ProductResponse>(`/api/products/${id}`, { method: "PUT", body: payload }),
     remove: (id: string) => apiRequest<null>(`/api/products/${id}`, { method: "DELETE" }),
+  },
+
+  uploads: {
+    uploadImage: (file: File) => {
+      const formData = new FormData();
+      formData.append("file", file);
+      return apiRequest<UploadImageResponse>("/api/uploads/images", {
+        method: "POST",
+        body: formData,
+      });
+    },
   },
 
   purchases: {
@@ -196,7 +226,7 @@ export const backendApi = {
         },
       }),
     drillDown: (params: { type: string; id: string; month: number; year: number }) =>
-      apiRequest<any[]>("/api/search/drill-down", {
+      apiRequest<unknown[]>("/api/search/drill-down", {
         query: {
           type: params.type,
           id: params.id,

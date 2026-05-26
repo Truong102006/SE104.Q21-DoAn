@@ -65,6 +65,11 @@ Build an end-to-end management system for a gold/silver/jewelry store:
 - Frontend:
   - Code currently reads `NEXT_PUBLIC_API_BASE_URL` (fallback `http://localhost:8080`)
   - Some docs still mention `NEXT_PUBLIC_API_URL` (inconsistency to verify)
+- Media upload:
+  - `CLOUDINARY_CLOUD_NAME`
+  - `CLOUDINARY_API_KEY`
+  - `CLOUDINARY_API_SECRET`
+  - `CLOUDINARY_UPLOAD_FOLDER`
 
 ## How To Run
 - Install deps (repo root): `npm install`

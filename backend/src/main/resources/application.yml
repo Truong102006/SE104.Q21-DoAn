@@ -47,3 +47,8 @@ application:
       staff:
         username: ${AUTH_STAFF_USERNAME:staff}
         password: ${AUTH_STAFF_PASSWORD:staff123}
+  cloudinary:
+    cloud-name: ${CLOUDINARY_CLOUD_NAME:}
+    api-key: ${CLOUDINARY_API_KEY:}
+    api-secret: ${CLOUDINARY_API_SECRET:}
+    upload-folder: ${CLOUDINARY_UPLOAD_FOLDER:gold-store/products}

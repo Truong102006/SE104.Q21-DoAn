@@ -51,6 +51,29 @@ public interface SanPhamRepository extends JpaRepository<SanPham, String> {
         FROM SanPham sp
         LEFT JOIN FETCH sp.loaiSanPham lsp
         LEFT JOIN FETCH sp.donViTinh dvt
+        WHERE (:keyword = '' OR LOWER(sp.maSanPham) LIKE CONCAT('%', :keyword, '%')
+            OR LOWER(sp.tenSanPham) LIKE CONCAT('%', :keyword, '%')
+            OR LOWER(lsp.tenLoaiSanPham) LIKE CONCAT('%', :keyword, '%'))
+          AND (:maLoaiSanPham IS NULL OR sp.maLoaiSanPham = :maLoaiSanPham)
+          AND (:stockStatus IS NULL
+            OR (:stockStatus = 'IN_STOCK' AND sp.tonKho > 5)
+            OR (:stockStatus = 'LOW_STOCK' AND sp.tonKho > 0 AND sp.tonKho <= 5)
+            OR (:stockStatus = 'OUT_OF_STOCK' AND sp.tonKho = 0))
+        """
+    )
+    Page<SanPham> searchCatalog(
+        @Param("keyword") String keyword,
+        @Param("maLoaiSanPham") String maLoaiSanPham,
+        @Param("stockStatus") String stockStatus,
+        Pageable pageable
+    );
+
+    @Query(
+        """
+        SELECT sp
+        FROM SanPham sp
+        LEFT JOIN FETCH sp.loaiSanPham lsp
+        LEFT JOIN FETCH sp.donViTinh dvt
         WHERE :keyword = '' OR LOWER(sp.maSanPham) LIKE CONCAT('%', :keyword, '%')
             OR LOWER(sp.tenSanPham) LIKE CONCAT('%', :keyword, '%')
             OR LOWER(lsp.tenLoaiSanPham) LIKE CONCAT('%', :keyword, '%')
