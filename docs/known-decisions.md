@@ -128,7 +128,18 @@ Capture decisions already encoded in code so future changes do not accidentally 
   - consolidate create/deliver/lookup flow for service vouchers in one module
 - Implication:
   - avoid introducing new parallel lookup UX without clear reason
-  - stale links to `/dashboard/service-voucher-lookup` should be considered cleanup candidates
+- stale links to `/dashboard/service-voucher-lookup` should be considered cleanup candidates
+
+## Decision 14: Product Images Store URL-Only In DB
+- Status: Active
+- Evidence:
+  - `san_pham.image_url` column
+  - dedicated upload endpoint writes files to Cloudinary and returns secure URL
+- Why:
+  - keep DB lean and avoid binary object storage in PostgreSQL/Supabase
+- Implication:
+  - backend/frontend must treat image as URL metadata only
+  - file lifecycle concerns (delete/replace) are external-storage concerns
 
 ## Open Items Needing Verification
 1. Env variable naming mismatch:

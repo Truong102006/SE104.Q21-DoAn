@@ -82,7 +82,7 @@ export async function apiRequest<T>(
   path: string,
   options?: {
     method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
-    body?: unknown;
+    body?: unknown | FormData;
     query?: Record<string, string | number | boolean | null | undefined>;
     token?: string | null;
     headers?: Record<string, string>;
@@ -98,7 +98,9 @@ export async function apiRequest<T>(
     ...(options?.headers ?? {}),
   };
 
-  if (options?.body !== undefined) {
+  const isFormData = options?.body instanceof FormData;
+
+  if (options?.body !== undefined && !isFormData) {
     headers["Content-Type"] = "application/json";
   }
 
@@ -106,10 +108,15 @@ export async function apiRequest<T>(
     headers.Authorization = `Bearer ${token}`;
   }
 
+  let requestBody: BodyInit | undefined;
+  if (options?.body !== undefined) {
+    requestBody = isFormData ? (options.body as FormData) : JSON.stringify(options.body);
+  }
+
   const response = await fetch(url, {
     method,
     headers,
-    body: options?.body !== undefined ? JSON.stringify(options.body) : undefined,
+    body: requestBody,
   });
 
   const parsedBody = await parseBody<T>(response);

@@ -84,6 +84,9 @@ export function CommandMenu() {
               <CommandItem icon={Package} onSelect={() => runCommand(() => router.push("/dashboard/products"))}>
                 {t("nav.products")}
               </CommandItem>
+              <CommandItem icon={Package} onSelect={() => runCommand(() => router.push("/dashboard/product-catalog"))}>
+                {t("nav.productCatalog")}
+              </CommandItem>
               <CommandItem icon={Store} onSelect={() => runCommand(() => router.push("/dashboard/suppliers"))}>
                 {t("nav.suppliers")}
               </CommandItem>

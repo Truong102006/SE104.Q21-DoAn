@@ -20,7 +20,9 @@ import com.se104.goldstore.repository.SanPhamRepository;
 import com.se104.goldstore.service.SanPhamService;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -83,6 +85,30 @@ public class SanPhamServiceImpl implements SanPhamService {
     }
 
     @Override
+    public Page<SanPhamResponse> getCatalog(
+        String keyword,
+        String productTypeId,
+        String stockStatus,
+        String sort,
+        int page,
+        int size
+    ) {
+        String normalizedKeyword = SearchUtils.normalizeKeyword(keyword);
+        String normalizedProductTypeId = normalizeNullable(productTypeId);
+        String normalizedStockStatus = normalizeStockStatus(stockStatus);
+        Sort resolvedSort = resolveCatalogSort(sort);
+
+        PageRequest pageRequest = PageRequest.of(Math.max(page, 0), normalizePageSize(size), resolvedSort);
+        Page<SanPham> entities = sanPhamRepository.searchCatalog(
+            normalizedKeyword,
+            normalizedProductTypeId,
+            normalizedStockStatus,
+            pageRequest
+        );
+        return entities.map(this::toResponse);
+    }
+
+    @Override
     public List<SanPhamResponse> search(String keyword) {
         String normalizedKeyword = SearchUtils.normalizeKeyword(keyword);
         if (normalizedKeyword.isEmpty()) {
@@ -127,6 +153,8 @@ public class SanPhamServiceImpl implements SanPhamService {
         entity.setDonGiaMua(normalizePrice(request.getDonGiaMua()));
         entity.setDonGiaBan(calculateSellingPrice(entity.getDonGiaMua(), loaiSanPham.getTiLeLoiNhuan()));
         entity.setTonKho(0);
+        entity.setImageUrl(normalizeNullable(request.getImageUrl()));
+        entity.setCreatedAt(LocalDateTime.now());
         entity.setIsActive(request.getIsActive() != null ? request.getIsActive() : true);
 
         return toResponse(sanPhamRepository.save(entity));
@@ -148,6 +176,7 @@ public class SanPhamServiceImpl implements SanPhamService {
         entity.setMaDonViTinh(maDonViTinh);
         entity.setDonGiaMua(normalizePrice(request.getDonGiaMua()));
         entity.setDonGiaBan(calculateSellingPrice(entity.getDonGiaMua(), loaiSanPham.getTiLeLoiNhuan()));
+        entity.setImageUrl(normalizeNullable(request.getImageUrl()));
         if (request.getIsActive() != null) {
             entity.setIsActive(request.getIsActive());
         }
@@ -234,6 +263,40 @@ public class SanPhamServiceImpl implements SanPhamService {
         return Math.min(size, MAX_PAGE_SIZE);
     }
 
+    private String normalizeStockStatus(String value) {
+        String normalized = normalizeNullable(value);
+        if (normalized == null) {
+            return null;
+        }
+
+        String upper = normalized.toUpperCase(Locale.ROOT);
+        if (
+            "IN_STOCK".equals(upper) ||
+            "LOW_STOCK".equals(upper) ||
+            "OUT_OF_STOCK".equals(upper)
+        ) {
+            return upper;
+        }
+
+        throw new BusinessException("Stock status khong hop le");
+    }
+
+    private Sort resolveCatalogSort(String value) {
+        String normalized = normalizeNullable(value);
+        if (normalized == null) {
+            return Sort.by(Sort.Direction.DESC, "createdAt").and(Sort.by(Sort.Direction.ASC, "maSanPham"));
+        }
+
+        return switch (normalized.toLowerCase(Locale.ROOT)) {
+            case "newest" -> Sort.by(Sort.Direction.DESC, "createdAt").and(Sort.by(Sort.Direction.ASC, "maSanPham"));
+            case "priceasc" -> Sort.by(Sort.Direction.ASC, "donGiaBan").and(Sort.by(Sort.Direction.ASC, "maSanPham"));
+            case "pricedesc" -> Sort.by(Sort.Direction.DESC, "donGiaBan").and(Sort.by(Sort.Direction.ASC, "maSanPham"));
+            case "stockasc" -> Sort.by(Sort.Direction.ASC, "tonKho").and(Sort.by(Sort.Direction.ASC, "maSanPham"));
+            case "stockdesc" -> Sort.by(Sort.Direction.DESC, "tonKho").and(Sort.by(Sort.Direction.ASC, "maSanPham"));
+            default -> throw new BusinessException("Sort khong hop le");
+        };
+    }
+
     private String normalizeNullable(String value) {
         if (value == null || value.isBlank()) {
             return null;
@@ -264,6 +327,7 @@ public class SanPhamServiceImpl implements SanPhamService {
         response.setDonGiaMua(entity.getDonGiaMua());
         response.setDonGiaBan(entity.getDonGiaBan());
         response.setTonKho(entity.getTonKho());
+        response.setImageUrl(entity.getImageUrl());
         response.setIsActive(entity.getIsActive());
 
         if (entity.getLoaiSanPham() != null) {

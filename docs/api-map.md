@@ -71,11 +71,25 @@ Most endpoints return:
     - `productTypeId`
     - `page` (default 0)
     - `size` (default 20, max 100)
+  - `GET /catalog` with query:
+    - `keyword` or legacy alias `q`
+    - `productTypeId`
+    - `stockStatus`: `IN_STOCK` | `LOW_STOCK` | `OUT_OF_STOCK`
+    - `sort`: `newest` | `priceAsc` | `priceDesc` | `stockAsc` | `stockDesc`
+    - `page` (default 0)
+    - `size` (default 20, max 100)
   - `GET /search?keyword=...`
   - `GET /{maSanPham}`
   - `POST /`
   - `PUT /{maSanPham}`
   - `DELETE /{maSanPham}` (ADMIN only)
+
+## Upload Endpoints
+- Base paths: `/api/uploads/images`, `/api/v1/uploads/images`
+- Methods:
+  - `POST /` (`multipart/form-data`, field: `file`)
+  - Returns `imageUrl` (Cloudinary secure URL) and optional `publicId`
+  - Requires JWT + permission `QL_SP` (or ADMIN)
 
 ## Voucher Endpoints
 

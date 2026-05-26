@@ -44,6 +44,10 @@ cp frontend/.env.example frontend/.env.local
 - `SPRING_DATASOURCE_PASSWORD`
 - `JWT_SECRET`
 - `NEXT_PUBLIC_API_URL`
+- `CLOUDINARY_CLOUD_NAME`
+- `CLOUDINARY_API_KEY`
+- `CLOUDINARY_API_SECRET`
+- `CLOUDINARY_UPLOAD_FOLDER`
 
 ## 4. Cách chạy database PostgreSQL
 

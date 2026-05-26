@@ -20,6 +20,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/dashboard/product-types": "nav.productTypes",
   "/dashboard/service-types": "nav.serviceTypes",
   "/dashboard/products": "nav.products",
+  "/dashboard/product-catalog": "nav.productCatalog",
   "/dashboard/purchase-orders": "nav.purchaseOrders",
   "/dashboard/orders": "nav.salesOrders",
   "/dashboard/service-orders": "nav.serviceOrders",
