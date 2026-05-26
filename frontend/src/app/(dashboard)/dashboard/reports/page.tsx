@@ -52,6 +52,14 @@ function safeRatio(value: number): string {
   return `${Number(value ?? 0).toFixed(2)}%`;
 }
 
+function truncateChartLabel(value: string | number | null | undefined, maxChars = 18): string {
+  const text = String(value ?? "").trim();
+  if (text.length <= maxChars) {
+    return text;
+  }
+  return `${text.slice(0, maxChars).trimEnd()}...`;
+}
+
 function formatCompactVND(value: number): string {
   const safe = Number(value ?? 0);
   if (safe === 0) return "0 ₫";
@@ -592,7 +600,15 @@ export default function ReportsPage() {
                             </defs>
                             <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} opacity={0.1} />
                             <XAxis type="number" hide />
-                            <YAxis dataKey="tenSanPham" type="category" width={100} fontSize={10} fontWeight={800} tick={{ fill: 'currentColor' }} />
+                            <YAxis
+                              dataKey="tenSanPham"
+                              type="category"
+                              width={140}
+                              fontSize={10}
+                              fontWeight={800}
+                              tick={{ fill: "currentColor" }}
+                              tickFormatter={(value) => truncateChartLabel(value, 18)}
+                            />
                             <RechartsTooltip
                               content={<ChartTooltip />}
                               cursor={{ fill: 'currentColor', opacity: 0.04 }}
@@ -857,7 +873,15 @@ export default function ReportsPage() {
                             </defs>
                             <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} opacity={0.1} />
                             <XAxis type="number" hide />
-                            <YAxis dataKey="tenLoaiDichVu" type="category" width={100} fontSize={10} fontWeight={800} tick={{ fill: 'currentColor' }} />
+                            <YAxis
+                              dataKey="tenLoaiDichVu"
+                              type="category"
+                              width={140}
+                              fontSize={10}
+                              fontWeight={800}
+                              tick={{ fill: "currentColor" }}
+                              tickFormatter={(value) => truncateChartLabel(value, 18)}
+                            />
                             <RechartsTooltip
                               content={<ChartTooltip />}
                               cursor={{ fill: 'currentColor', opacity: 0.04 }}
