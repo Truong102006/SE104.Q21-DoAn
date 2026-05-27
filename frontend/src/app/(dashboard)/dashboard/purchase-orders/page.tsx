@@ -240,7 +240,9 @@ export default function PurchaseOrdersPage() {
     if (toPositiveNumber(item.donGia) < 0) {
       return t("purchaseOrders.priceInvalid");
     }
-    if (!item.maDonViTinh) {
+
+    const unitId = item.maDonViTinh || productTypes.find(pt => pt.maLoaiSanPham === item.maLoaiSanPham)?.maDonViTinh;
+    if (!unitId) {
       return t("purchaseOrders.unitRequired");
     }
     return null;
@@ -248,11 +250,20 @@ export default function PurchaseOrdersPage() {
 
   function onProductChange(index: number, maSanPham: string) {
     const product = products.find((item) => item.maSanPham === maSanPham);
+    if (!product) return;
+
+    let unitId = product.maDonViTinh;
+    // Fallback: if maDonViTinh is missing on product, find it from productTypes
+    if (!unitId && product.maLoaiSanPham) {
+      const pt = productTypes.find(t => t.maLoaiSanPham === product.maLoaiSanPham);
+      unitId = pt?.maDonViTinh ?? "";
+    }
+
     updateItem(index, {
       maSanPham,
-      maLoaiSanPham: product?.maLoaiSanPham ?? "",
-      maDonViTinh: product?.maDonViTinh ?? "",
-      donGia: String(product?.donGiaMua ?? 0),
+      maLoaiSanPham: product.maLoaiSanPham ?? "",
+      maDonViTinh: unitId,
+      donGia: String(product.donGiaMua ?? 0),
     });
   }
 
@@ -310,7 +321,8 @@ export default function PurchaseOrdersPage() {
         return;
       }
 
-      if (!item.maDonViTinh) {
+      const unitId = item.maDonViTinh || productTypes.find(pt => pt.maLoaiSanPham === item.maLoaiSanPham)?.maDonViTinh;
+      if (!unitId) {
         setFormError(t("purchaseOrders.unitRequired"));
         return;
       }
@@ -320,12 +332,15 @@ export default function PurchaseOrdersPage() {
       soPhieuMua: soPhieuMua.trim() || undefined,
       ngayLapPhieuMua,
       maNhaCungCap,
-      items: items.map((item) => ({
-        maSanPham: item.maSanPham,
-        soLuongMua: toPositiveInt(item.soLuongMua),
-        maDonViTinh: item.maDonViTinh,
-        donGia: toPositiveNumber(item.donGia),
-      })),
+      items: items.map((item) => {
+        const unitId = item.maDonViTinh || productTypes.find(pt => pt.maLoaiSanPham === item.maLoaiSanPham)?.maDonViTinh || "";
+        return {
+          maSanPham: item.maSanPham,
+          soLuongMua: toPositiveInt(item.soLuongMua),
+          maDonViTinh: unitId,
+          donGia: toPositiveNumber(item.donGia),
+        };
+      }),
     };
 
     setSubmitting(true);
@@ -455,7 +470,10 @@ export default function PurchaseOrdersPage() {
                             />
                           </TableCell>
                           <TableCell className="py-3.5 px-4 text-sm font-medium text-muted-foreground">
-                            {units.find((u) => u.maDonViTinh === item.maDonViTinh)?.tenDonViTinh ?? "-"}
+                            {(() => {
+                              const unitId = item.maDonViTinh || productTypes.find(pt => pt.maLoaiSanPham === item.maLoaiSanPham)?.maDonViTinh;
+                              return units.find((u) => u.maDonViTinh === unitId)?.tenDonViTinh ?? "-";
+                            })()}
                           </TableCell>
                           <TableCell className="py-3.5 px-4">
                             <div className="flex items-center w-28 h-9 border rounded-lg bg-background overflow-hidden focus-within:border-gold focus-within:ring-2 focus-within:ring-gold/25 focus-within:shadow-[0_0_8px_rgba(212,163,89,0.12)]">
@@ -718,10 +736,15 @@ export default function PurchaseOrdersPage() {
         onCreated={(product) => {
           setProducts((prev) => [...prev, product]);
           if (quickCreateTargetIndex >= 0) {
+            let unitId = product.maDonViTinh;
+            if (!unitId && product.maLoaiSanPham) {
+              const pt = productTypes.find(t => t.maLoaiSanPham === product.maLoaiSanPham);
+              unitId = pt?.maDonViTinh ?? "";
+            }
             updateItem(quickCreateTargetIndex, {
               maSanPham: product.maSanPham,
               maLoaiSanPham: product.maLoaiSanPham || "",
-              maDonViTinh: product.maDonViTinh || "",
+              maDonViTinh: unitId || "",
               donGia: String(product.donGiaMua ?? 0),
             });
           }
