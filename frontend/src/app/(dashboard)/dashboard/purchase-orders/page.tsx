@@ -449,7 +449,7 @@ export default function PurchaseOrdersPage() {
                                 )
                                 .map((productOption) => ({
                                   value: productOption.maSanPham,
-                                  label: `[${productOption.maSanPham}] ${productOption.tenSanPham}`,
+                                  label: `${productOption.tenSanPham} (${productOption.maSanPham})`,
                                 }))}
                               className="h-9"
                               placeholder="Chọn sản phẩm..."
