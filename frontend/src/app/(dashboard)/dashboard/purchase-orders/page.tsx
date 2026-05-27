@@ -12,10 +12,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ContactPanel, DetailGrid, DetailModal, LineError, StickySummaryBar, VoucherSection } from "@/components/dashboard/voucher-ui";
 import { Combobox } from "@/components/ui/combobox";
 import { Pagination } from "@/components/dashboard/pagination";
+import { QuickCreateProductDialog } from "@/components/dashboard/quick-create-product-dialog";
 import { useToastStore } from "@/stores/toast-store";
 import { backendApi } from "@/services/backend-api";
 import type {
   ProductResponse,
+  ProductTypeResponse,
   PurchaseRequest,
   PurchaseResponse,
   SupplierResponse,
@@ -51,6 +53,12 @@ export default function PurchaseOrdersPage() {
   const [suppliers, setSuppliers] = useState<SupplierResponse[]>([]);
   const [products, setProducts] = useState<ProductResponse[]>([]);
   const [units, setUnits] = useState<UnitResponse[]>([]);
+  const [productTypes, setProductTypes] = useState<ProductTypeResponse[]>([]);
+
+  // Quick-Create Product Dialog state
+  const [quickCreateOpen, setQuickCreateOpen] = useState(false);
+  const [quickCreateName, setQuickCreateName] = useState("");
+  const [quickCreateTargetIndex, setQuickCreateTargetIndex] = useState(-1);
 
   const [purchaseList, setPurchaseList] = useState<PurchaseResponse[]>([]);
   const [totalRecords, setTotalRecords] = useState(0);
@@ -89,15 +97,17 @@ export default function PurchaseOrdersPage() {
     setLoading(true);
     setError(null);
     try {
-      const [supplierData, productPage, unitData] = await Promise.all([
+      const [supplierData, productPage, unitData, ptData] = await Promise.all([
         backendApi.suppliers.list(),
         backendApi.products.list({ page: 0, size: 100 }),
         backendApi.units.list(),
+        backendApi.productTypes.list(),
       ]);
 
       setSuppliers(supplierData);
       setProducts(productPage.content);
       setUnits(unitData);
+      setProductTypes(ptData);
 
       if (!maNhaCungCap && supplierData.length > 0) {
         setMaNhaCungCap(supplierData[0].maNhaCungCap);
@@ -351,123 +361,148 @@ export default function PurchaseOrdersPage() {
 
           <VoucherSection title="Chi tiết sản phẩm" description="Chọn sản phẩm, đơn vị và số lượng nhập kho" icon={ReceiptText}>
             <div className="rounded-md border border-border/80 overflow-visible [&_[data-slot=table-container]]:overflow-visible mt-2">
-            <Table>
-              <TableHeader className="bg-muted/30">
-                <TableRow className="hover:bg-transparent">
-                  <TableHead className="w-14 text-center py-3 px-4 h-10 text-xs font-bold uppercase tracking-wider">{t("common.stt")}</TableHead>
-                  <TableHead className="py-3 px-4 h-10 text-xs font-bold uppercase tracking-wider min-w-[200px]">{t("common.product")}</TableHead>
-                  <TableHead className="py-3 px-4 h-10 text-xs font-bold uppercase tracking-wider">{t("products.productType")}</TableHead>
-                  <TableHead className="py-3 px-4 h-10 text-xs font-bold uppercase tracking-wider">{t("common.unit")}</TableHead>
-                  <TableHead className="py-3 px-4 h-10 text-xs font-bold uppercase tracking-wider w-32">{t("common.quantity")}</TableHead>
-                  <TableHead className="py-3 px-4 h-10 text-xs font-bold uppercase tracking-wider min-w-[140px]">{t("products.purchasePrice")}</TableHead>
-                  <TableHead className="py-3 px-4 h-10 text-xs font-bold uppercase tracking-wider">{t("common.subtotal")}</TableHead>
-                  <TableHead className="py-3 px-4 h-10 text-xs font-bold uppercase tracking-wider text-right w-16">{t("common.actions")}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {items.map((item, index) => {
-                  const product = products.find((p) => p.maSanPham === item.maSanPham);
-                  const soLuong = toPositiveInt(item.soLuongMua);
-                  const donGia = toPositiveNumber(item.donGia);
-                  const thanhTien = soLuong * donGia;
+              <Table>
+                <TableHeader className="bg-muted/30">
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="w-14 text-center py-3 px-4 h-10 text-xs font-bold uppercase tracking-wider">{t("common.stt")}</TableHead>
+                    <TableHead className="py-3 px-4 h-10 text-xs font-bold uppercase tracking-wider min-w-[200px]">{t("common.product")}</TableHead>
+                    <TableHead className="py-3 px-4 h-10 text-xs font-bold uppercase tracking-wider">{t("products.productType")}</TableHead>
+                    <TableHead className="py-3 px-4 h-10 text-xs font-bold uppercase tracking-wider">{t("common.unit")}</TableHead>
+                    <TableHead className="py-3 px-4 h-10 text-xs font-bold uppercase tracking-wider w-32">{t("common.quantity")}</TableHead>
+                    <TableHead className="py-3 px-4 h-10 text-xs font-bold uppercase tracking-wider min-w-[140px]">{t("products.purchasePrice")}</TableHead>
+                    <TableHead className="py-3 px-4 h-10 text-xs font-bold uppercase tracking-wider">{t("common.subtotal")}</TableHead>
+                    <TableHead className="py-3 px-4 h-10 text-xs font-bold uppercase tracking-wider text-right w-16">{t("common.actions")}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {items.map((item, index) => {
+                    const product = products.find((p) => p.maSanPham === item.maSanPham);
+                    const soLuong = toPositiveInt(item.soLuongMua);
+                    const donGia = toPositiveNumber(item.donGia);
+                    const thanhTien = soLuong * donGia;
 
-                  return (
-                    <Fragment key={item.keyId}>
-                    <TableRow className="table-row-hover border-b border-border/60">
-                      <TableCell className="py-3.5 px-4 text-center font-bold text-sm text-muted-foreground">{index + 1}</TableCell>
-                      <TableCell className="py-3.5 px-4">
-                        <Combobox
-                          value={item.maSanPham || ""}
-                          onValueChange={(value) => onProductChange(index, value)}
-                          options={products
-                            .filter((p) => (p.isActive !== false || p.maSanPham === item.maSanPham) && !items.some((draftItem, idx) => idx !== index && draftItem.maSanPham === p.maSanPham))
-                            .map((productOption) => ({
-                              value: productOption.maSanPham,
-                              label: productOption.tenSanPham,
-                            }))}
-                          className="h-9"
-                          placeholder="Chọn sản phẩm..."
-                        />
-                      </TableCell>
-                      <TableCell className="py-3.5 px-4 text-sm font-medium text-muted-foreground">
-                        {product?.loaiSanPham?.tenLoaiSanPham ?? "-"}
-                      </TableCell>
-                      <TableCell className="py-3.5 px-4 text-sm font-semibold text-muted-foreground">
-                        {units.find((u) => u.maDonViTinh === item.maDonViTinh)?.tenDonViTinh ?? "-"}
-                      </TableCell>
-                      <TableCell className="py-3.5 px-4">
-                        <div className="flex items-center w-28 h-9 border rounded-lg bg-background overflow-hidden focus-within:border-gold focus-within:ring-2 focus-within:ring-gold/25 focus-within:shadow-[0_0_8px_rgba(212,163,89,0.12)]">
-                          <button
-                            type="button"
-                            className="h-full w-8 border-r border-border text-muted-foreground hover:text-foreground hover:bg-muted/50 flex items-center justify-center font-bold text-sm select-none cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                            onClick={() => {
-                              const val = toPositiveInt(item.soLuongMua) || 1;
-                              updateItem(index, { soLuongMua: String(Math.max(1, val - 1)) });
-                            }}
-                            disabled={toPositiveInt(item.soLuongMua) <= 1}
-                          >
-                            -
-                          </button>
-                          <input
-                            value={item.soLuongMua}
-                            type="number"
-                            min="1"
-                            onChange={(e) => updateItem(index, { soLuongMua: e.target.value })}
-                            onBlur={(e) => {
-                              const val = toPositiveInt(e.target.value);
-                              if (val <= 0) {
-                                updateItem(index, { soLuongMua: "1" });
-                              }
-                            }}
-                            className="h-full w-full min-w-0 border-0 bg-transparent text-center focus:outline-none focus:ring-0 text-sm font-semibold px-1"
-                          />
-                          <button
-                            type="button"
-                            className="h-full w-8 border-l border-border text-muted-foreground hover:text-foreground hover:bg-muted/50 flex items-center justify-center font-bold text-sm select-none cursor-pointer"
-                            onClick={() => {
-                              const val = toPositiveInt(item.soLuongMua) || 1;
-                              updateItem(index, { soLuongMua: String(val + 1) });
-                            }}
-                          >
-                            +
-                          </button>
-                        </div>
-                      </TableCell>
-                      <TableCell className="py-3.5 px-4">
-                        <div className="relative flex items-center w-full">
-                          <Input
-                            type="text"
-                            value={formatVNCurrencyInput(item.donGia)}
-                            onChange={(e) => updateItem(index, { donGia: parseVNCurrencyInput(e.target.value) })}
-                            className="h-9 text-sm pr-9 text-right font-semibold"
-                          />
-                          <span className="absolute right-2.5 text-xs text-muted-foreground font-semibold pointer-events-none select-none">
-                            đ
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="py-3.5 px-4 text-sm font-bold text-emerald-600 dark:text-emerald-400">
-                        {formatCurrency(thanhTien)}
-                      </TableCell>
-                      <TableCell className="py-3.5 px-4 text-right">
-                        <Button variant="destructive" size="icon-sm" className="h-8 w-8" onClick={() => removeRow(index)} disabled={items.length <= 1}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                    {getItemError(item) && (
-                      <TableRow className="border-b border-border/60 hover:bg-transparent">
-                        <TableCell colSpan={8} className="px-4 py-0">
-                          <LineError>Dòng {index + 1}: {getItemError(item)}</LineError>
-                        </TableCell>
-                      </TableRow>
-                    )}
-                    </Fragment>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
+                    return (
+                      <Fragment key={item.keyId}>
+                        <TableRow className="table-row-hover border-b border-border/60">
+                          <TableCell className="py-3.5 px-4 text-center font-bold text-sm text-muted-foreground">{index + 1}</TableCell>
+                          <TableCell className="py-3.5 px-4">
+                            <Combobox
+                              value={item.maSanPham || ""}
+                              onValueChange={(value) => onProductChange(index, value)}
+                              options={products
+                                .filter((p) => (p.isActive !== false || p.maSanPham === item.maSanPham) && !items.some((draftItem, idx) => idx !== index && draftItem.maSanPham === p.maSanPham))
+                                .map((productOption) => ({
+                                  value: productOption.maSanPham,
+                                  label: productOption.tenSanPham,
+                                }))}
+                              className="h-9"
+                              placeholder="Chọn sản phẩm..."
+                              onCreateNew={async (name) => {
+                                setQuickCreateName(name);
+                                setQuickCreateTargetIndex(index);
+                                setQuickCreateOpen(true);
+                                return null;
+                              }}
+                            />
+                          </TableCell>
+                          <TableCell className="py-3.5 px-4 text-sm font-medium text-muted-foreground">
+                            {product?.loaiSanPham?.tenLoaiSanPham ?? "-"}
+                          </TableCell>
+                          <TableCell className="py-3.5 px-4">
+                            <Combobox
+                              value={item.maDonViTinh || ""}
+                              onValueChange={(v) => updateItem(index, { maDonViTinh: v })}
+                              options={units
+                                .filter((u) => u.isActive !== false || u.maDonViTinh === item.maDonViTinh)
+                                .map((u) => ({ value: u.maDonViTinh, label: u.tenDonViTinh }))}
+                              className="h-9"
+                              placeholder="Chọn đơn vị..."
+                              onCreateNew={async (name) => {
+                                try {
+                                  const created = await backendApi.units.create({ tenDonViTinh: name });
+                                  setUnits((prev) => [...prev, created]);
+                                  useToastStore.getState().success(`Đã tạo đơn vị "${created.tenDonViTinh}"`);
+                                  return { value: created.maDonViTinh, label: created.tenDonViTinh };
+                                } catch (err) {
+                                  useToastStore.getState().error(getApiErrorMessage(err, "Không thể tạo đơn vị"));
+                                  return null;
+                                }
+                              }}
+                            />
+                          </TableCell>
+                          <TableCell className="py-3.5 px-4">
+                            <div className="flex items-center w-28 h-9 border rounded-lg bg-background overflow-hidden focus-within:border-gold focus-within:ring-2 focus-within:ring-gold/25 focus-within:shadow-[0_0_8px_rgba(212,163,89,0.12)]">
+                              <button
+                                type="button"
+                                className="h-full w-8 border-r border-border text-muted-foreground hover:text-foreground hover:bg-muted/50 flex items-center justify-center font-bold text-sm select-none cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                                onClick={() => {
+                                  const val = toPositiveInt(item.soLuongMua) || 1;
+                                  updateItem(index, { soLuongMua: String(Math.max(1, val - 1)) });
+                                }}
+                                disabled={toPositiveInt(item.soLuongMua) <= 1}
+                              >
+                                -
+                              </button>
+                              <input
+                                value={item.soLuongMua}
+                                type="number"
+                                min="1"
+                                onChange={(e) => updateItem(index, { soLuongMua: e.target.value })}
+                                onBlur={(e) => {
+                                  const val = toPositiveInt(e.target.value);
+                                  if (val <= 0) {
+                                    updateItem(index, { soLuongMua: "1" });
+                                  }
+                                }}
+                                className="h-full w-full min-w-0 border-0 bg-transparent text-center focus:outline-none focus:ring-0 text-sm font-semibold px-1"
+                              />
+                              <button
+                                type="button"
+                                className="h-full w-8 border-l border-border text-muted-foreground hover:text-foreground hover:bg-muted/50 flex items-center justify-center font-bold text-sm select-none cursor-pointer"
+                                onClick={() => {
+                                  const val = toPositiveInt(item.soLuongMua) || 1;
+                                  updateItem(index, { soLuongMua: String(val + 1) });
+                                }}
+                              >
+                                +
+                              </button>
+                            </div>
+                          </TableCell>
+                          <TableCell className="py-3.5 px-4">
+                            <div className="relative flex items-center w-full">
+                              <Input
+                                type="text"
+                                value={formatVNCurrencyInput(item.donGia)}
+                                onChange={(e) => updateItem(index, { donGia: parseVNCurrencyInput(e.target.value) })}
+                                className="h-9 text-sm pr-9 text-right font-semibold"
+                              />
+                              <span className="absolute right-2.5 text-xs text-muted-foreground font-semibold pointer-events-none select-none">
+                                đ
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="py-3.5 px-4 text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                            {formatCurrency(thanhTien)}
+                          </TableCell>
+                          <TableCell className="py-3.5 px-4 text-right">
+                            <Button variant="destructive" size="icon-sm" className="h-8 w-8" onClick={() => removeRow(index)} disabled={items.length <= 1}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                        {getItemError(item) && (
+                          <TableRow className="border-b border-border/60 hover:bg-transparent">
+                            <TableCell colSpan={8} className="px-4 py-0">
+                              <LineError>Dòng {index + 1}: {getItemError(item)}</LineError>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </Fragment>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
           </VoucherSection>
 
           <StickySummaryBar
@@ -637,6 +672,24 @@ export default function PurchaseOrdersPage() {
           </div>
         )}
       </DetailModal>
+
+      {/* Quick-Create Product Dialog */}
+      <QuickCreateProductDialog
+        open={quickCreateOpen}
+        defaultName={quickCreateName}
+        productTypes={productTypes}
+        units={units}
+        onCreated={(product) => {
+          setProducts((prev) => [...prev, product]);
+          if (quickCreateTargetIndex >= 0) {
+            onProductChange(quickCreateTargetIndex, product.maSanPham);
+          }
+          setQuickCreateOpen(false);
+        }}
+        onClose={() => setQuickCreateOpen(false)}
+        onProductTypeCreated={(pt) => setProductTypes((prev) => [...prev, pt])}
+        onUnitCreated={(u) => setUnits((prev) => [...prev, u])}
+      />
     </div>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ChevronDown, Check } from "lucide-react";
+import { ChevronDown, Check, Plus, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Tooltip,
@@ -23,6 +23,12 @@ interface ComboboxProps {
   placeholder?: string;
   className?: string;
   disabled?: boolean;
+  /** Called when user clicks "+ Create new". Return created option or null (e.g. to open a dialog). */
+  onCreateNew?: (searchQuery: string) => Promise<ComboboxOption | null>;
+  /** Label prefix for the create button. Default: "Thêm mới" */
+  createLabel?: string;
+  /** Show loading spinner on create button */
+  creating?: boolean;
 }
 
 function removeAccents(str: string) {
@@ -41,11 +47,17 @@ export function Combobox({
   placeholder = "Chọn...",
   className,
   disabled = false,
+  onCreateNew,
+  createLabel = "Thêm mới",
+  creating = false,
 }: ComboboxProps) {
   const [isOpen, setIsOpen] = React.useState(false);
   const [isFocused, setIsFocused] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState("");
   const [highlightedIndex, setHighlightedIndex] = React.useState(0);
+  const [internalCreating, setInternalCreating] = React.useState(false);
+
+  const isCreating = creating || internalCreating;
 
   const containerRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -78,10 +90,24 @@ export function Combobox({
     });
   }, [searchQuery, options, selectedOption]);
 
+  // Check if search query exactly matches an existing option
+  const hasExactMatch = React.useMemo(() => {
+    if (!searchQuery.trim()) return true;
+    const queryClean = removeAccents(searchQuery.trim().toLowerCase());
+    return options.some(
+      (opt) => removeAccents(opt.label.toLowerCase()) === queryClean
+    );
+  }, [searchQuery, options]);
+
+  // Whether the create button should be shown
+  const showCreateButton = onCreateNew && searchQuery.trim() && !hasExactMatch && !isCreating;
+  // Total selectable items including create button
+  const totalItems = filteredOptions.length + (showCreateButton ? 1 : 0);
+
   // Reset highlight index when filtered list changes
   React.useEffect(() => {
     setHighlightedIndex(0);
-  }, [filteredOptions]);
+  }, [filteredOptions, showCreateButton]);
 
   // Close dropdown on click outside
   React.useEffect(() => {
@@ -98,6 +124,23 @@ export function Combobox({
     };
   }, [selectedOption]);
 
+  const handleCreateNew = React.useCallback(async () => {
+    if (!onCreateNew || !searchQuery.trim() || isCreating) return;
+    setInternalCreating(true);
+    try {
+      const result = await onCreateNew(searchQuery.trim());
+      if (result) {
+        onValueChange(result.value);
+        setSearchQuery(result.label);
+        setIsOpen(false);
+        setIsFocused(false);
+        inputRef.current?.blur();
+      }
+    } finally {
+      setInternalCreating(false);
+    }
+  }, [onCreateNew, searchQuery, isCreating, onValueChange]);
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (disabled) return;
 
@@ -113,18 +156,21 @@ export function Combobox({
       case "ArrowDown":
         e.preventDefault();
         setHighlightedIndex((prev) =>
-          prev < filteredOptions.length - 1 ? prev + 1 : 0
+          prev < totalItems - 1 ? prev + 1 : 0
         );
         break;
       case "ArrowUp":
         e.preventDefault();
         setHighlightedIndex((prev) =>
-          prev > 0 ? prev - 1 : filteredOptions.length - 1
+          prev > 0 ? prev - 1 : totalItems - 1
         );
         break;
       case "Enter":
         e.preventDefault();
-        if (filteredOptions[highlightedIndex]) {
+        // If highlighted index is on the create button
+        if (showCreateButton && highlightedIndex === filteredOptions.length) {
+          handleCreateNew();
+        } else if (filteredOptions[highlightedIndex]) {
           const option = filteredOptions[highlightedIndex];
           onValueChange(option.value);
           setSearchQuery(option.label);
@@ -214,49 +260,75 @@ export function Combobox({
               "animate-in fade-in-0 slide-in-from-top-1 duration-200"
             )}
           >
-            {filteredOptions.length === 0 ? (
+            {filteredOptions.length === 0 && !showCreateButton && !isCreating ? (
               <div className="py-2.5 px-3 text-sm text-muted-foreground text-center font-medium italic">
                 Không tìm thấy kết quả
               </div>
             ) : (
-              filteredOptions.map((option, idx) => {
-                const isSelected = option.value === value;
-                const isHighlighted = idx === highlightedIndex;
+              <>
+                {filteredOptions.map((option, idx) => {
+                  const isSelected = option.value === value;
+                  const isHighlighted = idx === highlightedIndex;
 
-                return (
-                  <Tooltip key={option.value} delayDuration={300}>
-                    <TooltipTrigger asChild>
-                      <div
-                        onMouseDown={(e) => {
-                          // Prevent input from losing focus immediately, letting selection happen smoothly
-                          e.preventDefault();
-                          onValueChange(option.value);
-                          setSearchQuery(option.label);
-                          setIsOpen(false);
-                          setIsFocused(false);
-                          inputRef.current?.blur();
-                        }}
-                        onMouseEnter={() => setHighlightedIndex(idx)}
-                        className={cn(
-                          "relative flex h-9 cursor-pointer select-none items-center rounded-lg px-3 pr-10 text-sm outline-none transition-colors font-medium gap-2 whitespace-nowrap",
-                          isHighlighted && "bg-accent text-accent-foreground",
-                          isSelected ? "bg-primary/10 text-primary font-semibold" : "text-foreground"
-                        )}
-                      >
-                        <span>{option.label}</span>
-                        {isSelected && (
-                          <span className="absolute right-3 inline-flex items-center text-primary">
-                            <Check className="h-4 w-4" />
-                          </span>
-                        )}
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent side="right" className="text-xs">
-                      {option.label}
-                    </TooltipContent>
-                  </Tooltip>
-                );
-              })
+                  return (
+                    <Tooltip key={option.value} delayDuration={300}>
+                      <TooltipTrigger asChild>
+                        <div
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            onValueChange(option.value);
+                            setSearchQuery(option.label);
+                            setIsOpen(false);
+                            setIsFocused(false);
+                            inputRef.current?.blur();
+                          }}
+                          onMouseEnter={() => setHighlightedIndex(idx)}
+                          className={cn(
+                            "relative flex h-9 cursor-pointer select-none items-center rounded-lg px-3 pr-10 text-sm outline-none transition-colors font-medium gap-2 whitespace-nowrap",
+                            isHighlighted && "bg-accent text-accent-foreground",
+                            isSelected ? "bg-primary/10 text-primary font-semibold" : "text-foreground"
+                          )}
+                        >
+                          <span>{option.label}</span>
+                          {isSelected && (
+                            <span className="absolute right-3 inline-flex items-center text-primary">
+                              <Check className="h-4 w-4" />
+                            </span>
+                          )}
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent side="right" className="text-xs">
+                        {option.label}
+                      </TooltipContent>
+                    </Tooltip>
+                  );
+                })}
+
+                {/* Quick-Create button */}
+                {isCreating && (
+                  <div className="flex items-center gap-2 px-3 py-2.5 text-sm text-muted-foreground font-medium border-t border-border/60 mt-1 pt-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Đang tạo...
+                  </div>
+                )}
+                {showCreateButton && (
+                  <div
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      handleCreateNew();
+                    }}
+                    onMouseEnter={() => setHighlightedIndex(filteredOptions.length)}
+                    className={cn(
+                      "flex items-center gap-2 px-3 py-2 text-sm cursor-pointer font-semibold border-t border-border/60 mt-1 pt-2 rounded-lg transition-colors whitespace-nowrap",
+                      "text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30",
+                      highlightedIndex === filteredOptions.length && "bg-blue-50 dark:bg-blue-950/30"
+                    )}
+                  >
+                    <Plus className="h-4 w-4 stroke-[2.5]" />
+                    {createLabel} &ldquo;{searchQuery.trim()}&rdquo;
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}
