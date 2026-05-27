@@ -1,407 +1,347 @@
-# Kế Hoạch: Sửa Lỗi Phông Chữ + Thêm Chức Năng Đa Ngôn Ngữ (VI/EN)
+# Kế Hoạch: Inline Quick-Create — Tạo Nhanh Tại Chỗ Trong Phiếu Mua Hàng
 
-> **Ngày tạo:** 2026-05-21
-> **Trạng thái:** Chờ duyệt
+> **Ngày tạo:** 2026-05-27 · **Cập nhật:** 2026-05-27 (v2 — theo review)
+> **Trạng thái:** Chờ duyệt lần 2
+> **Scope:** Frontend-only (Backend API đã đầy đủ, không cần sửa)
 
 ---
 
-## 1. Phân Tích Hiện Trạng
+## 1. Database & Entity Design (Backend)
 
-### 1.1. Lỗi Phông Chữ
+**Kết luận: KHÔNG cần thay đổi gì.**
 
-Hiện tại `globals.css` khai báo font stack:
+Các bảng và API đã đủ:
 
-```css
---font-sans: "Segoe UI", "Noto Sans", "Helvetica Neue", Arial, sans-serif;
+| Entity | POST API | Request DTO | Required Fields |
+|---|---|---|---|
+| `LoaiSanPham` | `POST /api/loai-san-pham` | `LoaiSanPhamRequest` | `tenLoaiSanPham`, `tiLeLoiNhuan` |
+| `DonViTinh` | `POST /api/don-vi-tinh` | `DonViTinhRequest` | `tenDonViTinh` |
+| `SanPham` | `POST /api/san-pham` | `SanPhamRequest` | `tenSanPham`, `maLoaiSanPham`, `maDonViTinh`, `donGiaMua` |
+
+Frontend `backendApi` service (`backend-api.ts`) đã có sẵn `.create()` cho cả 3 module → gọi trực tiếp.
+
+---
+
+## 2. API Design & Transaction Strategy
+
+### Chiến lược: **Gọi API riêng rẽ, map ID vào phiếu mua** ✅
+
+> **Tại sao không gộp vào payload Create Purchase Order?**
+> - Backend `PhieuMuaHangRequest` chỉ nhận `maSanPham` (ID). Sửa backend = phá vỡ contract hiện tại.
+> - Gộp phức tạp transaction: phải tạo danh mục → rollback nếu phiếu lỗi → logic rối.
+> - API riêng rẽ = đơn giản, tái sử dụng, và **các danh mục mới sống độc lập khỏi phiếu**.
+
+### Luồng xử lý (Sequence)
+
+```
+User gõ "Vàng 9999" vào Combobox Sản phẩm
+        ↓ (không match)
+Dropdown hiện: [+ Thêm mới "Vàng 9999"]
+        ↓ (user click)
+FE gọi POST /api/san-pham { tenSanPham, maLoaiSanPham, maDonViTinh, donGiaMua: 0 }
+        ↓ (201 OK → trả về SanPhamResponse với maSanPham)
+FE cập nhật products state → Combobox tự động chọn sản phẩm vừa tạo
+        ↓ (user tiếp tục nhập số lượng, đơn giá)
+User submit → POST /api/phieu-mua-hang (dùng maSanPham vừa có)
 ```
 
-**Vấn đề:**
-- Không import web font nào (không có `@import url(...)` hay `next/font`).
-- Phụ thuộc hoàn toàn vào font hệ thống → hiển thị khác nhau trên Windows/Mac/Linux.
-- Trên máy không có "Segoe UI" hoặc "Noto Sans" sẽ rơi về Arial → tiếng Việt có dấu có thể hiển thị xấu hoặc không đồng nhất.
-- Chưa dùng `next/font` (API tối ưu của Next.js) để preload/self-host font.
+### Xử lý rác data
 
-### 1.2. Đa Ngôn Ngữ (i18n)
-
-- **Không có thư viện i18n** nào trong `package.json`.
-- Toàn bộ text tiếng Việt đang **hardcoded trực tiếp** trong ~22 file TSX.
-- `layout.tsx` gán cố định `lang="vi"`.
-- Không có file translation JSON hay mechanism chuyển ngôn ngữ.
-
-### 1.3 Danh Sách Các File Cần Sửa
-
-| Nhóm | File | Nội dung cần dịch |
-|------|------|--------------------|
-| Layout | `src/app/layout.tsx` | `lang`, metadata title/description |
-| Login | `src/app/(auth)/login/page.tsx` | ~15 chuỗi (Đăng nhập, Tên đăng nhập, Mật khẩu, v.v.) |
-| Sidebar | `src/components/layout/sidebar.tsx` | 15 label menu |
-| Header | `src/components/layout/header.tsx` | 14 page title, nút Logout |
-| Dashboard | `src/app/(dashboard)/dashboard/page.tsx` | ~10 chuỗi |
-| Management | `src/components/dashboard/management.tsx` | Component dùng chung |
-| Suppliers | `dashboard/suppliers/page.tsx` | CRUD labels |
-| Customers | `dashboard/customers/page.tsx` | CRUD labels |
-| Units | `dashboard/units/page.tsx` | CRUD labels |
-| Product Types | `dashboard/product-types/page.tsx` | CRUD labels |
-| Service Types | `dashboard/service-types/page.tsx` | CRUD labels |
-| Products | `dashboard/products/page.tsx` | CRUD labels |
-| Purchase Orders | `dashboard/purchase-orders/page.tsx` | Form labels |
-| Orders (Bán) | `dashboard/orders/page.tsx` | Form labels |
-| Service Orders | `dashboard/service-orders/page.tsx` | Form labels |
-| Service Lookup | `dashboard/service-voucher-lookup/page.tsx` | Search/filter labels |
-| Reports | `dashboard/reports/page.tsx` | Report labels |
-| Settings | `dashboard/settings/page.tsx` | Setting labels |
-| Staff | `dashboard/staff/page.tsx` | User mgmt labels |
-| Profile | `dashboard/profile/page.tsx` | Profile labels |
-| Other pages | `categories/`, `services/`, `notifications/`, `gold-prices/` | Misc labels |
+- **Không có rác**: Danh mục tạo ra là data hợp lệ (đơn vị tính, loại SP tồn tại độc lập).
+- Nếu user tạo danh mục nhưng hủy phiếu → danh mục vẫn hữu ích cho lần sau.
+- Nếu cần strict → thêm `isActive: false` khi quick-create, chỉ activate khi phiếu submit thành công. **Khuyến nghị: KHÔNG cần**, vì danh mục là master data.
 
 ---
 
-## 2. Giải Pháp Đề Xuất
+## 3. Frontend Implementation
 
-### 2.1. Sửa Lỗi Phông Chữ
+### 3.1. Nâng cấp Combobox — Thêm prop `onCreateNew`
 
-**Phương án: Dùng `next/font/google` (Khuyến nghị của Next.js)**
+**File:** `frontend/src/components/ui/combobox.tsx`
 
-- Import font **Inter** (hỗ trợ tốt tiếng Việt, nhiều weight, phổ biến nhất cho web app hiện đại).
-- Fallback font **Noto Sans** cho Vietnamese diacritics đầy đủ.
-- Dùng `next/font` để self-host, tránh request bên ngoài, tối ưu FOIT/FOUT.
+Thêm props mới:
+
+```typescript
+interface ComboboxProps {
+  // ... props hiện tại giữ nguyên
+  onCreateNew?: (searchQuery: string) => Promise<ComboboxOption | null>;
+  createLabel?: string;       // mặc định: "Thêm mới"
+  creating?: boolean;         // hiện loading state khi đang tạo
+}
+```
+
+**Logic bổ sung trong dropdown:**
+
+```
+Điều kiện hiện nút "+ Thêm mới":
+  1. onCreateNew được truyền (prop != undefined)
+  2. searchQuery.trim() !== ""
+  3. Không có option nào match chính xác searchQuery
+  4. creating === false
+
+Khi user click "+ Thêm mới":
+  1. Gọi onCreateNew(searchQuery)
+  2. Nếu trả về ComboboxOption:
+     → onValueChange(option.value)
+     → setSearchQuery(option.label)
+     → setIsOpen(false)
+```
+
+**Vị trí render:** Sau danh sách filtered options (hoặc thay thế "Không tìm thấy kết quả").
 
 ```tsx
-// layout.tsx
-import { Inter } from "next/font/google";
-
-const inter = Inter({
-  subsets: ["latin", "vietnamese"],
-  variable: "--font-sans",
-  display: "swap",
-});
+{/* Trong dropdown, sau filteredOptions.map() */}
+{onCreateNew && searchQuery.trim() && !exactMatch && (
+  <div
+    onMouseDown={async (e) => {
+      e.preventDefault();
+      const result = await onCreateNew(searchQuery.trim());
+      if (result) {
+        onValueChange(result.value);
+        setSearchQuery(result.label);
+        setIsOpen(false);
+      }
+    }}
+    className="flex items-center gap-2 px-3 py-2 text-sm cursor-pointer
+               text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30
+               border-t border-border/60 font-medium"
+  >
+    <Plus className="h-4 w-4" />
+    {createLabel ?? "Thêm mới"} "{searchQuery.trim()}"
+  </div>
+)}
 ```
 
-**File cần sửa:**
-1. `frontend/src/app/layout.tsx` — import font, gắn CSS variable
-2. `frontend/src/app/globals.css` — cập nhật `--font-sans` thành CSS variable từ `next/font`
+### 3.2. Tích hợp vào PurchaseOrdersPage — Chiến lược 2 tầng
 
----
+**File:** `frontend/src/app/(dashboard)/dashboard/purchase-orders/page.tsx`
 
-### 2.2. Thêm Chức Năng Đa Ngôn Ngữ VI/EN
+> ⚠️ **Nguyên tắc nghiệp vụ:** Trong ngành vàng bạc đá quý, **Giá cả + Tồn kho + Tỷ lệ lợi nhuận** phụ thuộc trực tiếp vào Loại SP và Đơn vị tính. Tuyệt đối KHÔNG dùng giá trị mặc định khi tạo sản phẩm.
 
-**Phương án: Dùng React Context + JSON dictionaries (Nhẹ, không cần thêm library)**
+#### Tầng 1: Inline 1-hit — Đơn vị tính & Loại sản phẩm
 
-> Lý do chọn: Dự án có quy mô vừa (~20 pages), không cần SSR i18n phức tạp (next-intl/i18next). Context + JSON đủ mạnh, zero-dependency, dễ maintain.
+Chỉ cần 1 trường tên → tạo ngay trong Combobox, không cần Dialog.
 
-#### 2.2.1. Kiến Trúc i18n
-
-```
-frontend/src/
-├── i18n/
-│   ├── locales/
-│   │   ├── vi.json          # Từ điển tiếng Việt
-│   │   └── en.json          # Từ điển tiếng Anh
-│   ├── i18n-context.tsx     # React Context + Provider
-│   └── use-translation.ts   # Hook useTranslation()
-```
-
-#### 2.2.2. Cấu Trúc File Từ Điển (JSON)
-
-```json
-// vi.json
-{
-  "common": {
-    "login": "Đăng nhập",
-    "logout": "Đăng xuất",
-    "save": "Lưu",
-    "cancel": "Hủy",
-    "delete": "Xóa",
-    "edit": "Sửa",
-    "add": "Thêm",
-    "search": "Tìm kiếm",
-    "loading": "Đang tải...",
-    "noData": "Không có dữ liệu",
-    "confirm": "Xác nhận",
-    "back": "Quay lại",
-    "actions": "Thao tác"
-  },
-  "auth": {
-    "title": "Đăng nhập",
-    "subtitle": "Nhập thông tin tài khoản để truy cập hệ thống",
-    "username": "Tên đăng nhập",
-    "usernamePlaceholder": "Nhập tên đăng nhập",
-    "password": "Mật khẩu",
-    "passwordPlaceholder": "Nhập mật khẩu",
-    "loginButton": "Đăng nhập",
-    "loggingIn": "Đang đăng nhập...",
-    "showPassword": "Hiện mật khẩu",
-    "hidePassword": "Ẩn mật khẩu",
-    "demoAccounts": "Tài khoản demo",
-    "staff": "Nhân viên",
-    "systemTitle": "Hệ thống quản lý cửa hàng",
-    "systemSubtitle": "Vàng · Bạc · Đá Quý",
-    "initLoading": "Đang khởi tạo trang đăng nhập...",
-    "errorDefault": "Đã xảy ra lỗi"
-  },
-  "nav": {
-    "dashboard": "Dashboard",
-    "suppliers": "Nhà cung cấp",
-    "customers": "Khách hàng",
-    "units": "Đơn vị tính",
-    "productTypes": "Loại sản phẩm",
-    "serviceTypes": "Loại dịch vụ",
-    "products": "Sản phẩm",
-    "purchaseOrders": "Lập phiếu mua",
-    "salesOrders": "Lập phiếu bán",
-    "serviceOrders": "Lập phiếu dịch vụ",
-    "productSearch": "Tra cứu sản phẩm",
-    "serviceSearch": "Tra cứu phiếu dịch vụ",
-    "accounts": "Quản lý tài khoản",
-    "reports": "Báo cáo",
-    "settings": "Thay đổi quy định"
-  },
-  "dashboard": {
-    "title": "Tổng quan vận hành",
-    "description": "Số liệu nhanh theo thời gian thực từ hệ thống",
-    "productCount": "Số sản phẩm",
-    "totalStock": "Tổng tồn kho",
-    "monthRevenue": "Doanh thu tháng nay",
-    "pendingService": "Phiếu dịch vụ chưa hoàn thành",
-    "note": "Ghi chú",
-    "noteContent": "Dashboard đang lấy doanh thu từ các phiếu bán trong tháng hiện tại và trạng thái phiếu dịch vụ từ backend.",
-    "loadingTitle": "Đang tải dữ liệu",
-    "loadingDesc": "Hệ thống đang đồng bộ số liệu tổng quan",
-    "loadError": "Không tải được dashboard"
-  },
-  "meta": {
-    "title": "Gold Store - Quản lý cửa hàng vàng bạc đá quý",
-    "description": "Hệ thống quản lý cửa hàng vàng bạc đá quý - quản lý sản phẩm, đơn hàng, khách hàng và giá vàng."
-  }
-}
-```
-
-```json
-// en.json (cùng key, giá trị tiếng Anh)
-{
-  "common": {
-    "login": "Login",
-    "logout": "Logout",
-    "save": "Save",
-    "cancel": "Cancel",
-    // ...
-  },
-  "auth": {
-    "title": "Login",
-    "subtitle": "Enter your credentials to access the system",
-    // ...
-  }
-}
-```
-
-#### 2.2.3. React Context & Hook
+**A. Combobox Đơn vị tính:**
 
 ```tsx
-// i18n-context.tsx
-"use client";
-import { createContext, useContext, useState, useCallback, useEffect } from "react";
-import vi from "./locales/vi.json";
-import en from "./locales/en.json";
-
-type Locale = "vi" | "en";
-type Translations = typeof vi;
-
-const dictionaries: Record<Locale, Translations> = { vi, en };
-
-interface I18nContextValue {
-  locale: Locale;
-  setLocale: (locale: Locale) => void;
-  t: (key: string) => string;
-}
-
-const I18nContext = createContext<I18nContextValue | null>(null);
-
-export function I18nProvider({ children }: { children: React.ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>(() => {
-    if (typeof window !== "undefined") {
-      return (localStorage.getItem("locale") as Locale) || "vi";
-    }
-    return "vi";
-  });
-
-  const setLocale = useCallback((newLocale: Locale) => {
-    setLocaleState(newLocale);
-    localStorage.setItem("locale", newLocale);
-    document.documentElement.lang = newLocale;
-  }, []);
-
-  useEffect(() => {
-    document.documentElement.lang = locale;
-  }, [locale]);
-
-  const t = useCallback((key: string): string => {
-    const keys = key.split(".");
-    let result: unknown = dictionaries[locale];
-    for (const k of keys) {
-      result = (result as Record<string, unknown>)?.[k];
-    }
-    return (result as string) ?? key;
-  }, [locale]);
-
-  return (
-    <I18nContext.Provider value={{ locale, setLocale, t }}>
-      {children}
-    </I18nContext.Provider>
-  );
-}
-
-export function useTranslation() {
-  const ctx = useContext(I18nContext);
-  if (!ctx) throw new Error("useTranslation must be used within I18nProvider");
-  return ctx;
-}
+<Combobox
+  value={item.maDonViTinh}
+  onValueChange={(v) => updateItem(index, { maDonViTinh: v })}
+  options={unitOptions}
+  onCreateNew={async (name) => {
+    const created = await backendApi.units.create({ tenDonViTinh: name });
+    setUnits(prev => [...prev, created]);
+    return { value: created.maDonViTinh, label: created.tenDonViTinh };
+  }}
+/>
 ```
 
-#### 2.2.4. Language Switcher Component trên Trang Login
+**B. Combobox Loại sản phẩm** (trong Dialog tạo SP, xem tầng 2):
 
-Thêm một **dropdown chọn ngôn ngữ** (VI 🇻🇳 / EN 🇬🇧) ở **góc trên bên phải** của trang Login. Khi chuyển ngôn ngữ:
-- Toàn bộ text trên login page cập nhật ngay lập tức.
-- Lưu lựa chọn vào `localStorage` → giữ nguyên khi reload.
-- Sau khi đăng nhập, dashboard và các trang khác cũng dùng ngôn ngữ đã chọn.
-
-```
-┌──────────────────────────────────────────────────┐
-│                                   [🇻🇳 VI ▾]     │  ← Language Switcher
-│                                                  │
-│  ┌──────────────────────────────────────────┐    │
-│  │          Gold Store                      │    │
-│  │   Hệ thống quản lý cửa hàng             │    │
-│  │   Vàng · Bạc · Đá Quý                   │    │
-│  └──────────────────────────────────────────┘    │
-│                                                  │
-│  ┌──────────────────────────────────────────┐    │
-│  │  Đăng nhập                               │    │
-│  │  Nhập thông tin tài khoản...             │    │
-│  │                                          │    │
-│  │  [Tên đăng nhập]                         │    │
-│  │  [Mật khẩu            👁]                │    │
-│  │  [     Đăng nhập      ]                  │    │
-│  │                                          │    │
-│  │  Tài khoản demo                          │    │
-│  │  [Admin]  [Nhân viên]                    │    │
-│  └──────────────────────────────────────────┘    │
-└──────────────────────────────────────────────────┘
+```tsx
+<Combobox
+  value={newProduct.maLoaiSanPham}
+  onValueChange={(v) => setNewProduct(prev => ({ ...prev, maLoaiSanPham: v }))}
+  options={productTypeOptions}
+  onCreateNew={async (name) => {
+    const created = await backendApi.productTypes.create({
+      tenLoaiSanPham: name,
+      tiLeLoiNhuan: 0.05, // mặc định 5%, user chỉnh sau
+    });
+    setProductTypes(prev => [...prev, created]);
+    return { value: created.maLoaiSanPham, label: created.tenLoaiSanPham };
+  }}
+/>
 ```
 
 ---
 
-## 3. Kế Hoạch Thực Hiện Chi Tiết
+#### Tầng 2: Dialog — Sản phẩm (bắt buộc chọn Loại SP + Đơn vị)
 
-### Phase 1: Sửa Lỗi Phông Chữ (Ước lượng: 15 phút)
+Khi user bấm `+ Thêm mới "Vàng SJC Test"` trên Combobox Sản phẩm → **mở Dialog** thay vì tạo ngay.
 
-| Bước | File | Thay đổi |
-|------|------|----------|
-| 1.1 | `frontend/src/app/layout.tsx` | Import `Inter` từ `next/font/google` với `subsets: ["latin", "vietnamese"]`, gắn `className` CSS variable vào `<body>` |
-| 1.2 | `frontend/src/app/globals.css` | Cập nhật `--font-sans` để dùng CSS variable `var(--font-inter)` thay vì chuỗi font cố định, giữ fallback |
+**Component mới:** `QuickCreateProductDialog`
 
-### Phase 2: Xây Dựng Hệ Thống i18n (Ước lượng: 30 phút)
+```tsx
+// Luồng:
+// 1. User gõ tên SP mới → click "+ Thêm mới"
+// 2. onCreateNew KHÔNG gọi API, mà mở Dialog
+// 3. Dialog pre-fill tên SP, bắt buộc chọn Loại SP + Đơn vị
+// 4. User bấm Lưu → gọi API → đóng Dialog → auto-fill vào row
 
-| Bước | File | Thay đổi |
-|------|------|----------|
-| 2.1 | `[NEW] frontend/src/i18n/locales/vi.json` | Tạo từ điển tiếng Việt đầy đủ tất cả nhóm: common, auth, nav, dashboard, suppliers, customers, units, productTypes, serviceTypes, products, purchaseOrders, salesOrders, serviceOrders, serviceLookup, reports, settings, staff, meta |
-| 2.2 | `[NEW] frontend/src/i18n/locales/en.json` | Tạo từ điển tiếng Anh tương ứng |
-| 2.3 | `[NEW] frontend/src/i18n/i18n-context.tsx` | React Context Provider + hook `useTranslation()` |
-| 2.4 | `frontend/src/app/layout.tsx` | Wrap app trong `<I18nProvider>` |
+interface QuickCreateProductDialogProps {
+  open: boolean;
+  defaultName: string;
+  productTypes: ProductTypeResponse[];
+  units: UnitResponse[];
+  onCreated: (product: ProductResponse) => void;
+  onClose: () => void;
+  // Truyền thêm để Loại SP + Đơn vị cũng quick-create được
+  onProductTypeCreated: (pt: ProductTypeResponse) => void;
+  onUnitCreated: (u: UnitResponse) => void;
+}
+```
 
-### Phase 3: Language Switcher + Login Page (Ước lượng: 20 phút)
+**Layout Dialog:**
 
-| Bước | File | Thay đổi |
-|------|------|----------|
-| 3.1 | `[NEW] frontend/src/components/language-switcher.tsx` | Component chọn ngôn ngữ (dropdown/toggle VI/EN), hiển thị cờ quốc gia |
-| 3.2 | `frontend/src/app/(auth)/login/page.tsx` | Thêm `LanguageSwitcher` ở góc phải trên, thay toàn bộ text hardcoded bằng `t("auth.xxx")` |
+```
+┌───────────────────────────────────────────┐
+│  ✨ Tạo nhanh sản phẩm                   │
+│                                           │
+│  Tên sản phẩm                             │
+│  ┌─────────────────────────────────────┐  │
+│  │ Vàng SJC Test (pre-filled)          │  │
+│  └─────────────────────────────────────┘  │
+│                                           │
+│  Loại sản phẩm *              (required)  │
+│  ┌──────────────────────────────── ▾──┐   │
+│  │ Chọn loại SP... (có Quick-Create) │   │
+│  └────────────────────────────────────┘   │
+│                                           │
+│  Đơn vị tính *                (required)  │
+│  ┌──────────────────────────────── ▾──┐   │
+│  │ Chọn đơn vị... (có Quick-Create)  │   │
+│  └────────────────────────────────────┘   │
+│                                           │
+│  Đơn giá mua (₫)             (optional)   │
+│  ┌─────────────────────────────────────┐  │
+│  │ 0                                   │  │
+│  └─────────────────────────────────────┘  │
+│                                           │
+│           [Hủy]    [💾 Lưu sản phẩm]     │
+└───────────────────────────────────────────┘
+```
 
-### Phase 4: Dịch Toàn Bộ Dashboard + Các Trang (Ước lượng: 45 phút)
+**Tích hợp vào Combobox Sản phẩm (purchase-orders/page.tsx):**
 
-| Bước | File | Thay đổi |
-|------|------|----------|
-| 4.1 | `frontend/src/components/layout/sidebar.tsx` | Thay label menu bằng `t("nav.xxx")` |
-| 4.2 | `frontend/src/components/layout/header.tsx` | Thay PAGE_TITLES bằng function dùng translation, thay "Logout" bằng `t("common.logout")` |
-| 4.3 | `frontend/src/app/(dashboard)/dashboard/page.tsx` | Thay text hardcoded bằng `t("dashboard.xxx")` |
-| 4.4 | Các page CRUD | Thay labels cho suppliers, customers, units, product-types, service-types, products (mỗi file có ~10-20 chuỗi) |
-| 4.5 | Các page phiếu | Thay labels cho purchase-orders, orders, service-orders |
-| 4.6 | Các page tra cứu + báo cáo + settings | Thay labels cho service-voucher-lookup, reports, settings, staff |
-| 4.7 | `frontend/src/components/dashboard/management.tsx` | Cập nhật component dùng chung |
+```tsx
+// State cho Dialog
+const [quickCreateOpen, setQuickCreateOpen] = useState(false);
+const [quickCreateName, setQuickCreateName] = useState("");
+const [quickCreateTargetIndex, setQuickCreateTargetIndex] = useState(-1);
 
-### Phase 5: Thêm Language Switcher Vào Header Dashboard (Ước lượng: 10 phút)
+// Combobox Sản phẩm
+<Combobox
+  value={item.maSanPham || ""}
+  onValueChange={(value) => onProductChange(index, value)}
+  options={productOptions}
+  onCreateNew={async (name) => {
+    // KHÔNG gọi API ở đây — mở Dialog
+    setQuickCreateName(name);
+    setQuickCreateTargetIndex(index);
+    setQuickCreateOpen(true);
+    return null; // Combobox không chọn gì, chờ Dialog xử lý
+  }}
+/>
 
-| Bước | File | Thay đổi |
-|------|------|----------|
-| 5.1 | `frontend/src/components/layout/header.tsx` | Thêm `<LanguageSwitcher />` cạnh nút Logout để user chuyển ngôn ngữ bất cứ lúc nào |
+// Dialog (render 1 lần ở cuối page)
+<QuickCreateProductDialog
+  open={quickCreateOpen}
+  defaultName={quickCreateName}
+  productTypes={productTypes}
+  units={units}
+  onCreated={(product) => {
+    setProducts(prev => [...prev, product]);
+    onProductChange(quickCreateTargetIndex, product.maSanPham);
+    setQuickCreateOpen(false);
+  }}
+  onClose={() => setQuickCreateOpen(false)}
+  onProductTypeCreated={(pt) => setProductTypes(prev => [...prev, pt])}
+  onUnitCreated={(u) => setUnits(prev => [...prev, u])}
+/>
+```
+
+### 3.3. State Management — Đồng bộ tức thì
+
+**Không cần Zustand hay React Query thêm.** Cách hiện tại đã đủ:
+
+```
+products, units, suppliers = useState<T[]>([])
+                                   ↓
+Khi quick-create thành công:
+  setProducts(prev => [...prev, newProduct])
+                                   ↓
+Combobox.options re-render → item mới xuất hiện ngay
+```
+
+**Đồng bộ cross-page:** Các trang khác (Phiếu Bán, Tra cứu) gọi `loadData()` khi mount → tự động fetch data mới nhất từ API. **Không cần invalidation mechanism.**
 
 ---
 
-## 4. Quy Tắc Translation Key
+## 4. Step-by-step Action Plan
 
-Để đảm bảo nhất quán:
+### Phase 1: Nâng cấp Combobox (Core)
 
-| Namespace | Mô tả | Ví dụ |
-|-----------|--------|-------|
-| `common` | Từ dùng chung toàn app | `common.save`, `common.delete` |
-| `auth` | Chỉ trang đăng nhập | `auth.title`, `auth.username` |
-| `nav` | Menu sidebar + header | `nav.suppliers`, `nav.reports` |
-| `dashboard` | Trang tổng quan | `dashboard.title`, `dashboard.productCount` |
-| `suppliers` | Trang nhà cung cấp | `suppliers.name`, `suppliers.phone` |
-| `customers` | Trang khách hàng | `customers.name`, `customers.phone` |
-| `products` | Trang sản phẩm | `products.name`, `products.price` |
-| `meta` | SEO metadata | `meta.title`, `meta.description` |
+| Step | File | Thay đổi | Effort |
+|------|------|----------|--------|
+| 1.1 | `combobox.tsx` | Thêm props `onCreateNew`, `createLabel`, `creating` vào `ComboboxProps` | 5 min |
+| 1.2 | `combobox.tsx` | Thêm `exactMatch` check vào `useMemo` | 3 min |
+| 1.3 | `combobox.tsx` | Render nút `+ Thêm mới "..."` cuối dropdown | 10 min |
+| 1.4 | `combobox.tsx` | Handle Enter key → nếu `highlightedIndex` ở nút Create → gọi `onCreateNew` | 5 min |
+| 1.5 | `combobox.tsx` | Loading state: disable nút khi `creating === true` | 3 min |
+
+### Phase 2: QuickCreateProductDialog + Tích hợp Purchase Orders
+
+| Step | File | Thay đổi | Effort |
+|------|------|----------|--------|
+| 2.1 | `purchase-orders/page.tsx` | Thêm state `productTypes` + fetch `backendApi.productTypes.list()` trong `loadData` | 5 min |
+| 2.2 | **[NEW]** `components/dashboard/quick-create-product-dialog.tsx` | Dialog: tên SP (pre-fill), Combobox Loại SP (có quick-create), Combobox Đơn vị (có quick-create), Input đơn giá mua, nút Lưu/Hủy | **20 min** |
+| 2.3 | `purchase-orders/page.tsx` | Thêm `onCreateNew` cho Combobox Sản phẩm → mở Dialog (không gọi API trực tiếp) | 10 min |
+| 2.4 | `purchase-orders/page.tsx` | Thêm `onCreateNew` cho cột Đơn vị tính (inline 1-hit, chuyển từ text → Combobox) | 10 min |
+| 2.5 | `purchase-orders/page.tsx` | Toast success khi tạo nhanh thành công | 3 min |
+
+### Phase 3: Polish & Edge Cases
+
+| Step | Nội dung | Effort |
+|------|----------|--------|
+| 3.1 | i18n: Thêm translation keys cho Quick-Create labels | 5 min |
+| 3.2 | Error handling: nếu API create lỗi (trùng tên,...) → hiện toast error, không chọn | 5 min |
+| 3.3 | Loading spinner trên nút "+ Thêm mới" khi đang gọi API | 3 min |
+| 3.4 | Keyboard: ArrowDown/Up tính thêm nút Create, Enter trên nút Create = trigger | 5 min |
+
+**Tổng effort ước lượng:** ~90 phút
 
 ---
 
-## 5. Kế Hoạch Xác Minh (Verification)
+## 5. Files Tổng Kết
 
-### 5.1. Kiểm Tra Tự Động
+| Loại | File | Nội dung |
+|------|------|----------|
+| **MODIFY** | `frontend/src/components/ui/combobox.tsx` | Thêm `onCreateNew` prop + render logic |
+| **[NEW]** | `frontend/src/components/dashboard/quick-create-product-dialog.tsx` | Dialog tạo nhanh SP: tên, loại SP, đơn vị, đơn giá mua |
+| **MODIFY** | `frontend/src/app/(dashboard)/dashboard/purchase-orders/page.tsx` | Tích hợp Dialog + inline quick-create cho Đơn vị |
+| **MODIFY** | `frontend/src/i18n/locales/vi.json` | Thêm keys: `common.createNew`, `quickCreate.*` |
+| **MODIFY** | `frontend/src/i18n/locales/en.json` | Tương ứng EN |
+
+**Backend: 0 file cần sửa.**
+
+---
+
+## 6. Verification Plan
+
+### Kiểm tra trực quan (Browser — Manual)
+
+1. **Mở** `http://localhost:3000/dashboard/purchase-orders`
+2. **Test Quick-Create Sản phẩm:**
+   - Click Combobox "Sản phẩm" → gõ tên chưa tồn tại (ví dụ: "Vàng SJC Test")
+   - Xác nhận dropdown hiện `+ Thêm mới "Vàng SJC Test"`
+   - Click nút → đợi loading → Combobox tự chọn sản phẩm mới
+   - Kiểm tra đơn vị tính + loại SP auto-fill
+3. **Test Quick-Create Đơn vị tính (nếu có):**
+   - Tương tự bước 2, gõ đơn vị mới
+4. **Test đồng bộ cross-page:**
+   - Mở tab "Phiếu Bán Hàng" → xác nhận sản phẩm vừa tạo xuất hiện trong dropdown
+5. **Test edge cases:**
+   - Gõ tên đã tồn tại → KHÔNG hiện nút "Thêm mới"
+   - Quick-create rồi xóa text → dropdown quay lại danh sách đầy đủ
+   - API lỗi (ví dụ: trùng tên) → toast error, không crash
+6. **Test submit phiếu mua:** Tạo nhanh SP → điền đầy đủ → submit → phiếu tạo thành công
+
+### Kiểm tra build
 
 ```bash
-# Chạy build để đảm bảo không lỗi TypeScript
-npm run build:frontend
-
-# Chạy lint
-npm run lint:frontend
-
-# Chạy type-check
-npm --prefix frontend run type-check
+cd frontend && npm run build
 ```
 
-### 5.2. Kiểm Tra Trực Quan (Browser)
-
-1. **Mở trang Login** (`http://localhost:3000/login`)
-   - Xác nhận font Inter hiển thị đúng (kiểm tra DevTools → Computed → `font-family`).
-   - Xác nhận tiếng Việt có dấu hiển thị đẹp, đều, không bị fallback font.
-   - Nhấn nút chuyển ngôn ngữ sang **EN** → toàn bộ text trên login page chuyển sang tiếng Anh.
-   - Nhấn chuyển lại **VI** → text trở về tiếng Việt.
-   - Reload trang → ngôn ngữ đã chọn được giữ nguyên (localStorage).
-
-2. **Đăng nhập và kiểm tra Dashboard**
-   - Đăng nhập với tài khoản `admin/admin123`.
-   - Kiểm tra sidebar menu, header title, dashboard cards hiển thị đúng ngôn ngữ đã chọn.
-   - Chuyển ngôn ngữ trên header → toàn bộ UI cập nhật ngay lập tức.
-
-3. **Kiểm tra các trang khác**
-   - Duyệt qua 2-3 trang CRUD (suppliers, products) → xác nhận labels đã được dịch.
-   - Duyệt trang Reports, Settings → xác nhận labels đã được dịch.
-
----
-
-## 6. Rủi Ro & Lưu Ý
-
-| Rủi ro | Giải pháp |
-|--------|-----------|
-| Metadata SEO (`<title>`, `<meta>`) không đổi theo ngôn ngữ (vì dùng Next.js `export const metadata` tĩnh) | Phase đầu giữ metadata tiếng Việt. Nếu cần dynamic metadata thì chuyển sang `generateMetadata()` ở phase sau |
-| Dữ liệu từ backend (tên sản phẩm, tên khách hàng...) vẫn tiếng Việt | Chấp nhận — đây là dữ liệu user input, không cần dịch |
-| Một số component shadcn/ui có text mặc định tiếng Anh | Sẽ override thông qua props |
-
----
-
-## 7. Tóm Tắt Thay Đổi
-
-| Loại | Số file |
-|------|---------|
-| File mới (`[NEW]`) | 4 files (vi.json, en.json, i18n-context.tsx, language-switcher.tsx) |
-| File sửa | ~22 files (layout, login, sidebar, header, dashboard, 15+ pages) |
-| Thư viện mới | 0 (không cần cài thêm package) |
-| Breaking changes | Không |
+Đảm bảo TypeScript không lỗi sau khi thêm props mới vào Combobox.

@@ -27,7 +27,7 @@ import { getApiErrorMessage } from "@/lib/api-error";
 import { formatCurrency, formatNumber, todayIsoDate, toPositiveInt, toPositiveNumber, formatVNCurrencyInput, parseVNCurrencyInput } from "@/lib/format";
 import { useTranslation } from "@/i18n/i18n-context";
 import { cn } from "@/lib/utils";
-import { ClipboardList, Eye, Plus, ReceiptText, Trash2 } from "lucide-react";
+import { ClipboardList, Eye, Plus, ReceiptText, Trash2, Search } from "lucide-react";
 
 type PurchaseItemDraft = {
   keyId: string;
@@ -322,16 +322,14 @@ export default function PurchaseOrdersPage() {
         <div>
           <h1 className="text-lg font-bold tracking-tight text-foreground flex items-center gap-2">
             {t("purchaseOrders.title")}
-            <Badge variant="outline" className="text-[10px] font-bold px-1.5 py-0 h-5 bg-muted/50 border-muted">BM5</Badge>
           </h1>
-          <p className="text-xs text-muted-foreground">{t("purchaseOrders.description")}</p>
         </div>
       </div>
 
       {/* KHỐI FORM LẬP PHIẾU MUA HÀNG - Ở TRÊN */}
       <Card className="glass-card hover-elevate shadow-sm">
         <CardContent className="space-y-6 p-6">
-          <VoucherSection title="Thông tin chung" description="Chọn nhà cung cấp và ngày lập phiếu" icon={ClipboardList}>
+          <VoucherSection title="Thông tin chung" icon={ClipboardList}>
             <div className="grid gap-4 lg:grid-cols-[220px_minmax(260px,1fr)_minmax(320px,1.2fr)] lg:items-end">
               <div className="space-y-2">
                 <Label className="text-sm font-semibold text-muted-foreground">{t("common.dateCreated")}</Label>
@@ -359,7 +357,7 @@ export default function PurchaseOrdersPage() {
             </div>
           </VoucherSection>
 
-          <VoucherSection title="Chi tiết sản phẩm" description="Chọn sản phẩm, đơn vị và số lượng nhập kho" icon={ReceiptText}>
+          <VoucherSection title="Chi tiết sản phẩm" icon={ReceiptText}>
             <div className="rounded-md border border-border/80 overflow-visible [&_[data-slot=table-container]]:overflow-visible mt-2">
               <Table>
                 <TableHeader className="bg-muted/30">
@@ -571,8 +569,17 @@ export default function PurchaseOrdersPage() {
       <Card className="glass-card hover-elevate shadow-sm">
         <TableToolbar
           title={t("purchaseOrders.historyTitle")}
-          description={t("purchaseOrders.historyDesc")}
-          search={<Input value={historyQuery} onChange={(e) => setHistoryQuery(e.target.value)} placeholder="Tìm mã phiếu hoặc nhà cung cấp" className="h-9" />}
+          search={
+            <div className="relative w-full sm:w-80">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                value={historyQuery}
+                onChange={(e) => setHistoryQuery(e.target.value)}
+                placeholder="Tìm mã phiếu hoặc nhà cung cấp"
+                className="h-9 pl-9 pr-4"
+              />
+            </div>
+          }
         />
         <CardContent className="p-6">
           {purchaseList.length === 0 && loading ? (
