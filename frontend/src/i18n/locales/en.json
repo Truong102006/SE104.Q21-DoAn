@@ -331,7 +331,7 @@
     },
     "serviceOrders": {
         "title": "Service Orders",
-        "description": "Manage services, prepayment and delivery",
+        "description": "",
         "minPrepaymentRate": "Minimum prepayment rate",
         "customerRequired": "Customer is required",
         "minOneItem": "At least 1 line item is required",

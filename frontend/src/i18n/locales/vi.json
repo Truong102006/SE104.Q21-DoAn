@@ -331,7 +331,7 @@
     },
     "serviceOrders": {
         "title": "Lập phiếu dịch vụ",
-        "description": "Quản lý dịch vụ, tiền trả trước và giao hàng",
+        "description": "",
         "minPrepaymentRate": "Tỷ lệ trả trước tối thiểu",
         "customerRequired": "Khách hàng là bắt buộc",
         "minOneItem": "Cần ít nhất 1 dòng chi tiết",

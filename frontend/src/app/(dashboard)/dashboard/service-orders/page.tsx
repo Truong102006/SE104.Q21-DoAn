@@ -24,7 +24,7 @@ import type {
   ServiceTypeResponse,
 } from "@/types/backend";
 import { getApiErrorMessage } from "@/lib/api-error";
-import { formatCurrency, todayIsoDate, toPositiveInt, toPositiveNumber, formatVNCurrencyInput, parseVNCurrencyInput, formatVietnameseStatus } from "@/lib/format";
+import { formatCurrency, formatNumber, todayIsoDate, toPositiveInt, toPositiveNumber, formatVNCurrencyInput, parseVNCurrencyInput, formatVietnameseStatus } from "@/lib/format";
 import { useTranslation } from "@/i18n/i18n-context";
 import { ClipboardList, Eye, Filter, Plus, ReceiptText, RotateCcw, Search, Truck, Trash2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -167,6 +167,7 @@ export default function ServiceOrdersPage() {
   const [ngayLapPhieuDichVu, setNgayLapPhieuDichVu] = useState(todayIsoDate());
   const [maKhachHang, setMaKhachHang] = useState("");
   const [tongTienTraTruoc, setTongTienTraTruoc] = useState("0");
+  const [isManuallyEdited, setIsManuallyEdited] = useState(false);
   const [items, setItems] = useState<ServiceItemDraft[]>([createEmptyItem()]);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -212,6 +213,13 @@ export default function ServiceOrdersPage() {
       tongConLai,
     };
   }, [items, tongTienTraTruoc]);
+
+  useEffect(() => {
+    if (!isManuallyEdited) {
+      const minPrepay = Math.round(totals.tongTien * 0.15);
+      setTongTienTraTruoc(String(minPrepay));
+    }
+  }, [totals.tongTien, isManuallyEdited]);
 
   async function loadData() {
     setLoading(true);
@@ -349,7 +357,7 @@ export default function ServiceOrdersPage() {
       return;
     }
 
-    const minPrepayment = (prepaymentRate / 100) * totals.tongTien;
+    const minPrepayment = Math.max(0.15, prepaymentRate / 100) * totals.tongTien;
     if (totals.tongTraTruoc < minPrepayment) {
       setFormError(
         t("serviceOrders.prepaymentInsufficient")
@@ -434,6 +442,7 @@ export default function ServiceOrdersPage() {
       const created = await backendApi.serviceTickets.create(payload);
       setSoPhieuDichVu("");
       setTongTienTraTruoc("0");
+      setIsManuallyEdited(false);
       setItems([createEmptyItem()]);
       await loadData();
       await loadHistory(0);
@@ -477,7 +486,6 @@ export default function ServiceOrdersPage() {
         <div>
           <h1 className="text-lg font-bold tracking-tight text-foreground flex items-center gap-2">
             {t("serviceOrders.title")}
-            <Badge variant="outline" className="text-[10px] font-bold px-1.5 py-0 h-5 bg-muted/50 border-muted">BM7</Badge>
           </h1>
           <p className="text-xs text-muted-foreground">{t("serviceOrders.description")}</p>
         </div>
@@ -488,7 +496,7 @@ export default function ServiceOrdersPage() {
       {/* KHỐI FORM LẬP PHIẾU DỊCH VỤ - Ở TRÊN */}
       <Card className="shadow-sm border-border/80">
         <CardContent className="space-y-6 p-6">
-          <VoucherSection title="Thông tin chung" description="Chọn khách hàng và ngày lập phiếu" icon={ClipboardList}>
+          <VoucherSection title="Thông tin chung" description="" icon={ClipboardList}>
             <div className="grid gap-4 lg:grid-cols-[180px_220px_1fr] lg:items-end">
               <div className="space-y-2">
                 <Label className="text-sm font-semibold text-muted-foreground">{t("common.dateCreated")}</Label>
@@ -513,7 +521,7 @@ export default function ServiceOrdersPage() {
             </div>
           </VoucherSection>
 
-          <VoucherSection title="Chi tiết dịch vụ" description="Nhập từng dòng dịch vụ, số lượng và ngày giao dự kiến" icon={ReceiptText}>
+          <VoucherSection title="Chi tiết dịch vụ" description="" icon={ReceiptText}>
           <div className="rounded-md border border-border/80 overflow-visible [&_[data-slot=table-container]]:overflow-visible">
             <Table>
               <TableHeader className="bg-muted/30">
@@ -651,13 +659,16 @@ export default function ServiceOrdersPage() {
 
                 <div className="rounded-xl border border-blue-200 bg-blue-50/50 px-4 py-1.5 dark:border-blue-800 dark:bg-blue-950/20 shadow-xs flex items-center gap-2">
                   <span className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 whitespace-nowrap">
-                    {t("serviceOrders.prepaid")} ({prepaymentRate}%):
+                    {t("serviceOrders.prepaid")} (&gt;=15%):
                   </span>
                   <div className="relative flex items-center w-36">
                     <Input
                       type="text"
                       value={formatVNCurrencyInput(tongTienTraTruoc)}
-                      onChange={(e) => setTongTienTraTruoc(parseVNCurrencyInput(e.target.value))}
+                      onChange={(e) => {
+                        setIsManuallyEdited(true);
+                        setTongTienTraTruoc(parseVNCurrencyInput(e.target.value));
+                      }}
                       className="h-8 w-full bg-white dark:bg-slate-900 border-blue-300 focus-visible:ring-blue-500 font-extrabold text-blue-700 dark:text-blue-300 text-sm pl-2 !pr-10 text-right shadow-none py-0.5 rounded-md"
                     />
                     <span className="absolute right-2.5 text-xs text-blue-600 dark:text-blue-400 font-extrabold pointer-events-none select-none">
