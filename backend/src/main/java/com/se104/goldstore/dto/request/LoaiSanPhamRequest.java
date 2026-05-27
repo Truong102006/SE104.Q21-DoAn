@@ -17,6 +17,9 @@ public class LoaiSanPhamRequest {
     private BigDecimal tiLeLoiNhuan;
     private Boolean isActive;
 
+    @NotBlank(message = "Ma don vi tinh khong duoc de trong")
+    private String maDonViTinh;
+
     public String getMaLoaiSanPham() {
         return maLoaiSanPham;
     }
@@ -47,5 +50,13 @@ public class LoaiSanPhamRequest {
 
     public void setIsActive(Boolean isActive) {
         this.isActive = isActive;
+    }
+
+    public String getMaDonViTinh() {
+        return maDonViTinh;
+    }
+
+    public void setMaDonViTinh(String maDonViTinh) {
+        this.maDonViTinh = maDonViTinh;
     }
 }

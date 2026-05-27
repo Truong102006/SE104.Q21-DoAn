@@ -119,23 +119,25 @@ class PhieuBanHangServiceImplTest {
         khachHang.setSoDienThoaiKhachHang("0901234567");
         khachHang.setDiaChiKhachHang("TP HCM");
 
-        SanPham sanPham = new SanPham();
-        sanPham.setMaSanPham("SP001");
-        sanPham.setTenSanPham("Nhan vang");
-        sanPham.setMaLoaiSanPham("LSP001");
-        sanPham.setMaDonViTinh("DVT001");
-        sanPham.setTonKho(10);
-        sanPham.setDonGiaMua(new BigDecimal("350000"));
-        sanPham.setDonGiaBan(new BigDecimal("385000.00"));
-
         LoaiSanPham loaiSanPham = new LoaiSanPham();
         loaiSanPham.setMaLoaiSanPham("LSP001");
         loaiSanPham.setTenLoaiSanPham("Vang 24K");
         loaiSanPham.setTiLeLoiNhuan(new BigDecimal("10"));
+        loaiSanPham.setMaDonViTinh("DVT001");
 
         DonViTinh donViTinh = new DonViTinh();
         donViTinh.setMaDonViTinh("DVT001");
         donViTinh.setTenDonViTinh("chi");
+        loaiSanPham.setDonViTinh(donViTinh);
+
+        SanPham sanPham = new SanPham();
+        sanPham.setMaSanPham("SP001");
+        sanPham.setTenSanPham("Nhan vang");
+        sanPham.setMaLoaiSanPham("LSP001");
+        sanPham.setTonKho(10);
+        sanPham.setDonGiaMua(new BigDecimal("350000"));
+        sanPham.setDonGiaBan(new BigDecimal("385000.00"));
+        sanPham.setLoaiSanPham(loaiSanPham);
 
         when(khachHangRepository.findById("KH001")).thenReturn(Optional.of(khachHang));
         when(phieuBanHangRepository.findTopBySoPhieuBanStartingWithOrderBySoPhieuBanDesc("PB")).thenReturn(Optional.empty());

@@ -272,9 +272,9 @@ ON CONFLICT (ma_tham_so) DO NOTHING;
 
 INSERT INTO don_vi_tinh (ma_don_vi_tinh, ten_don_vi_tinh, loai_don_vi, he_so_quy_doi, ghi_chu)
 VALUES
-    ('GRAM', 'gram', 'Khoi luong', 1, 'Don vi co so gram'),
-    ('CHI', 'chi', 'Khoi luong', 3.75, '1 chi = 3.75 gram'),
-    ('LUONG', 'luong', 'Khoi luong', 37.5, '1 luong = 37.5 gram')
+    ('DVT001', 'gram', 'Khoi luong', 1, 'Don vi co so gram'),
+    ('DVT002', 'chi', 'Khoi luong', 3.75, '1 chi = 3.75 gram'),
+    ('DVT003', 'luong', 'Khoi luong', 37.5, '1 luong = 37.5 gram')
 ON CONFLICT (ma_don_vi_tinh) DO NOTHING;
 
 INSERT INTO loai_dich_vu (ma_loai_dich_vu, ten_loai_dich_vu, don_gia_dich_vu)

@@ -33,7 +33,6 @@ import * as z from "zod";
 const productSchema = z.object({
   tenSanPham: z.string().min(1, "Tên sản phẩm là bắt buộc"),
   maLoaiSanPham: z.string().min(1, "Loại sản phẩm là bắt buộc"),
-  maDonViTinh: z.string().min(1, "Đơn vị tính là bắt buộc"),
   donGiaMua: z.number().min(0, "Đơn giá mua phải >= 0"),
   tonKho: z.number().int().min(0, "Tồn kho phải >= 0"),
   isActive: z.boolean(),
@@ -105,7 +104,6 @@ export default function ProductsPage() {
     defaultValues: {
       tenSanPham: "",
       maLoaiSanPham: "",
-      maDonViTinh: "",
       donGiaMua: 0,
       tonKho: 0,
       isActive: true,
@@ -208,7 +206,6 @@ export default function ProductsPage() {
     form.reset({
       tenSanPham: "",
       maLoaiSanPham: productTypes[0]?.maLoaiSanPham ?? "",
-      maDonViTinh: units.filter(u => u.isActive !== false)[0]?.maDonViTinh ?? units[0]?.maDonViTinh ?? "",
       donGiaMua: 0,
       tonKho: 0,
       isActive: true,
@@ -224,7 +221,6 @@ export default function ProductsPage() {
     form.reset({
       tenSanPham: item.tenSanPham,
       maLoaiSanPham: item.maLoaiSanPham,
-      maDonViTinh: item.maDonViTinh,
       donGiaMua: Number(item.donGiaMua ?? 0),
       tonKho: Number(item.tonKho ?? 0),
       isActive: item.isActive !== false,
@@ -239,7 +235,6 @@ export default function ProductsPage() {
         maSanPham: item.maSanPham,
         tenSanPham: item.tenSanPham,
         maLoaiSanPham: item.maLoaiSanPham,
-        maDonViTinh: item.maDonViTinh,
         donGiaMua: Number(item.donGiaMua ?? 0),
         tonKho: Number(item.tonKho ?? 0),
         imageUrl: item.imageUrl ?? null,
@@ -357,18 +352,6 @@ export default function ProductsPage() {
               />
             </div>
           }
-          actions={
-            !isSearchMode && (
-              <Button
-                size="sm"
-                className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold hover:from-blue-500 hover:to-indigo-500 hover:shadow-blue-500/35 active:scale-95 shadow-md shadow-blue-500/20 gap-1.5 h-9 px-4 rounded-xl cursor-pointer transition-all text-xs border-none"
-                onClick={openCreate}
-              >
-                <Plus className="h-4 w-4 stroke-[3]" />
-                {t("common.add")}
-              </Button>
-            )
-          }
         />
         <CardContent className="px-0">
           {items.length === 0 && loading ? (
@@ -392,7 +375,6 @@ export default function ProductsPage() {
                         <TableHead className="w-40">{t("products.productType")}</TableHead>
                         <TableHead className="w-36">{t("products.sellingPrice")}</TableHead>
                         <TableHead className="w-28">{t("products.stock")}</TableHead>
-                        <TableHead className="w-32">{t("common.unit")}</TableHead>
                         <TableHead className="w-64 pl-4">{t("common.status") || "Trạng thái"}</TableHead>
                         {!isSearchMode && <TableHead className="w-28 pr-5 text-right">{t("common.actions")}</TableHead>}
                         </TableRow>
@@ -425,7 +407,6 @@ export default function ProductsPage() {
                                 <TableCell>{item.loaiSanPham?.tenLoaiSanPham ?? item.maLoaiSanPham}</TableCell>
                                 <TableCell>{formatCurrency(item.donGiaBan)}</TableCell>
                                 <TableCell>{formatNumber(item.tonKho)}</TableCell>
-                                <TableCell>{item.donViTinh?.tenDonViTinh ?? item.maDonViTinh}</TableCell>
                                 <TableCell className="pl-4">
                                     <div className="flex items-center gap-2">
                                         {isSearchMode ? (
@@ -522,7 +503,7 @@ export default function ProductsPage() {
                   )}
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-2 sm:col-span-2">
                   <Label>
                     {t("products.productType")} <span className="text-destructive">*</span>
                   </Label>
@@ -532,17 +513,6 @@ export default function ProductsPage() {
                     options={productTypes
                       .filter((type) => type.isActive !== false || type.maLoaiSanPham === form.getValues("maLoaiSanPham"))
                       .map((type) => ({ value: type.maLoaiSanPham, label: type.tenLoaiSanPham }))}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>
-                    {t("common.unit")} <span className="text-destructive">*</span>
-                  </Label>
-                  <Select
-                    value={form.watch("maDonViTinh")}
-                    onValueChange={(value) => form.setValue("maDonViTinh", value)}
-                    options={units.filter((unit) => unit.isActive !== false || unit.maDonViTinh === form.getValues("maDonViTinh")).map((unit) => ({ value: unit.maDonViTinh, label: unit.tenDonViTinh }))}
                   />
                 </div>
 

@@ -23,6 +23,13 @@ public class LoaiSanPham {
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
 
+    @Column(name = "ma_don_vi_tinh", length = 20, nullable = false)
+    private String maDonViTinh;
+
+    @jakarta.persistence.ManyToOne(fetch = jakarta.persistence.FetchType.LAZY)
+    @jakarta.persistence.JoinColumn(name = "ma_don_vi_tinh", referencedColumnName = "ma_don_vi_tinh", insertable = false, updatable = false)
+    private DonViTinh donViTinh;
+
     public String getMaLoaiSanPham() {
         return maLoaiSanPham;
     }
@@ -53,5 +60,21 @@ public class LoaiSanPham {
 
     public void setIsActive(Boolean isActive) {
         this.isActive = isActive;
+    }
+
+    public String getMaDonViTinh() {
+        return maDonViTinh;
+    }
+
+    public void setMaDonViTinh(String maDonViTinh) {
+        this.maDonViTinh = maDonViTinh;
+    }
+
+    public DonViTinh getDonViTinh() {
+        return donViTinh;
+    }
+
+    public void setDonViTinh(DonViTinh donViTinh) {
+        this.donViTinh = donViTinh;
     }
 }

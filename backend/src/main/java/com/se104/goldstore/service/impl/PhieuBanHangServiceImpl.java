@@ -221,15 +221,15 @@ public class PhieuBanHangServiceImpl implements PhieuBanHangService {
             .stream()
             .collect(Collectors.toMap(SanPham::getMaSanPham, sanPham -> sanPham));
 
-        Set<String> maDonViTinhSet = sanPhamMap.values().stream().map(SanPham::getMaDonViTinh).collect(Collectors.toSet());
-        Map<String, DonViTinh> donViTinhMap = donViTinhRepository.findAllById(maDonViTinhSet)
-            .stream()
-            .collect(Collectors.toMap(DonViTinh::getMaDonViTinh, donViTinh -> donViTinh));
-
         Set<String> maLoaiSanPhamSet = sanPhamMap.values().stream().map(SanPham::getMaLoaiSanPham).collect(Collectors.toSet());
         Map<String, LoaiSanPham> loaiSanPhamMap = loaiSanPhamRepository.findAllById(maLoaiSanPhamSet)
             .stream()
             .collect(Collectors.toMap(LoaiSanPham::getMaLoaiSanPham, loaiSanPham -> loaiSanPham));
+
+        Set<String> maDonViTinhSet = loaiSanPhamMap.values().stream().map(LoaiSanPham::getMaDonViTinh).collect(Collectors.toSet());
+        Map<String, DonViTinh> donViTinhMap = donViTinhRepository.findAllById(maDonViTinhSet)
+            .stream()
+            .collect(Collectors.toMap(DonViTinh::getMaDonViTinh, donViTinh -> donViTinh));
 
         List<PhieuBanHangResponse.ItemResponse> items = details
             .stream()
@@ -256,16 +256,16 @@ public class PhieuBanHangServiceImpl implements PhieuBanHangService {
         if (sanPham != null) {
             item.setTenSanPham(sanPham.getTenSanPham());
             item.setMaLoaiSanPham(sanPham.getMaLoaiSanPham());
-            item.setMaDonViTinh(sanPham.getMaDonViTinh());
-
-            DonViTinh donViTinh = donViTinhMap.get(sanPham.getMaDonViTinh());
-            if (donViTinh != null) {
-                item.setTenDonViTinh(donViTinh.getTenDonViTinh());
-            }
 
             LoaiSanPham loaiSanPham = loaiSanPhamMap.get(sanPham.getMaLoaiSanPham());
             if (loaiSanPham != null) {
                 item.setTenLoaiSanPham(loaiSanPham.getTenLoaiSanPham());
+                item.setMaDonViTinh(loaiSanPham.getMaDonViTinh());
+
+                DonViTinh donViTinh = donViTinhMap.get(loaiSanPham.getMaDonViTinh());
+                if (donViTinh != null) {
+                    item.setTenDonViTinh(donViTinh.getTenDonViTinh());
+                }
             }
         }
 

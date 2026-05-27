@@ -40,10 +40,12 @@ class LoaiSanPhamServiceImplTest {
         loaiSanPham.setMaLoaiSanPham("LSP001");
         loaiSanPham.setTenLoaiSanPham("Vang 24K");
         loaiSanPham.setTiLeLoiNhuan(new BigDecimal("5"));
+        loaiSanPham.setMaDonViTinh("DVT001");
 
         LoaiSanPhamRequest request = new LoaiSanPhamRequest();
         request.setTenLoaiSanPham("Vang 24K");
         request.setTiLeLoiNhuan(new BigDecimal("10"));
+        request.setMaDonViTinh("DVT001");
 
         SanPham sanPham = new SanPham();
         sanPham.setMaSanPham("SP001");

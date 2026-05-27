@@ -9,9 +9,10 @@ import { Pagination } from "@/components/dashboard/pagination";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { backendApi } from "@/services/backend-api";
-import type { ProductTypeRequest, ProductTypeResponse } from "@/types/backend";
+import type { ProductTypeRequest, ProductTypeResponse, UnitResponse } from "@/types/backend";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { toPositiveNumber } from "@/lib/format";
 import { useAuthStore } from "@/stores/auth-store";
@@ -22,6 +23,7 @@ import { Pencil, Plus, Search, Trash2, X } from "lucide-react";
 const EMPTY_FORM: ProductTypeRequest = {
   tenLoaiSanPham: "",
   tiLeLoiNhuan: 0,
+  maDonViTinh: "",
   isActive: true,
 };
 
@@ -40,6 +42,7 @@ export default function ProductTypesPage() {
   const [editing, setEditing] = useState<ProductTypeResponse | null>(null);
   const [form, setForm] = useState<ProductTypeRequest>(EMPTY_FORM);
   const [tiLeText, setTiLeText] = useState("0");
+  const [units, setUnits] = useState<UnitResponse[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
   const [deleting, setDeleting] = useState<ProductTypeResponse | null>(null);
@@ -56,8 +59,18 @@ export default function ProductTypesPage() {
     }
   }
 
+  async function loadUnits() {
+    try {
+      const unitList = await backendApi.units.list();
+      setUnits(unitList);
+    } catch (err) {
+      console.error("Failed to load units:", err);
+    }
+  }
+
   useEffect(() => {
     loadData();
+    loadUnits();
   }, []);
 
   const filtered = useMemo(() => {
@@ -82,7 +95,11 @@ export default function ProductTypesPage() {
 
   function openCreate() {
     setEditing(null);
-    setForm({ ...EMPTY_FORM, isActive: true });
+    setForm({
+      ...EMPTY_FORM,
+      maDonViTinh: units.filter(u => u.isActive !== false)[0]?.maDonViTinh ?? units[0]?.maDonViTinh ?? "",
+      isActive: true,
+    });
     setTiLeText("0");
     setOpenForm(true);
   }
@@ -93,6 +110,7 @@ export default function ProductTypesPage() {
       maLoaiSanPham: item.maLoaiSanPham,
       tenLoaiSanPham: item.tenLoaiSanPham,
       tiLeLoiNhuan: item.tiLeLoiNhuan,
+      maDonViTinh: item.maDonViTinh,
       isActive: item.isActive !== false,
     });
     setTiLeText(String(item.tiLeLoiNhuan ?? 0));
@@ -109,6 +127,7 @@ export default function ProductTypesPage() {
       const payload: ProductTypeRequest = {
         tenLoaiSanPham: item.tenLoaiSanPham,
         tiLeLoiNhuan: item.tiLeLoiNhuan,
+        maDonViTinh: item.maDonViTinh,
         isActive: newActive,
       };
 
@@ -129,6 +148,11 @@ export default function ProductTypesPage() {
 
     if (!form.tenLoaiSanPham?.trim()) {
       useToastStore.getState().error(t("productTypes.nameRequired"));
+      return;
+    }
+
+    if (!form.maDonViTinh?.trim()) {
+      useToastStore.getState().error("Đơn vị tính là bắt buộc");
       return;
     }
 
@@ -230,6 +254,7 @@ export default function ProductTypesPage() {
                     <TableHead className="py-2 px-3 h-8 text-[11px] font-bold uppercase tracking-wider">{t("common.code")}</TableHead>
                     <TableHead className="py-2 px-3 h-8 text-[11px] font-bold uppercase tracking-wider">{t("productTypes.name")}</TableHead>
                     <TableHead className="py-2 px-3 h-8 text-[11px] font-bold uppercase tracking-wider">{t("productTypes.profitRate")}</TableHead>
+                    <TableHead className="py-2 px-3 h-8 text-[11px] font-bold uppercase tracking-wider">{t("common.unit") || "ĐVT"}</TableHead>
                     <TableHead className="py-2 px-3 h-8 text-[11px] font-bold uppercase tracking-wider pl-4">{t("common.status") || "Trạng thái"}</TableHead>
                     <TableHead className="py-2 px-3 h-8 text-[11px] font-bold uppercase tracking-wider text-right w-24">{t("common.actions")}</TableHead>
                   </TableRow>
@@ -243,7 +268,10 @@ export default function ProductTypesPage() {
                       <TableCell className="py-1.5 px-3 text-center font-bold text-xs text-muted-foreground">{(currentPage - 1) * itemsPerPage + index + 1}</TableCell>
                       <TableCell className="py-1.5 px-3 text-xs font-semibold">{item.maLoaiSanPham}</TableCell>
                       <TableCell className="py-1.5 px-3 text-xs font-semibold text-foreground">{item.tenLoaiSanPham}</TableCell>
-                      <TableCell className="py-1.5 px-3 text-xs">{item.tiLeLoiNhuan}</TableCell>
+                      <TableCell className="py-1.5 px-3 text-xs">{item.tiLeLoiNhuan}%</TableCell>
+                      <TableCell className="py-1.5 px-3 text-xs font-semibold">
+                        {units.find(u => u.maDonViTinh === item.maDonViTinh)?.tenDonViTinh ?? item.maDonViTinh}
+                      </TableCell>
                       <TableCell className="py-1.5 px-3 pl-4">
                         <div className="flex items-center gap-2">
                           <button
@@ -310,6 +338,14 @@ export default function ProductTypesPage() {
                 <div className="space-y-2">
                   <Label>{t("productTypes.profitRate")}</Label>
                   <Input value={tiLeText} onChange={(e) => setTiLeText(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label>{t("common.unit") || "Đơn vị tính"}</Label>
+                  <Select
+                    value={form.maDonViTinh}
+                    onValueChange={(value) => updateField("maDonViTinh", value)}
+                    options={units.filter((unit) => unit.isActive !== false || unit.maDonViTinh === form.maDonViTinh).map((unit) => ({ value: unit.maDonViTinh, label: unit.tenDonViTinh }))}
+                  />
                 </div>
                 <div className="flex items-center space-x-2 pt-2 sm:col-span-2">
                   <input

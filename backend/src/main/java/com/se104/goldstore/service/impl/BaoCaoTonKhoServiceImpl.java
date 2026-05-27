@@ -280,8 +280,8 @@ public class BaoCaoTonKhoServiceImpl implements BaoCaoTonKhoService {
 
             if (detail.getSanPham() != null) {
                 item.setTenSanPham(detail.getSanPham().getTenSanPham());
-                if (detail.getSanPham().getDonViTinh() != null) {
-                    item.setTenDonViTinh(detail.getSanPham().getDonViTinh().getTenDonViTinh());
+                if (detail.getSanPham().getLoaiSanPham() != null && detail.getSanPham().getLoaiSanPham().getDonViTinh() != null) {
+                    item.setTenDonViTinh(detail.getSanPham().getLoaiSanPham().getDonViTinh().getTenDonViTinh());
                 }
             }
 

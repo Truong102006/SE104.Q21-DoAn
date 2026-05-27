@@ -52,6 +52,15 @@ export function QuickCreateProductDialog({
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    // Auto-select unit when product type changes
+    function handleProductTypeChange(value: string) {
+        setMaLoaiSanPham(value);
+        const pt = productTypes.find(t => t.maLoaiSanPham === value);
+        if (pt?.maDonViTinh) {
+            setMaDonViTinh(pt.maDonViTinh);
+        }
+    }
+
     // Reset form when dialog opens with new name
     const [prevName, setPrevName] = useState(defaultName);
     if (defaultName !== prevName) {
@@ -92,7 +101,6 @@ export function QuickCreateProductDialog({
             const created = await backendApi.products.create({
                 tenSanPham: tenSanPham.trim(),
                 maLoaiSanPham,
-                maDonViTinh,
                 donGiaMua: Number(parseVNCurrencyInput(donGiaMua)) || 0,
             });
             useToastStore.getState().success(`Đã tạo sản phẩm "${created.tenSanPham}"`);
@@ -133,34 +141,6 @@ export function QuickCreateProductDialog({
                             />
                         </div>
 
-                        {/* Loại sản phẩm */}
-                        <div className="space-y-2">
-                            <Label className="text-sm font-semibold">
-                                Loại sản phẩm <span className="text-destructive">*</span>
-                            </Label>
-                            <Combobox
-                                value={maLoaiSanPham}
-                                onValueChange={setMaLoaiSanPham}
-                                options={productTypeOptions}
-                                placeholder="Chọn loại sản phẩm..."
-                                className="h-9"
-                                onCreateNew={async (name) => {
-                                    try {
-                                        const created = await backendApi.productTypes.create({
-                                            tenLoaiSanPham: name,
-                                            tiLeLoiNhuan: 0.05,
-                                        });
-                                        onProductTypeCreated(created);
-                                        useToastStore.getState().success(`Đã tạo loại SP "${created.tenLoaiSanPham}"`);
-                                        return { value: created.maLoaiSanPham, label: created.tenLoaiSanPham };
-                                    } catch (err) {
-                                        useToastStore.getState().error(getApiErrorMessage(err, "Không thể tạo loại SP"));
-                                        return null;
-                                    }
-                                }}
-                            />
-                        </div>
-
                         {/* Đơn vị tính */}
                         <div className="space-y-2">
                             <Label className="text-sm font-semibold">
@@ -180,6 +160,39 @@ export function QuickCreateProductDialog({
                                         return { value: created.maDonViTinh, label: created.tenDonViTinh };
                                     } catch (err) {
                                         useToastStore.getState().error(getApiErrorMessage(err, "Không thể tạo đơn vị"));
+                                        return null;
+                                    }
+                                }}
+                            />
+                        </div>
+
+                        {/* Loại sản phẩm */}
+                        <div className="space-y-2">
+                            <Label className="text-sm font-semibold">
+                                Loại sản phẩm <span className="text-destructive">*</span>
+                            </Label>
+                            <Combobox
+                                value={maLoaiSanPham}
+                                onValueChange={handleProductTypeChange}
+                                options={productTypeOptions}
+                                placeholder="Chọn loại sản phẩm..."
+                                className="h-9"
+                                onCreateNew={async (name) => {
+                                    if (!maDonViTinh) {
+                                        useToastStore.getState().error("Vui lòng chọn đơn vị tính trước khi tạo loại sản phẩm mới");
+                                        return null;
+                                    }
+                                    try {
+                                        const created = await backendApi.productTypes.create({
+                                            tenLoaiSanPham: name,
+                                            tiLeLoiNhuan: 0.05,
+                                            maDonViTinh: maDonViTinh,
+                                        });
+                                        onProductTypeCreated(created);
+                                        useToastStore.getState().success(`Đã tạo loại SP "${created.tenLoaiSanPham}"`);
+                                        return { value: created.maLoaiSanPham, label: created.tenLoaiSanPham };
+                                    } catch (err) {
+                                        useToastStore.getState().error(getApiErrorMessage(err, "Không thể tạo loại SP"));
                                         return null;
                                     }
                                 }}

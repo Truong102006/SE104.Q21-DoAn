@@ -8,6 +8,8 @@ public class LoaiSanPhamResponse {
     private String tenLoaiSanPham;
     private BigDecimal tiLeLoiNhuan;
     private Boolean isActive;
+    private String maDonViTinh;
+    private String tenDonViTinh;
 
     public String getMaLoaiSanPham() {
         return maLoaiSanPham;
@@ -39,5 +41,21 @@ public class LoaiSanPhamResponse {
 
     public void setIsActive(Boolean isActive) {
         this.isActive = isActive;
+    }
+
+    public String getMaDonViTinh() {
+        return maDonViTinh;
+    }
+
+    public void setMaDonViTinh(String maDonViTinh) {
+        this.maDonViTinh = maDonViTinh;
+    }
+
+    public String getTenDonViTinh() {
+        return tenDonViTinh;
+    }
+
+    public void setTenDonViTinh(String tenDonViTinh) {
+        this.tenDonViTinh = tenDonViTinh;
     }
 }

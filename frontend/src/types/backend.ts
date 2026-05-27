@@ -93,6 +93,7 @@ export interface ProductTypeResponse {
   maLoaiSanPham: string;
   tenLoaiSanPham: string;
   tiLeLoiNhuan: number;
+  maDonViTinh: string;
   isActive?: boolean;
 }
 
@@ -100,6 +101,7 @@ export interface ProductTypeRequest {
   maLoaiSanPham?: string;
   tenLoaiSanPham: string;
   tiLeLoiNhuan: number;
+  maDonViTinh: string;
   isActive?: boolean;
 }
 
@@ -142,7 +144,6 @@ export interface ProductRequest {
   maSanPham?: string;
   tenSanPham: string;
   maLoaiSanPham: string;
-  maDonViTinh: string;
   donGiaMua: number;
   donGiaBan?: number;
   tonKho?: number;
