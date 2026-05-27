@@ -264,7 +264,7 @@
     },
     "productCatalog": {
         "title": "Product Catalog",
-        "subtitle": "Browse products by image, price and stock",
+        "subtitle": "",
         "searchPlaceholder": "Search by code, name or product type...",
         "allStock": "All stock",
         "inStock": "In stock",

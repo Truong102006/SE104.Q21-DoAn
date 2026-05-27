@@ -264,7 +264,7 @@
     },
     "productCatalog": {
         "title": "Catalog sản phẩm",
-        "subtitle": "Tra cứu sản phẩm bằng hình ảnh, giá bán và tồn kho",
+        "subtitle": "",
         "searchPlaceholder": "Tìm theo mã, tên hoặc loại sản phẩm...",
         "allStock": "Tất cả tồn kho",
         "inStock": "Còn hàng",
