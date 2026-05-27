@@ -209,8 +209,6 @@ public class TraCuuServiceImpl implements TraCuuService {
 
         if (deliveredItems == totalItems) {
             return TINH_TRANG_HOAN_THANH;
-        } else if (deliveredItems > 0) {
-            return TINH_TRANG_DANG_GIAO;
         } else {
             return TINH_TRANG_CHUA_HOAN_THANH;
         }

@@ -331,12 +331,8 @@ public class PhieuDichVuServiceImpl implements PhieuDichVuService {
         voucher.setTongTienTraTruoc(tongTienTraTruoc);
         voucher.setTongTienConLai(tongTienConLai);
 
-        if (totalItems == 0) {
-            voucher.setTinhTrangDichVu(TINH_TRANG_CHUA_HOAN_THANH);
-        } else if (deliveredItems == totalItems) {
+        if (totalItems > 0 && deliveredItems == totalItems) {
             voucher.setTinhTrangDichVu(TINH_TRANG_HOAN_THANH);
-        } else if (deliveredItems > 0) {
-            voucher.setTinhTrangDichVu(TINH_TRANG_DANG_GIAO);
         } else {
             voucher.setTinhTrangDichVu(TINH_TRANG_CHUA_HOAN_THANH);
         }
