@@ -165,7 +165,7 @@
     },
     "suppliers": {
         "title": "Suppliers",
-        "description": "Manage supplier directory",
+        "description": "",
         "searchDesc": "Search by code, name, phone",
         "name": "Supplier name",
         "addTitle": "Add supplier",
@@ -178,7 +178,7 @@
     },
     "customers": {
         "title": "Customers",
-        "description": "Manage customer directory",
+        "description": "",
         "searchDesc": "Search by code, name, phone",
         "name": "Customer name",
         "addTitle": "Add customer",
@@ -191,7 +191,7 @@
     },
     "units": {
         "title": "Units",
-        "description": "Manage unit directory",
+        "description": "",
         "searchDesc": "Search by code, name, unit type",
         "name": "Unit name",
         "unitType": "Unit type",

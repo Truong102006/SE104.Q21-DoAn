@@ -165,7 +165,7 @@
     },
     "suppliers": {
         "title": "Nhà cung cấp",
-        "description": "Quản lý danh mục nhà cung cấp",
+        "description": "",
         "searchDesc": "Tìm theo mã, tên, SĐT",
         "name": "Tên nhà cung cấp",
         "addTitle": "Thêm nhà cung cấp",
@@ -178,7 +178,7 @@
     },
     "customers": {
         "title": "Khách hàng",
-        "description": "Quản lý danh mục khách hàng",
+        "description": "",
         "searchDesc": "Tìm theo mã, tên, SĐT",
         "name": "Tên khách hàng",
         "addTitle": "Thêm khách hàng",
@@ -191,7 +191,7 @@
     },
     "units": {
         "title": "Đơn vị tính",
-        "description": "Quản lý danh mục đơn vị tính",
+        "description": "",
         "searchDesc": "Tìm theo mã, tên, loại đơn vị",
         "name": "Tên đơn vị tính",
         "unitType": "Loại đơn vị",
