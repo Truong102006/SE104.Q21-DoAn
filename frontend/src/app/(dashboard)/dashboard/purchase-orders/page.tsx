@@ -112,7 +112,13 @@ export default function PurchaseOrdersPage() {
       ]);
 
       setSuppliers(supplierData);
-      setProducts(productPage.content);
+
+      // Ensure products are unique by maSanPham
+      const uniqueProducts = Array.from(
+        new Map(productPage.content.map((p) => [p.maSanPham, p])).values()
+      );
+      setProducts(uniqueProducts);
+
       setUnits(unitData);
       setProductTypes(ptData);
 
@@ -734,7 +740,10 @@ export default function PurchaseOrdersPage() {
         productTypes={productTypes}
         units={units}
         onCreated={(product) => {
-          setProducts((prev) => [...prev, product]);
+          setProducts((prev) => {
+            const exists = prev.some(p => p.maSanPham === product.maSanPham);
+            return exists ? prev : [...prev, product];
+          });
           if (quickCreateTargetIndex >= 0) {
             let unitId = product.maDonViTinh;
             if (!unitId && product.maLoaiSanPham) {
