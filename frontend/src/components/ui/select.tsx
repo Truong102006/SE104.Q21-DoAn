@@ -35,6 +35,56 @@ function Select({
   disabled,
   "aria-label": ariaLabel,
 }: SelectProps) {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (e.defaultPrevented) return;
+
+    // Only navigate fields when the Radix select dropdown is closed
+    const isClosed = e.currentTarget.getAttribute("data-state") === "closed";
+    if (!isClosed) return;
+
+    if (e.key !== "ArrowUp" && e.key !== "ArrowDown" && e.key !== "Enter") {
+      return;
+    }
+
+    const formElement = e.currentTarget.closest("form");
+    if (!formElement) return;
+
+    const selectors = 'input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([disabled]), select:not([disabled]), textarea:not([disabled]), [data-slot="select-trigger"]:not([disabled])';
+    const inputs = (Array.from(formElement.querySelectorAll(selectors)) as HTMLElement[])
+      .filter((el) => {
+        const rect = el.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      });
+
+    const currentIndex = inputs.indexOf(e.currentTarget);
+    if (currentIndex === -1) return;
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      e.stopPropagation();
+      const nextInput = inputs[currentIndex + 1];
+      if (nextInput) {
+        nextInput.focus();
+      }
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      e.stopPropagation();
+      const prevInput = inputs[currentIndex - 1];
+      if (prevInput) {
+        prevInput.focus();
+      }
+    } else if (e.key === "Enter") {
+      if (currentIndex < inputs.length - 1) {
+        e.preventDefault();
+        e.stopPropagation();
+        const nextInput = inputs[currentIndex + 1];
+        if (nextInput) {
+          nextInput.focus();
+        }
+      }
+    }
+  };
+
   return (
     <SelectPrimitive.Root
       value={String(value)}
@@ -43,6 +93,7 @@ function Select({
     >
       <SelectPrimitive.Trigger
         id={id}
+        data-slot="select-trigger"
         aria-label={ariaLabel}
         className={cn(
           "flex h-8 w-full items-center justify-between gap-2 rounded-lg border border-input bg-card px-2.5 text-sm text-foreground shadow-xs outline-none [&>span]:truncate",
@@ -50,6 +101,7 @@ function Select({
           "disabled:cursor-not-allowed disabled:opacity-50",
           className,
         )}
+        onKeyDownCapture={handleKeyDown}
       >
         <SelectPrimitive.Value placeholder={placeholder} />
         <SelectPrimitive.Icon asChild>
@@ -62,7 +114,7 @@ function Select({
           position="popper"
           sideOffset={5}
           className={cn(
-            "z-50 max-h-72 min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-lg border border-border/80 bg-popover text-popover-foreground shadow-xl",
+            "z-50 max-h-72 min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-xl p-1",
             "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
             "data-[side=bottom]:slide-in-from-top-1 data-[side=top]:slide-in-from-bottom-1",
             contentClassName,
@@ -74,9 +126,10 @@ function Select({
                 key={String(option.value)}
                 value={String(option.value)}
                 className={cn(
-                  "relative flex h-8 cursor-pointer select-none items-center gap-2 rounded-md px-2 pr-8 text-sm outline-none",
-                  "data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground",
-                  "data-[state=checked]:bg-primary/10 data-[state=checked]:font-medium data-[state=checked]:text-primary",
+                  "relative flex h-8 cursor-pointer select-none items-center gap-2 rounded-md px-2 pr-8 text-sm outline-none transition-colors",
+                  "text-slate-700 dark:text-slate-200",
+                  "data-[highlighted]:bg-slate-100 dark:data-[highlighted]:bg-slate-800 data-[highlighted]:text-slate-900 dark:data-[highlighted]:text-slate-100",
+                  "data-[state=checked]:bg-primary/10 data-[state=checked]:font-semibold data-[state=checked]:text-primary",
                 )}
               >
                 {option.leadingClassName && (

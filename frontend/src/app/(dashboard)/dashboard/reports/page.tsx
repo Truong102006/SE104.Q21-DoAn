@@ -226,7 +226,7 @@ function DrillDownModal({ open, onOpenChange, type, id, name, month, year }: Dri
                 <TableBody>
                   {paginatedData.map((item, idx) => (
                     <TableRow key={idx} className="hover:bg-muted/30 transition-colors border-b border-border/60">
-                      <TableCell className="py-1.5 px-3 text-xs text-blue-600">{item.soPhieu}</TableCell>
+                      <TableCell className="py-1.5 px-3 text-[11px] font-semibold text-foreground">{item.soPhieu}</TableCell>
                       <TableCell className="py-1.5 px-3 text-muted-foreground text-xs">{item.ngayLap}</TableCell>
                       <TableCell className="py-1.5 px-3 text-xs text-foreground">{item.khachHang || item.nhaCungCap}</TableCell>
                       <TableCell className="py-1.5 px-3 text-xs text-right text-foreground">{formatNumber(item.soLuong)}</TableCell>
@@ -343,14 +343,23 @@ export default function ReportsPage() {
       setLoading(true);
       setError(null);
       try {
+        // 1. Thu thập dữ liệu hiện có
         const [inv, prod, serv] = await Promise.all([
           backendApi.reports.inventoryGet(selectedMonth, selectedYear).catch(() => null),
           backendApi.reports.revenueProductsGet(selectedMonth, selectedYear).catch(() => null),
           backendApi.reports.revenueServicesGet(selectedMonth, selectedYear).catch(() => null),
         ]);
-        setInventory(inv);
-        setProductRevenue(prod);
-        setServiceRevenue(serv);
+
+        // 2. Tự động tạo song song (dưới dạng tuple) nếu thiếu báo biểu
+        const [genInv, genProd, genServ] = await Promise.all([
+          inv ? Promise.resolve(inv) : backendApi.reports.inventoryGenerate(selectedMonth, selectedYear).catch(() => null),
+          prod ? Promise.resolve(prod) : backendApi.reports.revenueProductsGenerate(selectedMonth, selectedYear).catch(() => null),
+          serv ? Promise.resolve(serv) : backendApi.reports.revenueServicesGenerate(selectedMonth, selectedYear).catch(() => null),
+        ]);
+
+        setInventory(genInv);
+        setProductRevenue(genProd);
+        setServiceRevenue(genServ);
       } catch (err) {
         setError(getApiErrorMessage(err, "Không thể nạp dữ liệu kỳ này"));
       } finally {
@@ -391,23 +400,6 @@ export default function ReportsPage() {
     return serviceRevenue.chiTiet.slice(start, start + serviceRevenueItemsPerPage);
   }, [serviceRevenue, serviceRevenuePage, serviceRevenueItemsPerPage]);
 
-  async function runGenerate(action: "inventory" | "product-revenue" | "service-revenue") {
-    setLoading(true);
-    try {
-      if (action === "inventory") {
-        setInventory(await backendApi.reports.inventoryGenerate(selectedMonth, selectedYear));
-      } else if (action === "product-revenue") {
-        setProductRevenue(await backendApi.reports.revenueProductsGenerate(selectedMonth, selectedYear));
-      } else if (action === "service-revenue") {
-        setServiceRevenue(await backendApi.reports.revenueServicesGenerate(selectedMonth, selectedYear));
-      }
-    } catch (err) {
-      setError(getApiErrorMessage(err, "Thao tác không thành công"));
-    } finally {
-      setLoading(false);
-    }
-  }
-
   if (!isAdmin) {
     return (
       <div className="flex h-[70vh] items-center justify-center">
@@ -420,67 +412,65 @@ export default function ReportsPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 pb-20">
-      {/* Date Filter & Global Action Card */}
-      <Card className="border-none shadow-sm">
-        <CardContent className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 bg-muted/10 rounded-2xl border">
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="flex items-center gap-2 pr-4 border-r border-border/50">
-              <Calendar className="h-5 w-5 text-primary" />
-              <span className="text-sm font-black text-foreground uppercase tracking-wider">Kỳ báo cáo:</span>
-            </div>
-            <div className="w-48">
-              <MonthPickerInput
-                value={`${selectedYear}-${String(selectedMonth).padStart(2, "0")}`}
-                onValueChange={(val) => {
-                  if (val) {
-                    const [year, month] = val.split("-").map(Number);
-                    setSelectedYear(year);
-                    setSelectedMonth(month);
-                  }
-                }}
-              />
-            </div>
+    <div className="max-w-7xl mx-auto space-y-4 pb-12">
+      {/* Date Filter & Global Action */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 bg-muted/10 rounded-xl border shadow-sm">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2 pr-3 border-r border-border/50">
+            <Calendar className="h-5 w-5 text-primary" />
+            <span className="text-base font-black text-foreground uppercase tracking-wider">Kỳ báo cáo:</span>
           </div>
+          <div className="w-40">
+            <MonthPickerInput
+              value={`${selectedYear}-${String(selectedMonth).padStart(2, "0")}`}
+              onValueChange={(val) => {
+                if (val) {
+                  const [year, month] = val.split("-").map(Number);
+                  setSelectedYear(year);
+                  setSelectedMonth(month);
+                }
+              }}
+            />
+          </div>
+        </div>
 
-          <Button
-            className="bg-emerald-600 hover:bg-emerald-700 text-white font-black shadow-lg shadow-emerald-600/20 rounded-xl h-11 px-6 gap-2 w-full sm:w-auto"
-            onClick={() => {
-              if (inventory) exportToCsv(`baocao_tonghop_${selectedMonth}_${selectedYear}.csv`, inventory.chiTiet);
-            }}
-            disabled={!inventory}
-          >
-            <FileDown className="h-5 w-5" />
-            XUẤT TỔNG HỢP
-          </Button>
-        </CardContent>
-      </Card>
+        <Button
+          className="bg-emerald-600 hover:bg-emerald-700 text-white font-black shadow-lg shadow-emerald-600/20 rounded-xl h-10 px-5 gap-2 w-full sm:w-auto text-xs"
+          onClick={() => {
+            if (inventory) exportToCsv(`baocao_tonghop_${selectedMonth}_${selectedYear}.csv`, inventory.chiTiet);
+          }}
+          disabled={!inventory}
+        >
+          <FileDown className="h-4 w-4" />
+          Xuất tổng hợp
+        </Button>
+      </div>
 
-      {error && <div className="bg-destructive/10 text-destructive p-4 rounded-xl border border-destructive/20 text-sm font-bold flex items-center gap-2"><Info className="h-4 w-4" />{error}</div>}
+      {error && <div className="bg-destructive/10 text-destructive p-3 rounded-xl border border-destructive/20 text-sm font-bold flex items-center gap-2"><Info className="h-4 w-4" />{error}</div>}
 
       {!loading && (
-        <div className="space-y-8">
-          {/* SECTION 1: BM10 Inventory */}
-          <Card className="border-none shadow-lg overflow-hidden border rounded-2xl">
-            <CardHeader className="flex flex-row items-center justify-between border-b px-6 py-5 bg-muted/5">
-              <CardTitle className="text-lg font-black flex items-center gap-2 uppercase tracking-tight">
+        <div className="space-y-4">
+          {/* SECTION 1: Inventory */}
+          <Card className="border-none shadow-md overflow-hidden border rounded-xl">
+            <CardHeader className="flex flex-row items-center justify-between border-b px-4 py-3 bg-muted/5">
+              <CardTitle className="text-sm font-extrabold flex items-center gap-2 uppercase tracking-wide">
                 <Boxes className="h-5 w-5 text-primary" />
-                Tồn Kho Sản Phẩm (BM10)
+                Tồn Kho Sản Phẩm
               </CardTitle>
               <div className="flex gap-2">
                 <Button
                   size="sm"
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl h-9 px-4 gap-2"
+                  variant="outline"
+                  className="border-emerald-600/30 dark:border-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:text-white hover:bg-emerald-600 dark:hover:bg-emerald-600 hover:border-emerald-600 font-bold gap-1.5 h-9 px-3.5 rounded-xl transition-all shadow-sm"
                   onClick={() => inventory && exportToCsv(`kho_${selectedMonth}_${selectedYear}.csv`, inventory.chiTiet)}
                 >
                   <FileDown className="h-4 w-4" /> Xuất Excel
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => runGenerate("inventory")} className="font-bold rounded-xl h-9 border-primary/50 text-primary">Chốt Kho</Button>
               </div>
             </CardHeader>
             <CardContent className="px-0 py-0">
               {!inventory ? (
-                <div className="p-10"><EmptyState title="Dữ liệu kỳ này chưa chốt" description="Dữ liệu kho chưa được chốt cho tháng này." /></div>
+                <div className="p-10"><EmptyState title="Không có dữ liệu tồn kho" description="Không có dữ liệu tồn kho cho tháng này." /></div>
               ) : (
                 <div className="flex flex-col">
                   <div className="overflow-x-auto">
@@ -505,7 +495,7 @@ export default function ReportsPage() {
                             onClick={() => setDrillDown({ open: true, type: "product-purchase", id: item.maSanPham, name: item.tenSanPham })}
                           >
                             <TableCell className="py-1.5 px-3 text-center text-xs text-muted-foreground">{(inventoryPage - 1) * inventoryItemsPerPage + idx + 1}</TableCell>
-                            <TableCell className="py-1.5 px-3 text-[10px] font-mono font-bold text-blue-600">{item.maSanPham}</TableCell>
+                            <TableCell className="py-1.5 px-3 text-[11px] font-semibold text-foreground">{item.maSanPham}</TableCell>
                             <TableCell className="py-1.5 px-3 text-xs text-foreground">{item.tenSanPham}</TableCell>
                             <TableCell className="py-1.5 px-3 text-xs text-right text-foreground">{formatNumber(item.tonDau)}</TableCell>
                             <TableCell className="py-1.5 px-3 text-xs text-right text-blue-600">+{formatNumber(item.soLuongMuaVao)}</TableCell>
@@ -531,13 +521,13 @@ export default function ReportsPage() {
             </CardContent>
           </Card>
 
-          <div className="grid gap-8 lg:grid-cols-2">
-            {/* SECTION 2: BM11 Product Revenue */}
-            <Card className="border-none shadow-lg overflow-hidden border rounded-2xl">
-              <CardHeader className="flex flex-row items-center justify-between border-b px-6 py-5 bg-muted/5">
-                <CardTitle className="text-lg font-black flex items-center gap-2 uppercase tracking-tight">
+          <div className="grid gap-4 lg:grid-cols-2">
+            {/* SECTION 2: Product Revenue */}
+            <Card className="border-none shadow-md overflow-hidden border rounded-xl">
+              <CardHeader className="flex flex-row items-center justify-between border-b px-4 py-3 bg-muted/5">
+                <CardTitle className="text-sm font-extrabold flex items-center gap-2 uppercase tracking-wide">
                   <BarChart3 className="h-5 w-5 text-primary" />
-                  Doanh Thu Bán Hàng (BM11)
+                  Doanh Thu Sản Phẩm
                 </CardTitle>
                 <div className="flex items-center gap-4">
                   <div className="flex border rounded-lg overflow-hidden p-0.5 bg-muted/50">
@@ -563,22 +553,21 @@ export default function ReportsPage() {
                   <div className="flex gap-2">
                     <Button
                       size="sm"
-                      variant="ghost"
-                      className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 font-black gap-1 p-0 px-2"
+                      variant="outline"
+                      className="border-emerald-600/30 dark:border-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:text-white hover:bg-emerald-600 dark:hover:bg-emerald-600 hover:border-emerald-600 font-bold gap-1.5 h-9 px-3.5 rounded-xl transition-all shadow-sm"
                       onClick={() => productRevenue && exportToCsv(`doanh_thu_sp_${selectedMonth}_${selectedYear}.csv`, productRevenue.chiTiet)}
                     >
-                      <FileDown className="h-4 w-4" /> EXCEL
+                      <FileDown className="h-4 w-4" /> Xuất Excel
                     </Button>
-                    <Button variant="outline" size="sm" onClick={() => runGenerate("product-revenue")} className="text-[10px] font-black rounded-lg h-7">KẾT TOÁN</Button>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="p-6">
+              <CardContent className="p-4">
                 {!productRevenue ? (
-                  <div className="h-[200px] flex items-center justify-center text-muted-foreground italic font-medium">Chưa có số liệu kết toán doanh thu.</div>
+                  <div className="h-[180px] flex items-center justify-center text-muted-foreground italic font-medium">Chưa có số liệu doanh thu.</div>
                 ) : (
-                  <div className="space-y-6">
-                    <div className="h-[260px] w-full bg-muted/5 rounded-xl border border-dashed p-2">
+                  <div className="space-y-4">
+                    <div className="h-[210px] w-full bg-muted/5 rounded-xl border border-dashed p-1.5">
                       {bm11ChartType === "bar" ? (
                         <ResponsiveContainer width="100%" height="100%">
                           <BarChart
@@ -708,21 +697,30 @@ export default function ReportsPage() {
                       <Table>
                         <TableHeader className="bg-muted/40">
                           <TableRow className="hover:bg-transparent">
+                            <TableHead className="w-14 text-center py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400">STT</TableHead>
                             <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400">Mã SP</TableHead>
                             <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400">Sản phẩm</TableHead>
+                            <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400 text-right">Số lượng bán</TableHead>
                             <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400 text-right">Doanh thu</TableHead>
-                            <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400 text-right w-16">%</TableHead>
+                            <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400 text-right w-16">Tỉ lệ</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {paginatedProductRevenue.map((item, i) => (
                             <TableRow key={i} className="hover:bg-muted/20 cursor-pointer transition-colors border-b border-border/60" onClick={() => setDrillDown({ open: true, type: "product-sale", id: item.maSanPham, name: item.tenSanPham })}>
-                              <TableCell className="py-1.5 px-3 text-[10px] font-mono font-bold text-blue-600">{item.maSanPham}</TableCell>
+                              <TableCell className="py-1.5 px-3 text-center text-xs text-muted-foreground">{(productRevenuePage - 1) * productRevenueItemsPerPage + i + 1}</TableCell>
+                              <TableCell className="py-1.5 px-3 text-[11px] font-semibold text-foreground">{item.maSanPham}</TableCell>
                               <TableCell className="py-1.5 px-3 text-xs text-slate-600 dark:text-slate-300 truncate max-w-[120px]">{item.tenSanPham}</TableCell>
+                              <TableCell className="py-1.5 px-3 text-xs text-right text-foreground">{formatNumber(item.soLuongBan)}</TableCell>
                               <TableCell className="py-1.5 px-3 text-xs text-right text-emerald-600">{formatCurrency(item.doanhThu)}</TableCell>
                               <TableCell className="py-1.5 px-3 text-xs text-right text-amber-600">{Math.round(Number(item.tiLe))}%</TableCell>
                             </TableRow>
                           ))}
+                          <TableRow className="bg-muted/10 font-bold hover:bg-muted/10">
+                            <TableCell colSpan={4} className="py-2 px-3 text-xs text-foreground uppercase tracking-wider">Tổng doanh thu:</TableCell>
+                            <TableCell className="py-2 px-3 text-xs text-right text-emerald-600 font-extrabold">{formatCurrency(productRevenue.tongDoanhThuSanPham)}</TableCell>
+                            <TableCell className="py-2 px-3 text-xs text-right text-slate-500">100%</TableCell>
+                          </TableRow>
                         </TableBody>
                       </Table>
                       {productRevenue.chiTiet.length > productRevenueItemsPerPage && (
@@ -740,23 +738,14 @@ export default function ReportsPage() {
               </CardContent>
             </Card>
 
-            <Card className="border-none shadow-lg overflow-hidden border rounded-2xl">
-              <CardHeader className="flex flex-row items-center justify-between border-b px-6 py-5 bg-muted/5">
-                <CardTitle className="text-lg font-black flex items-center gap-2 uppercase tracking-tight">
+            <Card className="border-none shadow-md overflow-hidden border rounded-xl">
+              <CardHeader className="flex flex-row items-center justify-between border-b px-4 py-3 bg-muted/5">
+                <CardTitle className="text-sm font-extrabold flex items-center gap-2 uppercase tracking-wide">
                   <PieChart className="h-5 w-5 text-primary" />
-                  Doanh Thu Dịch Vụ (BM12)
+                  Doanh Thu Dịch Vụ
                 </CardTitle>
                 <div className="flex items-center gap-4">
                   <div className="flex border rounded-lg overflow-hidden p-0.5 bg-muted/50">
-                    <button
-                      onClick={() => setBm12ChartType("pie")}
-                      className={cn(
-                        "px-2.5 py-1 text-[10px] font-black rounded-md transition-all uppercase tracking-wider",
-                        bm12ChartType === "pie" ? "bg-primary text-primary-foreground shadow-sm" : "hover:bg-muted text-muted-foreground"
-                      )}
-                    >
-                      Hình tròn
-                    </button>
                     <button
                       onClick={() => setBm12ChartType("bar")}
                       className={cn(
@@ -766,26 +755,34 @@ export default function ReportsPage() {
                     >
                       Cột ngang
                     </button>
+                    <button
+                      onClick={() => setBm12ChartType("pie")}
+                      className={cn(
+                        "px-2.5 py-1 text-[10px] font-black rounded-md transition-all uppercase tracking-wider",
+                        bm12ChartType === "pie" ? "bg-primary text-primary-foreground shadow-sm" : "hover:bg-muted text-muted-foreground"
+                      )}
+                    >
+                      Hình tròn
+                    </button>
                   </div>
                   <div className="flex gap-2">
                     <Button
                       size="sm"
-                      variant="ghost"
-                      className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 font-black gap-1 p-0 px-2"
+                      variant="outline"
+                      className="border-emerald-600/30 dark:border-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:text-white hover:bg-emerald-600 dark:hover:bg-emerald-600 hover:border-emerald-600 font-bold gap-1.5 h-9 px-3.5 rounded-xl transition-all shadow-sm"
                       onClick={() => serviceRevenue && exportToCsv(`doanh_thu_dv_${selectedMonth}_${selectedYear}.csv`, serviceRevenue.chiTiet)}
                     >
-                      <FileDown className="h-4 w-4" /> EXCEL
+                      <FileDown className="h-4 w-4" /> Xuất Excel
                     </Button>
-                    <Button variant="outline" size="sm" onClick={() => runGenerate("service-revenue")} className="text-[10px] font-black rounded-lg h-7">QUYẾT TOÁN</Button>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="p-6">
+              <CardContent className="p-4">
                 {!serviceRevenue ? (
-                  <div className="h-[200px] flex items-center justify-center text-muted-foreground italic font-medium">Chưa có số liệu quyết toán dịch vụ.</div>
+                  <div className="h-[180px] flex items-center justify-center text-muted-foreground italic font-medium">Chưa có số liệu doanh thu dịch vụ.</div>
                 ) : (
-                  <div className="space-y-6">
-                    <div className="h-[260px] w-full flex items-center justify-center">
+                  <div className="space-y-4">
+                    <div className="h-[210px] w-full flex items-center justify-center">
                       {bm12ChartType === "pie" ? (
                         <div className="flex flex-col sm:flex-row items-center justify-between h-full w-full gap-4 px-2">
                           <div className="w-full sm:w-1/2 h-[180px] sm:h-full relative">
@@ -915,19 +912,28 @@ export default function ReportsPage() {
                       <Table>
                         <TableHeader className="bg-muted/40">
                           <TableRow className="hover:bg-transparent">
+                            <TableHead className="w-14 text-center py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400">STT</TableHead>
+                            <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400">Mã DV</TableHead>
                             <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400">Dịch vụ</TableHead>
                             <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400 text-right">Doanh thu</TableHead>
-                            <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400 text-right w-16">%</TableHead>
+                            <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400 text-right w-16">Tỉ lệ</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {paginatedServiceRevenue.map((item, i) => (
                             <TableRow key={i} className="hover:bg-muted/20 cursor-pointer transition-colors border-b border-border/60" onClick={() => setDrillDown({ open: true, type: "service", id: item.maLoaiDichVu, name: item.tenLoaiDichVu })}>
+                              <TableCell className="py-1.5 px-3 text-center text-xs text-muted-foreground">{(serviceRevenuePage - 1) * serviceRevenueItemsPerPage + i + 1}</TableCell>
+                              <TableCell className="py-1.5 px-3 text-[11px] font-semibold text-foreground">{item.maLoaiDichVu}</TableCell>
                               <TableCell className="py-1.5 px-3 text-xs text-slate-600 dark:text-slate-300 truncate max-w-[120px]">{item.tenLoaiDichVu}</TableCell>
                               <TableCell className="py-1.5 px-3 text-xs text-right text-emerald-600">{formatCurrency(item.doanhThu)}</TableCell>
                               <TableCell className="py-1.5 px-3 text-xs text-right text-amber-600">{Math.round(Number(item.tiLe))}%</TableCell>
                             </TableRow>
                           ))}
+                          <TableRow className="bg-muted/10 font-bold hover:bg-muted/10">
+                            <TableCell colSpan={3} className="py-2 px-3 text-xs text-foreground uppercase tracking-wider">Tổng doanh thu:</TableCell>
+                            <TableCell className="py-2 px-3 text-xs text-right text-emerald-600 font-extrabold">{formatCurrency(serviceRevenue.tongDoanhThuDichVu)}</TableCell>
+                            <TableCell className="py-2 px-3 text-xs text-right text-slate-500">100%</TableCell>
+                          </TableRow>
                         </TableBody>
                       </Table>
                       {serviceRevenue.chiTiet.length > serviceRevenueItemsPerPage && (

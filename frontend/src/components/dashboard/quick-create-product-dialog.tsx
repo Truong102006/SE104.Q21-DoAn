@@ -117,118 +117,120 @@ export function QuickCreateProductDialog({
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className="space-y-4 py-2">
-                    {/* Tên sản phẩm */}
-                    <div className="space-y-2">
-                        <Label className="text-sm font-semibold">
-                            Tên sản phẩm <span className="text-destructive">*</span>
-                        </Label>
-                        <Input
-                            value={tenSanPham}
-                            onChange={(e) => setTenSanPham(e.target.value)}
-                            placeholder="Nhập tên sản phẩm"
-                            className="h-9"
-                            autoFocus
-                        />
-                    </div>
-
-                    {/* Loại sản phẩm */}
-                    <div className="space-y-2">
-                        <Label className="text-sm font-semibold">
-                            Loại sản phẩm <span className="text-destructive">*</span>
-                        </Label>
-                        <Combobox
-                            value={maLoaiSanPham}
-                            onValueChange={setMaLoaiSanPham}
-                            options={productTypeOptions}
-                            placeholder="Chọn loại sản phẩm..."
-                            className="h-9"
-                            onCreateNew={async (name) => {
-                                try {
-                                    const created = await backendApi.productTypes.create({
-                                        tenLoaiSanPham: name,
-                                        tiLeLoiNhuan: 0.05,
-                                    });
-                                    onProductTypeCreated(created);
-                                    useToastStore.getState().success(`Đã tạo loại SP "${created.tenLoaiSanPham}"`);
-                                    return { value: created.maLoaiSanPham, label: created.tenLoaiSanPham };
-                                } catch (err) {
-                                    useToastStore.getState().error(getApiErrorMessage(err, "Không thể tạo loại SP"));
-                                    return null;
-                                }
-                            }}
-                        />
-                    </div>
-
-                    {/* Đơn vị tính */}
-                    <div className="space-y-2">
-                        <Label className="text-sm font-semibold">
-                            Đơn vị tính <span className="text-destructive">*</span>
-                        </Label>
-                        <Combobox
-                            value={maDonViTinh}
-                            onValueChange={setMaDonViTinh}
-                            options={unitOptions}
-                            placeholder="Chọn đơn vị tính..."
-                            className="h-9"
-                            onCreateNew={async (name) => {
-                                try {
-                                    const created = await backendApi.units.create({ tenDonViTinh: name });
-                                    onUnitCreated(created);
-                                    useToastStore.getState().success(`Đã tạo đơn vị "${created.tenDonViTinh}"`);
-                                    return { value: created.maDonViTinh, label: created.tenDonViTinh };
-                                } catch (err) {
-                                    useToastStore.getState().error(getApiErrorMessage(err, "Không thể tạo đơn vị"));
-                                    return null;
-                                }
-                            }}
-                        />
-                    </div>
-
-                    {/* Đơn giá mua */}
-                    <div className="space-y-2">
-                        <Label className="text-sm font-semibold text-muted-foreground">
-                            Đơn giá mua (₫)
-                        </Label>
-                        <div className="relative flex items-center">
+                <form onSubmit={(e) => { e.preventDefault(); handleSubmit(); }} className="space-y-4">
+                    <div className="space-y-4 py-2">
+                        {/* Tên sản phẩm */}
+                        <div className="space-y-2">
+                            <Label className="text-sm font-semibold">
+                                Tên sản phẩm <span className="text-destructive">*</span>
+                            </Label>
                             <Input
-                                type="text"
-                                value={formatVNCurrencyInput(donGiaMua)}
-                                onChange={(e) => setDonGiaMua(parseVNCurrencyInput(e.target.value))}
-                                className="h-9 text-sm pr-9 text-right font-semibold"
+                                value={tenSanPham}
+                                onChange={(e) => setTenSanPham(e.target.value)}
+                                placeholder="Nhập tên sản phẩm"
+                                className="h-9"
+                                autoFocus
                             />
-                            <span className="absolute right-2.5 text-xs text-muted-foreground font-semibold pointer-events-none select-none">
-                                ₫
-                            </span>
                         </div>
+
+                        {/* Loại sản phẩm */}
+                        <div className="space-y-2">
+                            <Label className="text-sm font-semibold">
+                                Loại sản phẩm <span className="text-destructive">*</span>
+                            </Label>
+                            <Combobox
+                                value={maLoaiSanPham}
+                                onValueChange={setMaLoaiSanPham}
+                                options={productTypeOptions}
+                                placeholder="Chọn loại sản phẩm..."
+                                className="h-9"
+                                onCreateNew={async (name) => {
+                                    try {
+                                        const created = await backendApi.productTypes.create({
+                                            tenLoaiSanPham: name,
+                                            tiLeLoiNhuan: 0.05,
+                                        });
+                                        onProductTypeCreated(created);
+                                        useToastStore.getState().success(`Đã tạo loại SP "${created.tenLoaiSanPham}"`);
+                                        return { value: created.maLoaiSanPham, label: created.tenLoaiSanPham };
+                                    } catch (err) {
+                                        useToastStore.getState().error(getApiErrorMessage(err, "Không thể tạo loại SP"));
+                                        return null;
+                                    }
+                                }}
+                            />
+                        </div>
+
+                        {/* Đơn vị tính */}
+                        <div className="space-y-2">
+                            <Label className="text-sm font-semibold">
+                                Đơn vị tính <span className="text-destructive">*</span>
+                            </Label>
+                            <Combobox
+                                value={maDonViTinh}
+                                onValueChange={setMaDonViTinh}
+                                options={unitOptions}
+                                placeholder="Chọn đơn vị tính..."
+                                className="h-9"
+                                onCreateNew={async (name) => {
+                                    try {
+                                        const created = await backendApi.units.create({ tenDonViTinh: name });
+                                        onUnitCreated(created);
+                                        useToastStore.getState().success(`Đã tạo đơn vị "${created.tenDonViTinh}"`);
+                                        return { value: created.maDonViTinh, label: created.tenDonViTinh };
+                                    } catch (err) {
+                                        useToastStore.getState().error(getApiErrorMessage(err, "Không thể tạo đơn vị"));
+                                        return null;
+                                    }
+                                }}
+                            />
+                        </div>
+
+                        {/* Đơn giá mua */}
+                        <div className="space-y-2">
+                            <Label className="text-sm font-semibold text-muted-foreground">
+                                Đơn giá mua (₫)
+                            </Label>
+                            <div className="relative flex items-center">
+                                <Input
+                                    type="text"
+                                    value={formatVNCurrencyInput(donGiaMua)}
+                                    onChange={(e) => setDonGiaMua(parseVNCurrencyInput(e.target.value))}
+                                    className="h-9 text-sm pr-9 text-right font-semibold"
+                                />
+                                <span className="absolute right-2.5 text-xs text-muted-foreground font-semibold pointer-events-none select-none">
+                                    ₫
+                                </span>
+                            </div>
+                        </div>
+
+                        {error && (
+                            <p className="text-sm text-destructive bg-destructive/5 border border-destructive/20 rounded-md p-2.5">
+                                {error}
+                            </p>
+                        )}
                     </div>
 
-                    {error && (
-                        <p className="text-sm text-destructive bg-destructive/5 border border-destructive/20 rounded-md p-2.5">
-                            {error}
-                        </p>
-                    )}
-                </div>
-
-                <DialogFooter>
-                    <Button variant="outline" onClick={onClose} disabled={submitting} className="cursor-pointer">
-                        Hủy
-                    </Button>
-                    <Button
-                        onClick={handleSubmit}
-                        disabled={submitting}
-                        className="bg-gold-gradient text-gold-foreground font-bold hover:brightness-105 cursor-pointer"
-                    >
-                        {submitting ? (
-                            <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Đang tạo...
-                            </>
-                        ) : (
-                            "💾 Lưu sản phẩm"
-                        )}
-                    </Button>
-                </DialogFooter>
+                    <DialogFooter>
+                        <Button type="button" variant="outline" onClick={onClose} disabled={submitting} className="cursor-pointer">
+                            Hủy
+                        </Button>
+                        <Button
+                            type="submit"
+                            disabled={submitting}
+                            className="bg-gold-gradient text-gold-foreground font-bold hover:brightness-105 cursor-pointer border-none"
+                        >
+                            {submitting ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Đang tạo...
+                                </>
+                            ) : (
+                                "Lưu sản phẩm"
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </form>
             </DialogContent>
         </Dialog>
     );

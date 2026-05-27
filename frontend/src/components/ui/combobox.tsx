@@ -145,9 +145,41 @@ export function Combobox({
     if (disabled) return;
 
     if (!isOpen) {
-      if (e.key === "ArrowDown" || e.key === "Enter") {
-        setIsOpen(true);
-        e.preventDefault();
+      if (e.key === "ArrowUp" || e.key === "ArrowDown" || e.key === "Enter") {
+        const formElement = e.currentTarget.closest("form");
+        if (formElement) {
+          const selectors = 'input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([disabled]), select:not([disabled]), textarea:not([disabled]), [data-slot="select-trigger"]:not([disabled])';
+          const inputs = (Array.from(formElement.querySelectorAll(selectors)) as HTMLElement[])
+            .filter((el) => {
+              const rect = el.getBoundingClientRect();
+              return rect.width > 0 && rect.height > 0;
+            });
+
+          const currentIndex = inputs.indexOf(e.currentTarget);
+          if (currentIndex !== -1) {
+            if (e.key === "ArrowDown") {
+              e.preventDefault();
+              const nextInput = inputs[currentIndex + 1];
+              if (nextInput) {
+                nextInput.focus();
+              }
+            } else if (e.key === "ArrowUp") {
+              e.preventDefault();
+              const prevInput = inputs[currentIndex - 1];
+              if (prevInput) {
+                prevInput.focus();
+              }
+            } else if (e.key === "Enter") {
+              if (currentIndex < inputs.length - 1) {
+                e.preventDefault();
+                const nextInput = inputs[currentIndex + 1];
+                if (nextInput) {
+                  nextInput.focus();
+                }
+              }
+            }
+          }
+        }
       }
       return;
     }
@@ -175,14 +207,15 @@ export function Combobox({
           onValueChange(option.value);
           setSearchQuery(option.label);
           setIsOpen(false);
-          inputRef.current?.blur();
+          // Keep focus so pressing Enter again will move to the next field
         }
         break;
       case "Escape":
         e.preventDefault();
+        e.stopPropagation();
+        e.nativeEvent.stopImmediatePropagation();
         setIsOpen(false);
         setSearchQuery(selectedOption ? selectedOption.label : "");
-        inputRef.current?.blur();
         break;
       case "Tab":
         setIsOpen(false);

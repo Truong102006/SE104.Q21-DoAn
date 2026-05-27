@@ -348,9 +348,9 @@ function PickerInput({
                   else onValueChange(formatMonthValue(d.getFullYear(), d.getMonth()));
                   setIsOpen(false);
                 }}
-                className="text-[10px] font-bold text-primary hover:underline px-2 py-1"
+                className="text-[10px] font-bold text-primary hover:underline px-2 py-1 uppercase"
               >
-                HÔM NAY
+                {type === 'date' ? 'HÔM NAY' : 'THÁNG NÀY'}
               </button>
             </div>
           </div>,

@@ -93,7 +93,7 @@ export default function SettingsPage() {
       )}
 
       <Card>
-        <TableToolbar title={t("settings.prepaymentTitle")} description={t("settings.prepaymentDesc")} />
+        <TableToolbar title={t("settings.prepaymentTitle")} />
         <CardContent className="space-y-3 p-4">
           <div className="max-w-sm space-y-2">
             <Label>{t("settings.rateLabel")}</Label>
@@ -109,7 +109,7 @@ export default function SettingsPage() {
       </Card>
 
       <Card>
-        <TableToolbar title={t("settings.categoriesTitle")} description={t("settings.categoriesDesc")} />
+        <TableToolbar title={t("settings.categoriesTitle")} />
         <CardContent className="px-0">
           {loading ? (
             <p className="px-4 py-6 text-sm text-muted-foreground">{t("common.loading")}</p>
