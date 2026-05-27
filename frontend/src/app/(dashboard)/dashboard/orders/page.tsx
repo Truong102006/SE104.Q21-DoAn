@@ -401,7 +401,7 @@ export default function SalesPage() {
                             .filter((p) => (p.isActive !== false || p.maSanPham === item.maSanPham) && !items.some((draftItem, idx) => idx !== index && draftItem.maSanPham === p.maSanPham))
                             .map((productOption) => ({
                               value: productOption.maSanPham,
-                              label: productOption.tenSanPham,
+                              label: `[${productOption.maSanPham}] ${productOption.tenSanPham}`,
                             }))}
                           className="h-9"
                           placeholder="Chọn sản phẩm..."

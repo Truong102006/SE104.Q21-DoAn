@@ -443,7 +443,7 @@ export default function PurchaseOrdersPage() {
                                 )
                                 .map((productOption) => ({
                                   value: productOption.maSanPham,
-                                  label: productOption.tenSanPham,
+                                  label: `[${productOption.maSanPham}] ${productOption.tenSanPham}`,
                                 }))}
                               className="h-9"
                               placeholder="Chọn sản phẩm..."
