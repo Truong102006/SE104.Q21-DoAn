@@ -112,8 +112,8 @@ function formatDateTime(dateStr: string | undefined | null, id?: string): string
 
     const now = new Date();
     const isToday = d.getDate() === now.getDate() &&
-                    d.getMonth() === now.getMonth() &&
-                    d.getFullYear() === now.getFullYear();
+      d.getMonth() === now.getMonth() &&
+      d.getFullYear() === now.getFullYear();
 
     let hoursStr = "";
     let minutesStr = "";
@@ -194,14 +194,14 @@ function DashboardSkeleton() {
       </div>
       <div className="grid gap-4 lg:grid-cols-12">
         <div className="lg:col-span-8 h-[400px] rounded-xl border border-border/70 bg-card p-6">
-            <Skeleton className="h-6 w-1/4 mb-4" />
-            <Skeleton className="h-full w-full rounded-lg" />
+          <Skeleton className="h-6 w-1/4 mb-4" />
+          <Skeleton className="h-full w-full rounded-lg" />
         </div>
         <div className="lg:col-span-4 h-[400px] rounded-xl border border-border/70 bg-card p-6">
-            <Skeleton className="h-6 w-1/2 mb-4" />
-            <div className="space-y-4">
-                {[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-10 w-full" />)}
-            </div>
+          <Skeleton className="h-6 w-1/2 mb-4" />
+          <div className="space-y-4">
+            {[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-10 w-full" />)}
+          </div>
         </div>
       </div>
     </div>
@@ -387,16 +387,16 @@ export default function DashboardPage() {
 
     // Generate Y axis labels (5 ticks)
     const yAxisLabels = [0, 0.25, 0.5, 0.75, 1].map(ratio => {
-        const val = maxValue * (1 - ratio);
-        const y = paddingTop + ratio * (height - paddingBottom - paddingTop);
-        let label = "";
-        const mUnit = t("common.million") || "Tr";
-        const kUnit = t("common.thousand") || "k";
+      const val = maxValue * (1 - ratio);
+      const y = paddingTop + ratio * (height - paddingBottom - paddingTop);
+      let label = "";
+      const mUnit = t("common.million") || "Tr";
+      const kUnit = t("common.thousand") || "k";
 
-        if (val >= 1000000) label = (val / 1000000).toFixed(1) + mUnit;
-        else if (val >= 1000) label = (val / 1000).toFixed(0) + kUnit;
-        else label = val.toFixed(0);
-        return { y, label, val };
+      if (val >= 1000000) label = (val / 1000000).toFixed(1) + mUnit;
+      else if (val >= 1000) label = (val / 1000).toFixed(0) + kUnit;
+      else label = val.toFixed(0);
+      return { y, label, val };
     });
 
     const chartW = width - paddingLeft - paddingRight;
@@ -411,13 +411,13 @@ export default function DashboardPage() {
     });
 
     return {
-        points,
-        baseY: height - paddingBottom,
-        yAxisLabels,
-        startX: paddingLeft,
-        endX: width - paddingRight,
-        width,
-        height
+      points,
+      baseY: height - paddingBottom,
+      yAxisLabels,
+      startX: paddingLeft,
+      endX: width - paddingRight,
+      width,
+      height
     };
   }, [chartData, chartMode, t]);
 
@@ -636,7 +636,7 @@ export default function DashboardPage() {
           if (!s.ngayLapPhieuBan) return false;
           const d = new Date(s.ngayLapPhieuBan);
           return d.getMonth() === m && d.getFullYear() === y;
-         })
+        })
         .reduce((sum, s) => sum + Number(s.tongTien ?? 0), 0);
 
       const servicesSum = servicesList
@@ -676,21 +676,21 @@ export default function DashboardPage() {
         tone: "neutral" | "warning" | "success" | "danger";
         growth: string;
       }> = [
-        {
-          label: t("dashboard.orderCount"),
-          value: formatNumber(orderCount),
-          icon: Package,
-          tone: "neutral" as const,
-          growth: productGrowthText,
-        },
-        {
-          label: t("dashboard.totalStock"),
-          value: formatNumber(totalStock),
-          icon: Boxes,
-          tone: "warning" as const,
-          growth: stockGrowthText,
-        },
-      ];
+          {
+            label: t("dashboard.orderCount"),
+            value: formatNumber(orderCount),
+            icon: Package,
+            tone: "neutral" as const,
+            growth: productGrowthText,
+          },
+          {
+            label: t("dashboard.totalStock"),
+            value: formatNumber(totalStock),
+            icon: Boxes,
+            tone: "warning" as const,
+            growth: stockGrowthText,
+          },
+        ];
 
       if (isAdmin) {
         base.push({
@@ -837,8 +837,8 @@ export default function DashboardPage() {
                       <BarChart data={chartData}>
                         <defs>
                           <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="oklch(0.71 0.12 74)" stopOpacity={0.8}/>
-                            <stop offset="95%" stopColor="oklch(0.56 0.18 261)" stopOpacity={0.8}/>
+                            <stop offset="5%" stopColor="oklch(0.71 0.12 74)" stopOpacity={0.8} />
+                            <stop offset="95%" stopColor="oklch(0.56 0.18 261)" stopOpacity={0.8} />
                           </linearGradient>
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="oklch(0.27 0.03 258 / 5%)" />
@@ -886,7 +886,7 @@ export default function DashboardPage() {
                           radius={[4, 4, 0, 0]}
                           barSize={chartData.length > 10 ? 12 : 32}
                         >
-                           {chartData.map((entry, index) => (
+                          {chartData.map((entry, index) => (
                             <Cell key={`cell-${index}`} fillOpacity={hoveredChartPoint === index ? 1 : 0.8} />
                           ))}
                         </Bar>
@@ -1096,9 +1096,9 @@ export default function DashboardPage() {
                   {(["all", "sale", "service", "purchase", "system"] as const).map((type) => {
                     const label =
                       type === "all" ? "Tất cả" :
-                      type === "sale" ? t("common.sale") || "Bán lẻ" :
-                      type === "service" ? t("common.service") || "Dịch vụ" :
-                      type === "purchase" ? t("nav.purchaseOrders") || "Mua vào" : "Hệ thống";
+                        type === "sale" ? t("common.sale") || "Bán lẻ" :
+                          type === "service" ? t("common.service") || "Dịch vụ" :
+                            type === "purchase" ? t("nav.purchaseOrders") || "Mua vào" : "Hệ thống";
 
                     const count = allActivities.filter(a => type === "all" ? true : a.type === type).length;
                     const isActive = activityTypeFilter === type;
@@ -1107,11 +1107,10 @@ export default function DashboardPage() {
                       <button
                         key={type}
                         onClick={() => setActivityTypeFilter(type)}
-                        className={`px-3 py-1.5 text-xs font-bold rounded-lg cursor-pointer transition-all ${
-                          isActive
+                        className={`px-3 py-1.5 text-xs font-bold rounded-lg cursor-pointer transition-all ${isActive
                             ? "bg-amber-500 text-white shadow-sm"
                             : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                        }`}
+                          }`}
                       >
                         {label} <span className={`text-[10px] ml-1 opacity-70 ${isActive ? "text-white" : "text-muted-foreground"}`}>({count})</span>
                       </button>

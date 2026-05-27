@@ -224,10 +224,10 @@ export default function ServiceOrdersPage() {
 
   useEffect(() => {
     if (!isManuallyEdited) {
-      const minPrepay = Math.round(totals.tongTien * 0.15);
+      const minPrepay = Math.round(totals.tongTien * (prepaymentRate / 100));
       setTongTienTraTruoc(String(minPrepay));
     }
-  }, [totals.tongTien, isManuallyEdited]);
+  }, [totals.tongTien, isManuallyEdited, prepaymentRate]);
 
   async function loadData() {
     setLoading(true);
@@ -365,7 +365,7 @@ export default function ServiceOrdersPage() {
       return;
     }
 
-    const minPrepayment = Math.max(0.15, prepaymentRate / 100) * totals.tongTien;
+    const minPrepayment = (prepaymentRate / 100) * totals.tongTien;
     if (totals.tongTraTruoc < minPrepayment) {
       setFormError(
         t("serviceOrders.prepaymentInsufficient")
@@ -667,7 +667,7 @@ export default function ServiceOrdersPage() {
 
                 <div className="rounded-xl border border-blue-200 bg-blue-50/50 px-4 py-1.5 dark:border-blue-800 dark:bg-blue-950/20 shadow-xs flex items-center gap-2">
                   <span className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 whitespace-nowrap">
-                    {t("serviceOrders.prepaid")} (&gt;=15%):
+                    {t("serviceOrders.prepaid")} (&gt;={prepaymentRate}%):
                   </span>
                   <div className="relative flex items-center w-36">
                     <Input
