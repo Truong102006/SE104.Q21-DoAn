@@ -25,7 +25,8 @@ import {
   PieChart,
   Info,
   Layers,
-  FileDown
+  FileDown,
+  RefreshCw
 } from "lucide-react";
 import {
   BarChart,
@@ -336,6 +337,25 @@ export default function ReportsPage() {
     name: "",
   });
 
+  const handleRegenerateReports = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [genInv, genProd, genServ] = await Promise.all([
+        backendApi.reports.inventoryGenerate(selectedMonth, selectedYear),
+        backendApi.reports.revenueProductsGenerate(selectedMonth, selectedYear),
+        backendApi.reports.revenueServicesGenerate(selectedMonth, selectedYear),
+      ]);
+      setInventory(genInv);
+      setProductRevenue(genProd);
+      setServiceRevenue(genServ);
+    } catch (err) {
+      setError(getApiErrorMessage(err, "Không thể cập nhật báo cáo kỳ này"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (!isAdmin) return;
 
@@ -434,16 +454,28 @@ export default function ReportsPage() {
           </div>
         </div>
 
-        <Button
-          className="bg-emerald-600 hover:bg-emerald-700 text-white font-black shadow-lg shadow-emerald-600/20 rounded-xl h-10 px-5 gap-2 w-full sm:w-auto text-xs"
-          onClick={() => {
-            if (inventory) exportToCsv(`baocao_tonghop_${selectedMonth}_${selectedYear}.csv`, inventory.chiTiet);
-          }}
-          disabled={!inventory}
-        >
-          <FileDown className="h-4 w-4" />
-          Xuất tổng hợp
-        </Button>
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          <Button
+            variant="outline"
+            className="border-primary/30 text-primary hover:bg-primary/5 font-black rounded-xl h-10 px-4 gap-2 text-xs cursor-pointer shadow-xs shrink-0 bg-transparent"
+            onClick={handleRegenerateReports}
+            disabled={loading}
+          >
+            <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
+            Cập nhật dữ liệu
+          </Button>
+
+          <Button
+            className="bg-emerald-600 hover:bg-emerald-700 text-white font-black shadow-lg shadow-emerald-600/20 rounded-xl h-10 px-5 gap-2 w-full sm:w-auto text-xs"
+            onClick={() => {
+              if (inventory) exportToCsv(`baocao_tonghop_${selectedMonth}_${selectedYear}.csv`, inventory.chiTiet);
+            }}
+            disabled={!inventory || loading}
+          >
+            <FileDown className="h-4 w-4" />
+            Xuất tổng hợp
+          </Button>
+        </div>
       </div>
 
       {error && <div className="bg-destructive/10 text-destructive p-3 rounded-xl border border-destructive/20 text-sm font-bold flex items-center gap-2"><Info className="h-4 w-4" />{error}</div>}
