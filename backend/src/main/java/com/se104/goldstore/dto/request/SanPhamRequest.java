@@ -17,9 +17,6 @@ public class SanPhamRequest {
     @NotBlank(message = "Ma loai san pham khong duoc de trong")
     private String maLoaiSanPham;
 
-    @NotBlank(message = "Ma don vi tinh khong duoc de trong")
-    private String maDonViTinh;
-
     @NotNull(message = "Don gia mua khong duoc de trong")
     @DecimalMin(value = "0", inclusive = true, message = "Don gia mua phai >= 0")
     private BigDecimal donGiaMua;
@@ -57,14 +54,6 @@ public class SanPhamRequest {
 
     public void setMaLoaiSanPham(String maLoaiSanPham) {
         this.maLoaiSanPham = maLoaiSanPham;
-    }
-
-    public String getMaDonViTinh() {
-        return maDonViTinh;
-    }
-
-    public void setMaDonViTinh(String maDonViTinh) {
-        this.maDonViTinh = maDonViTinh;
     }
 
     public BigDecimal getDonGiaMua() {

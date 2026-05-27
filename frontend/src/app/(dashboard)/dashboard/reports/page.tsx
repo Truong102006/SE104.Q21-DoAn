@@ -25,7 +25,8 @@ import {
   PieChart,
   Info,
   Layers,
-  FileDown
+  FileDown,
+  RefreshCw
 } from "lucide-react";
 import {
   BarChart,
@@ -336,6 +337,65 @@ export default function ReportsPage() {
     name: "",
   });
 
+  const handleRegenerateReports = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [genInv, genProd, genServ] = await Promise.all([
+        backendApi.reports.inventoryGenerate(selectedMonth, selectedYear),
+        backendApi.reports.revenueProductsGenerate(selectedMonth, selectedYear),
+        backendApi.reports.revenueServicesGenerate(selectedMonth, selectedYear),
+      ]);
+      setInventory(genInv);
+      setProductRevenue(genProd);
+      setServiceRevenue(genServ);
+    } catch (err) {
+      setError(getApiErrorMessage(err, "Không thể cập nhật báo cáo kỳ này"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const productPieData = useMemo(() => {
+    if (!productRevenue?.chiTiet) return [];
+    const sorted = [...productRevenue.chiTiet].sort((a, b) => b.doanhThu - a.doanhThu);
+    if (sorted.length <= 5) return sorted;
+    const top5 = sorted.slice(0, 5);
+    const rest = sorted.slice(5);
+    const restDoanhThu = rest.reduce((sum, item) => sum + item.doanhThu, 0);
+    const restTiLe = rest.reduce((sum, item) => sum + Number(item.tiLe || 0), 0);
+    const restSoLuong = rest.reduce((sum, item) => sum + Number(item.soLuongBan || 0), 0);
+    return [
+      ...top5,
+      {
+        maSanPham: "OTHER",
+        tenSanPham: "Khác",
+        soLuongBan: restSoLuong,
+        doanhThu: restDoanhThu,
+        tiLe: restTiLe,
+      }
+    ];
+  }, [productRevenue]);
+
+  const servicePieData = useMemo(() => {
+    if (!serviceRevenue?.chiTiet) return [];
+    const sorted = [...serviceRevenue.chiTiet].sort((a, b) => b.doanhThu - a.doanhThu);
+    if (sorted.length <= 5) return sorted;
+    const top5 = sorted.slice(0, 5);
+    const rest = sorted.slice(5);
+    const restDoanhThu = rest.reduce((sum, item) => sum + item.doanhThu, 0);
+    const restTiLe = rest.reduce((sum, item) => sum + Number(item.tiLe || 0), 0);
+    return [
+      ...top5,
+      {
+        maLoaiDichVu: "OTHER",
+        tenLoaiDichVu: "Khác",
+        doanhThu: restDoanhThu,
+        tiLe: restTiLe,
+      }
+    ];
+  }, [serviceRevenue]);
+
   useEffect(() => {
     if (!isAdmin) return;
 
@@ -434,16 +494,28 @@ export default function ReportsPage() {
           </div>
         </div>
 
-        <Button
-          className="bg-emerald-600 hover:bg-emerald-700 text-white font-black shadow-lg shadow-emerald-600/20 rounded-xl h-10 px-5 gap-2 w-full sm:w-auto text-xs"
-          onClick={() => {
-            if (inventory) exportToCsv(`baocao_tonghop_${selectedMonth}_${selectedYear}.csv`, inventory.chiTiet);
-          }}
-          disabled={!inventory}
-        >
-          <FileDown className="h-4 w-4" />
-          Xuất tổng hợp
-        </Button>
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          <Button
+            variant="outline"
+            className="border-primary/30 text-primary hover:bg-primary/5 font-black rounded-xl h-10 px-4 gap-2 text-xs cursor-pointer shadow-xs shrink-0 bg-transparent"
+            onClick={handleRegenerateReports}
+            disabled={loading}
+          >
+            <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
+            Cập nhật dữ liệu
+          </Button>
+
+          <Button
+            className="bg-emerald-600 hover:bg-emerald-700 text-white font-black shadow-lg shadow-emerald-600/20 rounded-xl h-10 px-5 gap-2 w-full sm:w-auto text-xs"
+            onClick={() => {
+              if (inventory) exportToCsv(`baocao_tonghop_${selectedMonth}_${selectedYear}.csv`, inventory.chiTiet);
+            }}
+            disabled={!inventory || loading}
+          >
+            <FileDown className="h-4 w-4" />
+            Xuất tổng hợp
+          </Button>
+        </div>
       </div>
 
       {error && <div className="bg-destructive/10 text-destructive p-3 rounded-xl border border-destructive/20 text-sm font-bold flex items-center gap-2"><Info className="h-4 w-4" />{error}</div>}
@@ -638,9 +710,11 @@ export default function ReportsPage() {
                                 onMouseLeave={() => setProductMousePos(null)}
                               >
                                 <Pie
-                                  data={productRevenue.chiTiet.slice(0, 5)}
+                                  data={productPieData}
                                   cx="50%"
                                   cy="50%"
+                                  startAngle={90}
+                                  endAngle={-270}
                                   innerRadius={50}
                                   outerRadius={75}
                                   paddingAngle={0}
@@ -653,11 +727,15 @@ export default function ReportsPage() {
                                   animationEasing="ease-out"
                                   onMouseEnter={(_, index) => setProductHoveredIndex(index)}
                                   onMouseLeave={() => setProductHoveredIndex(null)}
-                                  onClick={(entry: any) => setDrillDown({ open: true, type: "product-sale", id: entry.maSanPham, name: entry.tenSanPham })}
+                                  onClick={(entry: any) => {
+                                    if (entry.maSanPham !== "OTHER") {
+                                      setDrillDown({ open: true, type: "product-sale", id: entry.maSanPham, name: entry.tenSanPham });
+                                    }
+                                  }}
                                   className="cursor-pointer outline-none"
                                   {...({ activeIndex: productHoveredIndex !== null ? productHoveredIndex : undefined, activeShape: renderActiveShape } as any)}
                                 >
-                                  {productRevenue.chiTiet.slice(0, 5).map((_, i) => (
+                                  {productPieData.map((_, i) => (
                                     <Cell key={i} fill={["#6366f1", "#f59e0b", "#10b981", "#3b82f6", "#ec4899", "#8b5cf6", "#ef4444"][i % 7]} className="hover:opacity-80 transition-opacity" />
                                   ))}
                                 </Pie>
@@ -673,13 +751,17 @@ export default function ReportsPage() {
                             </ResponsiveContainer>
                           </div>
                           <div className="w-full sm:w-1/2 flex flex-col justify-center gap-2 max-h-full overflow-y-auto pr-2">
-                            {productRevenue.chiTiet.slice(0, 5).map((item, i) => {
+                            {productPieData.map((item, i) => {
                               const colors = ["#6366f1", "#f59e0b", "#10b981", "#3b82f6", "#ec4899", "#8b5cf6", "#ef4444"];
                               return (
                                 <div
                                   key={i}
                                   className="flex items-center justify-between gap-2 p-1.5 rounded-lg hover:bg-muted/30 transition-colors cursor-pointer"
-                                  onClick={() => setDrillDown({ open: true, type: "product-sale", id: item.maSanPham, name: item.tenSanPham })}
+                                  onClick={() => {
+                                    if (item.maSanPham !== "OTHER") {
+                                      setDrillDown({ open: true, type: "product-sale", id: item.maSanPham, name: item.tenSanPham });
+                                    }
+                                  }}
                                 >
                                   <div className="flex items-center gap-2 truncate">
                                     <span className="w-3 h-3 rounded-full shrink-0 border border-background shadow-sm" style={{ backgroundColor: colors[i % colors.length] }} />
@@ -796,9 +878,11 @@ export default function ReportsPage() {
                                 onMouseLeave={() => setServiceMousePos(null)}
                               >
                                 <Pie
-                                  data={serviceRevenue.chiTiet}
+                                  data={servicePieData}
                                   cx="50%"
                                   cy="50%"
+                                  startAngle={90}
+                                  endAngle={-270}
                                   innerRadius={50}
                                   outerRadius={75}
                                   paddingAngle={0}
@@ -811,12 +895,16 @@ export default function ReportsPage() {
                                   animationEasing="ease-out"
                                   onMouseEnter={(_, index) => setServiceHoveredIndex(index)}
                                   onMouseLeave={() => setServiceHoveredIndex(null)}
-                                  onClick={(entry: any) => setDrillDown({ open: true, type: "service", id: entry.maLoaiDichVu, name: entry.tenLoaiDichVu })}
+                                  onClick={(entry: any) => {
+                                    if (entry.maLoaiDichVu !== "OTHER") {
+                                      setDrillDown({ open: true, type: "service", id: entry.maLoaiDichVu, name: entry.tenLoaiDichVu });
+                                    }
+                                  }}
                                   className="cursor-pointer outline-none"
                                   {...({ activeIndex: serviceHoveredIndex !== null ? serviceHoveredIndex : undefined, activeShape: renderActiveShape } as any)}
                                 >
-                                  {serviceRevenue.chiTiet.map((_, i) => (
-                                    <Cell key={i} fill={["#6366f1", "#f59e0b", "#10b981", "#3b82f6", "#ec4899"][i % 5]} className="hover:opacity-80 transition-opacity" />
+                                  {servicePieData.map((_, i) => (
+                                    <Cell key={i} fill={["#6366f1", "#f59e0b", "#10b981", "#3b82f6", "#ec4899", "#8b5cf6", "#ef4444"][i % 7]} className="hover:opacity-80 transition-opacity" />
                                   ))}
                                 </Pie>
                                 <RechartsTooltip
@@ -831,13 +919,17 @@ export default function ReportsPage() {
                             </ResponsiveContainer>
                           </div>
                           <div className="w-full sm:w-1/2 flex flex-col justify-center gap-2 max-h-full overflow-y-auto pr-2">
-                            {serviceRevenue.chiTiet.map((item, i) => {
-                              const colors = ["#6366f1", "#f59e0b", "#10b981", "#3b82f6", "#ec4899"];
+                            {servicePieData.map((item, i) => {
+                              const colors = ["#6366f1", "#f59e0b", "#10b981", "#3b82f6", "#ec4899", "#8b5cf6", "#ef4444"];
                               return (
                                 <div
                                   key={i}
                                   className="flex items-center justify-between gap-2 p-1.5 rounded-lg hover:bg-muted/30 transition-colors cursor-pointer"
-                                  onClick={() => setDrillDown({ open: true, type: "service", id: item.maLoaiDichVu, name: item.tenLoaiDichVu })}
+                                  onClick={() => {
+                                    if (item.maLoaiDichVu !== "OTHER") {
+                                      setDrillDown({ open: true, type: "service", id: item.maLoaiDichVu, name: item.tenLoaiDichVu });
+                                    }
+                                  }}
                                 >
                                   <div className="flex items-center gap-2 truncate">
                                     <span className="w-3 h-3 rounded-full shrink-0 border border-background shadow-sm" style={{ backgroundColor: colors[i % colors.length] }} />

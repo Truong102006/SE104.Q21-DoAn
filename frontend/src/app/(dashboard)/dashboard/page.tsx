@@ -578,19 +578,24 @@ export default function DashboardPage() {
 
 
 
-  // 1. Dynamic stock growth (imported receipts count this month)
+  // 1. Dynamic stock growth (imported product units count this month)
   const stockGrowthText = useMemo(() => {
     const now = new Date();
     const thisMonth = now.getMonth();
     const thisYear = now.getFullYear();
 
-    const currentMonthImportedCount = purchasesList.filter(p => {
-      if (!p.ngayLapPhieuMua) return false;
-      const d = new Date(p.ngayLapPhieuMua);
-      return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
-    }).length;
+    const currentMonthImportedUnits = purchasesList
+      .filter(p => {
+        if (!p.ngayLapPhieuMua) return false;
+        const d = new Date(p.ngayLapPhieuMua);
+        return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
+      })
+      .reduce((sum, p) => {
+        const itemSum = (p.items || []).reduce((s, item) => s + Number(item.soLuongMua || 0), 0);
+        return sum + itemSum;
+      }, 0);
 
-    return `+${currentMonthImportedCount} đơn nhập kho tháng này`;
+    return `+${currentMonthImportedUnits} sản phẩm nhập kho tháng này`;
   }, [purchasesList]);
 
   // 2. Dynamic product growth (sales transaction count difference this month vs last month)

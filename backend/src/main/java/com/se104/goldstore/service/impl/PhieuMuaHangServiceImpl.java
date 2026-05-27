@@ -71,8 +71,7 @@ public class PhieuMuaHangServiceImpl implements PhieuMuaHangService {
         String normalized = SearchUtils.normalizeKeyword(keyword);
         List<PhieuMuaHang> entities = phieuMuaHangRepository.findAllByKeyword(normalized);
 
-        // Optimization: Do not load items/details for list view to avoid N+1 and heavy mapping
-        return entities.stream().map(entity -> buildResponse(entity, List.of())).toList();
+        return entities.stream().map(entity -> buildResponse(entity, loadDetails(entity.getSoPhieuMua()))).toList();
     }
 
     @Override

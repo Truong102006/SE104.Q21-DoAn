@@ -75,17 +75,18 @@ class SanPhamServiceImplTest {
         SanPhamRequest request = new SanPhamRequest();
         request.setTenSanPham("Nhan vang");
         request.setMaLoaiSanPham("LSP001");
-        request.setMaDonViTinh("DVT001");
         request.setDonGiaMua(new BigDecimal("1000000"));
         request.setImageUrl("https://res.cloudinary.com/demo/image/upload/ring.jpg");
-
-        LoaiSanPham loaiSanPham = new LoaiSanPham();
-        loaiSanPham.setMaLoaiSanPham("LSP001");
-        loaiSanPham.setTiLeLoiNhuan(new BigDecimal("5"));
 
         DonViTinh donViTinh = new DonViTinh();
         donViTinh.setMaDonViTinh("DVT001");
         donViTinh.setLoaiDonVi("Khoi luong");
+
+        LoaiSanPham loaiSanPham = new LoaiSanPham();
+        loaiSanPham.setMaLoaiSanPham("LSP001");
+        loaiSanPham.setTiLeLoiNhuan(new BigDecimal("5"));
+        loaiSanPham.setMaDonViTinh("DVT001");
+        loaiSanPham.setDonViTinh(donViTinh);
 
         when(loaiSanPhamRepository.findById("LSP001")).thenReturn(Optional.of(loaiSanPham));
         when(donViTinhRepository.findById("DVT001")).thenReturn(Optional.of(donViTinh));
@@ -103,31 +104,32 @@ class SanPhamServiceImplTest {
 
     @Test
     void updateShouldRecalculateSellingPriceWhenPurchasePriceChanges() {
-        SanPham existing = new SanPham();
-        existing.setMaSanPham("SP001");
-        existing.setTenSanPham("Nhan vang");
-        existing.setMaLoaiSanPham("LSP001");
-        existing.setMaDonViTinh("DVT001");
-        existing.setDonGiaMua(new BigDecimal("100000"));
-        existing.setDonGiaBan(new BigDecimal("105000.00"));
-        existing.setTonKho(12);
-        existing.setImageUrl("https://res.cloudinary.com/demo/image/upload/old.jpg");
-
-        SanPhamRequest request = new SanPhamRequest();
-        request.setTenSanPham("Nhan vang cap nhat");
-        request.setMaLoaiSanPham("LSP001");
-        request.setMaDonViTinh("DVT001");
-        request.setDonGiaMua(new BigDecimal("200000"));
-        request.setTonKho(12);
-        request.setImageUrl("");
+        DonViTinh donViTinh = new DonViTinh();
+        donViTinh.setMaDonViTinh("DVT001");
+        donViTinh.setLoaiDonVi("Khoi luong");
 
         LoaiSanPham loaiSanPham = new LoaiSanPham();
         loaiSanPham.setMaLoaiSanPham("LSP001");
         loaiSanPham.setTiLeLoiNhuan(new BigDecimal("12.5"));
+        loaiSanPham.setMaDonViTinh("DVT001");
+        loaiSanPham.setDonViTinh(donViTinh);
 
-        DonViTinh donViTinh = new DonViTinh();
-        donViTinh.setMaDonViTinh("DVT001");
-        donViTinh.setLoaiDonVi("Khoi luong");
+        SanPham existing = new SanPham();
+        existing.setMaSanPham("SP001");
+        existing.setTenSanPham("Nhan vang");
+        existing.setMaLoaiSanPham("LSP001");
+        existing.setDonGiaMua(new BigDecimal("100000"));
+        existing.setDonGiaBan(new BigDecimal("105000.00"));
+        existing.setTonKho(12);
+        existing.setImageUrl("https://res.cloudinary.com/demo/image/upload/old.jpg");
+        existing.setLoaiSanPham(loaiSanPham);
+
+        SanPhamRequest request = new SanPhamRequest();
+        request.setTenSanPham("Nhan vang cap nhat");
+        request.setMaLoaiSanPham("LSP001");
+        request.setDonGiaMua(new BigDecimal("200000"));
+        request.setTonKho(12);
+        request.setImageUrl("");
 
         when(sanPhamRepository.findById("SP001")).thenReturn(Optional.of(existing));
         when(loaiSanPhamRepository.findById("LSP001")).thenReturn(Optional.of(loaiSanPham));
@@ -144,15 +146,23 @@ class SanPhamServiceImplTest {
 
     @Test
     void getAllShouldSupportRelativeSearchByKeywordAndProductType() {
+        LoaiSanPham loaiSanPham = new LoaiSanPham();
+        loaiSanPham.setMaLoaiSanPham("LSP001");
+        loaiSanPham.setMaDonViTinh("DVT001");
+        
+        DonViTinh donViTinh = new DonViTinh();
+        donViTinh.setMaDonViTinh("DVT001");
+        loaiSanPham.setDonViTinh(donViTinh);
+
         SanPham sanPham = new SanPham();
         sanPham.setMaSanPham("SP001");
         sanPham.setTenSanPham("Nhan vang 24K");
         sanPham.setMaLoaiSanPham("LSP001");
-        sanPham.setMaDonViTinh("DVT001");
         sanPham.setDonGiaMua(new BigDecimal("1000000"));
         sanPham.setDonGiaBan(new BigDecimal("1020000"));
         sanPham.setTonKho(5);
         sanPham.setImageUrl("https://res.cloudinary.com/demo/image/upload/a.jpg");
+        sanPham.setLoaiSanPham(loaiSanPham);
 
         Page<SanPham> page = new PageImpl<>(List.of(sanPham));
 
@@ -168,14 +178,22 @@ class SanPhamServiceImplTest {
 
     @Test
     void getCatalogShouldFilterByStockStatusAndSort() {
+        LoaiSanPham loaiSanPham = new LoaiSanPham();
+        loaiSanPham.setMaLoaiSanPham("LSP001");
+        loaiSanPham.setMaDonViTinh("DVT001");
+        
+        DonViTinh donViTinh = new DonViTinh();
+        donViTinh.setMaDonViTinh("DVT001");
+        loaiSanPham.setDonViTinh(donViTinh);
+
         SanPham sanPham = new SanPham();
         sanPham.setMaSanPham("SP009");
         sanPham.setTenSanPham("Vong tay");
         sanPham.setMaLoaiSanPham("LSP001");
-        sanPham.setMaDonViTinh("DVT001");
         sanPham.setDonGiaMua(new BigDecimal("1000000"));
         sanPham.setDonGiaBan(new BigDecimal("1200000"));
         sanPham.setTonKho(2);
+        sanPham.setLoaiSanPham(loaiSanPham);
 
         when(sanPhamRepository.searchCatalog(eq("vong"), eq("LSP001"), eq("LOW_STOCK"), any(Pageable.class)))
             .thenReturn(new PageImpl<>(List.of(sanPham)));

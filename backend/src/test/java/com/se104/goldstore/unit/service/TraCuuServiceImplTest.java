@@ -70,13 +70,13 @@ class TraCuuServiceImplTest {
         sanPham.setDonGiaBan(new BigDecimal("2100000.00"));
         sanPham.setTonKho(5);
 
-        LoaiSanPham loaiSanPham = new LoaiSanPham();
-        loaiSanPham.setTenLoaiSanPham("Nhan");
-        sanPham.setLoaiSanPham(loaiSanPham);
-
         DonViTinh donViTinh = new DonViTinh();
         donViTinh.setTenDonViTinh("Chiec");
-        sanPham.setDonViTinh(donViTinh);
+
+        LoaiSanPham loaiSanPham = new LoaiSanPham();
+        loaiSanPham.setTenLoaiSanPham("Nhan");
+        loaiSanPham.setDonViTinh(donViTinh);
+        sanPham.setLoaiSanPham(loaiSanPham);
 
         Page<SanPham> sanPhamPage = new PageImpl<>(List.of(sanPham));
         when(sanPhamRepository.search(eq("nhan vang"), eq(null), any(Pageable.class))).thenReturn(sanPhamPage);

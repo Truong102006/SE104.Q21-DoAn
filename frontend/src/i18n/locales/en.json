@@ -165,7 +165,7 @@
     },
     "suppliers": {
         "title": "Suppliers",
-        "description": "Manage supplier directory",
+        "description": "",
         "searchDesc": "Search by code, name, phone",
         "name": "Supplier name",
         "addTitle": "Add supplier",
@@ -178,7 +178,7 @@
     },
     "customers": {
         "title": "Customers",
-        "description": "Manage customer directory",
+        "description": "",
         "searchDesc": "Search by code, name, phone",
         "name": "Customer name",
         "addTitle": "Add customer",
@@ -191,7 +191,7 @@
     },
     "units": {
         "title": "Units",
-        "description": "Manage unit directory",
+        "description": "",
         "searchDesc": "Search by code, name, unit type",
         "name": "Unit name",
         "unitType": "Unit type",
@@ -207,7 +207,7 @@
     },
     "productTypes": {
         "title": "Product Types",
-        "description": "Manage profit rates by product type",
+        "description": "",
         "searchDesc": "Search by code, type name",
         "name": "Product type name",
         "profitRate": "Profit rate (%)",
@@ -222,7 +222,7 @@
     },
     "serviceTypes": {
         "title": "Service Types",
-        "description": "Manage service type directory",
+        "description": "",
         "searchDesc": "Search by code, service type name",
         "name": "Service type name",
         "price": "Service unit price",
@@ -264,7 +264,7 @@
     },
     "productCatalog": {
         "title": "Product Catalog",
-        "subtitle": "Browse products by image, price and stock",
+        "subtitle": "",
         "searchPlaceholder": "Search by code, name or product type...",
         "allStock": "All stock",
         "inStock": "In stock",

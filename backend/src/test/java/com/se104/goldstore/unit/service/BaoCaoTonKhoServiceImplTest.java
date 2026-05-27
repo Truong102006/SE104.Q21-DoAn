@@ -59,15 +59,22 @@ class BaoCaoTonKhoServiceImplTest {
 
     @Test
     void generateShouldCalculateTonKhoForProductWithMonthlyPurchaseAndSale() {
+        DonViTinh donViTinh = new DonViTinh();
+        donViTinh.setMaDonViTinh("DVT001");
+        donViTinh.setTenDonViTinh("Chi");
+
+        com.se104.goldstore.entity.LoaiSanPham loaiSanPham = new com.se104.goldstore.entity.LoaiSanPham();
+        loaiSanPham.setMaLoaiSanPham("LSP001");
+        loaiSanPham.setTenLoaiSanPham("Vang");
+        loaiSanPham.setMaDonViTinh("DVT001");
+        loaiSanPham.setDonViTinh(donViTinh);
+
         SanPham sanPham = new SanPham();
         sanPham.setMaSanPham("SP001");
         sanPham.setTenSanPham("Nhan vang");
         sanPham.setTonKho(20);
-
-        DonViTinh donViTinh = new DonViTinh();
-        donViTinh.setMaDonViTinh("DVT001");
-        donViTinh.setTenDonViTinh("Chi");
-        sanPham.setDonViTinh(donViTinh);
+        sanPham.setMaLoaiSanPham("LSP001");
+        sanPham.setLoaiSanPham(loaiSanPham);
 
         AtomicReference<List<ChiTietBaoCaoTonKho>> savedDetailsRef = new AtomicReference<>(List.of());
 

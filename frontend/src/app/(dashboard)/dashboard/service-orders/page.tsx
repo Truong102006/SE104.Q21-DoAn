@@ -84,10 +84,10 @@ function ServiceStatusStepper({ status, ngayGiao }: { status: string, ngayGiao?:
 
   const steps = [
     { label: "Tiếp nhận", desc: "Đã lập phiếu" },
-    { label: activeStep > 1 ? "Xử lý" : "Đang xử lý", desc: activeStep > 1 ? "Đã hoàn thành" : "Đang thực hiện" },
-    {
-      label: isCompleted ? "Hoàn thành" : "Sẵn sàng",
-      desc: isCompleted ? "Đã giao khách" : (activeStep === 2 ? "Sẵn sàng bàn giao" : "Đến hẹn bàn giao")
+    { label: activeStep > 1 ? "Đã hoàn thành" : "Đang xử lý", desc: activeStep > 1 ? "Đã hoàn thành" : "Đang thực hiện" },
+    { 
+      label: isCompleted ? "Hoàn thành đã giao" : (activeStep === 2 ? "Sẵn sàng đợi giao" : "Chờ bàn giao"), 
+      desc: isCompleted ? "Đã giao khách" : (activeStep === 2 ? "Sẵn sàng bàn giao" : "Đến hẹn bàn giao") 
     }
   ];
 

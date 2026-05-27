@@ -21,9 +21,14 @@ SET mat_khau = EXCLUDED.mat_khau,
 -- 3) Units
 INSERT INTO don_vi_tinh (ma_don_vi_tinh, ten_don_vi_tinh, loai_don_vi, he_so_quy_doi, ghi_chu)
 VALUES
-    ('GRAM', 'gam', 'Khối lượng', 1, 'Đơn vị khối lượng cơ sở'),
-    ('CHI', 'chỉ', 'Khối lượng', 3.75, '1 chỉ = 3,75 gam'),
-    ('LUONG', 'lượng', 'Khối lượng', 37.5, '1 lượng = 37,5 gam')
+    ('DVT001', 'gam', 'Khối lượng', 1, 'Đơn vị khối lượng cơ sở'),
+    ('DVT002', 'chỉ', 'Khối lượng', 3.75, '1 chỉ = 3,75 gam'),
+    ('DVT003', 'lượng', 'Khối lượng', 37.5, '1 lượng = 37,5 gam'),
+    ('DVT004', 'cái', 'Số lượng', 1, 'Đơn vị tính chiếc/cái bán lẻ'),
+    ('DVT005', 'viên', 'Số lượng', 1, 'Đơn vị cho kim cương, đá quý'),
+    ('DVT006', 'cặp', 'Số lượng', 2, 'Đơn vị cho bông tai, nhẫn cưới'),
+    ('DVT007', 'bộ', 'Số lượng', 1, 'Đơn vị cho bộ trang sức'),
+    ('DVT008', 'carat', 'Khối lượng', 0.2, 'Đơn vị đo khối lượng đá quý (1 carat = 0.2 gam)')
 ON CONFLICT (ma_don_vi_tinh) DO UPDATE
 SET ten_don_vi_tinh = EXCLUDED.ten_don_vi_tinh,
     loai_don_vi = EXCLUDED.loai_don_vi,
@@ -88,10 +93,10 @@ WHERE NOT EXISTS (
 -- 9) Sample products
 INSERT INTO san_pham (ma_san_pham, ten_san_pham, ma_loai_san_pham, ma_don_vi_tinh, don_gia_mua, don_gia_ban, ton_kho)
 VALUES
-    ('SP001', 'Nhẫn vàng 24K trơn', 'LSP_24K', 'CHI', 1000000, 1020000, 0),
-    ('SP002', 'Dây chuyền vàng 18K Ý', 'LSP_18K', 'CHI', 2000000, 2100000, 0),
-    ('SP003', 'Nhẫn kim cương nữ', 'LSP_KC', 'GRAM', 1500000, 1650000, 0),
-    ('SP004', 'Mặt dây chuyền đá ruby', 'LSP_DQ', 'GRAM', 1200000, 1296000, 0)
+    ('SP001', 'Nhẫn vàng 24K trơn', 'LSP_24K', 'DVT002', 1000000, 1020000, 0),
+    ('SP002', 'Dây chuyền vàng 18K Ý', 'LSP_18K', 'DVT002', 2000000, 2100000, 0),
+    ('SP003', 'Nhẫn kim cương nữ', 'LSP_KC', 'DVT001', 1500000, 1650000, 0),
+    ('SP004', 'Mặt dây chuyền đá ruby', 'LSP_DQ', 'DVT001', 1200000, 1296000, 0)
 ON CONFLICT (ma_san_pham) DO UPDATE
 SET ten_san_pham = EXCLUDED.ten_san_pham,
     ma_loai_san_pham = EXCLUDED.ma_loai_san_pham,

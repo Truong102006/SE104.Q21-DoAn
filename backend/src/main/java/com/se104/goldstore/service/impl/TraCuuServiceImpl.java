@@ -160,7 +160,7 @@ public class TraCuuServiceImpl implements TraCuuService {
         response.setDonGiaBan(entity.getDonGiaBan());
         response.setTonKho(entity.getTonKho());
         response.setTenLoaiSanPham(entity.getLoaiSanPham() != null ? entity.getLoaiSanPham().getTenLoaiSanPham() : null);
-        response.setTenDonViTinh(entity.getDonViTinh() != null ? entity.getDonViTinh().getTenDonViTinh() : null);
+        response.setTenDonViTinh(entity.getLoaiSanPham() != null && entity.getLoaiSanPham().getDonViTinh() != null ? entity.getLoaiSanPham().getDonViTinh().getTenDonViTinh() : null);
         return response;
     }
 

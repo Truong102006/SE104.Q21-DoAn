@@ -126,10 +126,7 @@ public class SanPhamServiceImpl implements SanPhamService {
     @Transactional
     public SanPhamResponse create(SanPhamRequest request) {
         String maLoaiSanPham = request.getMaLoaiSanPham().trim();
-        String maDonViTinh = request.getMaDonViTinh().trim();
         LoaiSanPham loaiSanPham = findLoaiSanPhamOrThrow(maLoaiSanPham);
-        DonViTinh donViTinh = findDonViTinhOrThrow(maDonViTinh);
-        validateUnitCompatibility(null, maLoaiSanPham, donViTinh);
         validateTonKhoOnCreate(request.getTonKho());
 
         String maSanPham = normalizeNullable(request.getMaSanPham());
@@ -149,7 +146,7 @@ public class SanPhamServiceImpl implements SanPhamService {
         entity.setMaSanPham(maSanPham);
         entity.setTenSanPham(request.getTenSanPham().trim());
         entity.setMaLoaiSanPham(maLoaiSanPham);
-        entity.setMaDonViTinh(maDonViTinh);
+        entity.setLoaiSanPham(loaiSanPham);
         entity.setDonGiaMua(normalizePrice(request.getDonGiaMua()));
         entity.setDonGiaBan(calculateSellingPrice(entity.getDonGiaMua(), loaiSanPham.getTiLeLoiNhuan()));
         entity.setTonKho(0);
@@ -157,7 +154,11 @@ public class SanPhamServiceImpl implements SanPhamService {
         entity.setCreatedAt(LocalDateTime.now());
         entity.setIsActive(request.getIsActive() != null ? request.getIsActive() : true);
 
-        return toResponse(sanPhamRepository.save(entity));
+        SanPham saved = sanPhamRepository.save(entity);
+        // Explicitly set relationship to ensure toResponse can access maDonViTinh from loaiSanPham
+        saved.setLoaiSanPham(loaiSanPham);
+
+        return toResponse(saved);
     }
 
     @Override
@@ -165,15 +166,11 @@ public class SanPhamServiceImpl implements SanPhamService {
     public SanPhamResponse update(String maSanPham, SanPhamRequest request) {
         SanPham entity = findByIdOrThrow(maSanPham);
         String maLoaiSanPham = request.getMaLoaiSanPham().trim();
-        String maDonViTinh = request.getMaDonViTinh().trim();
         LoaiSanPham loaiSanPham = findLoaiSanPhamOrThrow(maLoaiSanPham);
-        DonViTinh donViTinh = findDonViTinhOrThrow(maDonViTinh);
-        validateUnitCompatibility(maSanPham, maLoaiSanPham, donViTinh);
         validateTonKhoOnUpdate(entity.getTonKho(), request.getTonKho());
 
         entity.setTenSanPham(request.getTenSanPham().trim());
         entity.setMaLoaiSanPham(maLoaiSanPham);
-        entity.setMaDonViTinh(maDonViTinh);
         entity.setDonGiaMua(normalizePrice(request.getDonGiaMua()));
         entity.setDonGiaBan(calculateSellingPrice(entity.getDonGiaMua(), loaiSanPham.getTiLeLoiNhuan()));
         entity.setImageUrl(normalizeNullable(request.getImageUrl()));
@@ -208,31 +205,7 @@ public class SanPhamServiceImpl implements SanPhamService {
             .orElseThrow(() -> new BusinessException("Mã loại sản phẩm không tồn tại"));
     }
 
-    private DonViTinh findDonViTinhOrThrow(String maDonViTinh) {
-        return donViTinhRepository.findById(maDonViTinh)
-            .orElseThrow(() -> new BusinessException("Mã đơn vị tính không tồn tại"));
-    }
 
-    private void validateUnitCompatibility(String currentProductId, String maLoaiSanPham, DonViTinh selectedDonViTinh) {
-        Optional<SanPham> referenceProduct = currentProductId == null
-            ? sanPhamRepository.findFirstByMaLoaiSanPham(maLoaiSanPham)
-            : sanPhamRepository.findFirstByMaLoaiSanPhamAndMaSanPhamNot(maLoaiSanPham, currentProductId);
-        if (referenceProduct.isEmpty()) {
-            return;
-        }
-
-        DonViTinh referenceDonViTinh = donViTinhRepository.findById(referenceProduct.get().getMaDonViTinh()).orElse(null);
-        if (referenceDonViTinh == null) {
-            return;
-        }
-
-        String referenceCategory = normalizeNullable(referenceDonViTinh.getLoaiDonVi());
-        String selectedCategory = normalizeNullable(selectedDonViTinh.getLoaiDonVi());
-
-        if (referenceCategory != null && selectedCategory != null && !referenceCategory.equalsIgnoreCase(selectedCategory)) {
-            throw new BusinessException("Đơn vị tính không phù hợp với loại sản phẩm này");
-        }
-    }
 
     private void validateTonKhoOnCreate(Integer tonKhoRequest) {
         if (tonKhoRequest != null && tonKhoRequest != 0) {
@@ -323,7 +296,6 @@ public class SanPhamServiceImpl implements SanPhamService {
         response.setMaSanPham(entity.getMaSanPham());
         response.setTenSanPham(entity.getTenSanPham());
         response.setMaLoaiSanPham(entity.getMaLoaiSanPham());
-        response.setMaDonViTinh(entity.getMaDonViTinh());
         response.setDonGiaMua(entity.getDonGiaMua());
         response.setDonGiaBan(entity.getDonGiaBan());
         response.setTonKho(entity.getTonKho());
@@ -335,14 +307,15 @@ public class SanPhamServiceImpl implements SanPhamService {
             loaiSanPhamInfo.setMaLoaiSanPham(entity.getLoaiSanPham().getMaLoaiSanPham());
             loaiSanPhamInfo.setTenLoaiSanPham(entity.getLoaiSanPham().getTenLoaiSanPham());
             response.setLoaiSanPham(loaiSanPhamInfo);
-        }
 
-        if (entity.getDonViTinh() != null) {
-            SanPhamResponse.DonViTinhInfo donViTinhInfo = new SanPhamResponse.DonViTinhInfo();
-            donViTinhInfo.setMaDonViTinh(entity.getDonViTinh().getMaDonViTinh());
-            donViTinhInfo.setTenDonViTinh(entity.getDonViTinh().getTenDonViTinh());
-            donViTinhInfo.setLoaiDonVi(entity.getDonViTinh().getLoaiDonVi());
-            response.setDonViTinh(donViTinhInfo);
+            response.setMaDonViTinh(entity.getLoaiSanPham().getMaDonViTinh());
+            if (entity.getLoaiSanPham().getDonViTinh() != null) {
+                SanPhamResponse.DonViTinhInfo donViTinhInfo = new SanPhamResponse.DonViTinhInfo();
+                donViTinhInfo.setMaDonViTinh(entity.getLoaiSanPham().getDonViTinh().getMaDonViTinh());
+                donViTinhInfo.setTenDonViTinh(entity.getLoaiSanPham().getDonViTinh().getTenDonViTinh());
+                donViTinhInfo.setLoaiDonVi(entity.getLoaiSanPham().getDonViTinh().getLoaiDonVi());
+                response.setDonViTinh(donViTinhInfo);
+            }
         }
         return response;
     }

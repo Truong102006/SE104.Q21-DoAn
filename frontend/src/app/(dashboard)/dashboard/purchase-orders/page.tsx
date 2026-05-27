@@ -33,6 +33,7 @@ import { ClipboardList, Eye, Plus, ReceiptText, Trash2, Search } from "lucide-re
 type PurchaseItemDraft = {
   keyId: string;
   maSanPham: string;
+  maLoaiSanPham: string;
   maDonViTinh: string;
   soLuongMua: string;
   donGia: string;
@@ -41,6 +42,7 @@ type PurchaseItemDraft = {
 const createEmptyItem = (): PurchaseItemDraft => ({
   keyId: Math.random().toString(36).substring(2, 9),
   maSanPham: "",
+  maLoaiSanPham: "",
   maDonViTinh: "",
   soLuongMua: "1",
   donGia: "0",
@@ -110,7 +112,13 @@ export default function PurchaseOrdersPage() {
       ]);
 
       setSuppliers(supplierData);
-      setProducts(productPage.content);
+
+      // Ensure products are unique by maSanPham
+      const uniqueProducts = Array.from(
+        new Map(productPage.content.map((p) => [p.maSanPham, p])).values()
+      );
+      setProducts(uniqueProducts);
+
       setUnits(unitData);
       setProductTypes(ptData);
 
@@ -238,7 +246,9 @@ export default function PurchaseOrdersPage() {
     if (toPositiveNumber(item.donGia) < 0) {
       return t("purchaseOrders.priceInvalid");
     }
-    if (!item.maDonViTinh) {
+
+    const unitId = item.maDonViTinh || productTypes.find(pt => pt.maLoaiSanPham === item.maLoaiSanPham)?.maDonViTinh;
+    if (!unitId) {
       return t("purchaseOrders.unitRequired");
     }
     return null;
@@ -246,11 +256,40 @@ export default function PurchaseOrdersPage() {
 
   function onProductChange(index: number, maSanPham: string) {
     const product = products.find((item) => item.maSanPham === maSanPham);
+    if (!product) return;
+
+    let unitId = product.maDonViTinh;
+    // Fallback: if maDonViTinh is missing on product, find it from productTypes
+    if (!unitId && product.maLoaiSanPham) {
+      const pt = productTypes.find(t => t.maLoaiSanPham === product.maLoaiSanPham);
+      unitId = pt?.maDonViTinh ?? "";
+    }
+
     updateItem(index, {
       maSanPham,
-      maDonViTinh: product?.maDonViTinh ?? "",
-      donGia: String(product?.donGiaMua ?? 0),
+      maLoaiSanPham: product.maLoaiSanPham ?? "",
+      maDonViTinh: unitId,
+      donGia: String(product.donGiaMua ?? 0),
     });
+  }
+
+  function onLoaiSanPhamChange(index: number, maLoaiSanPham: string) {
+    const loaiSP = productTypes.find((lt) => lt.maLoaiSanPham === maLoaiSanPham);
+    const item = items[index];
+    const currentProduct = products.find((p) => p.maSanPham === item.maSanPham);
+
+    const patch: Partial<PurchaseItemDraft> = {
+      maLoaiSanPham,
+      maDonViTinh: loaiSP?.maDonViTinh ?? "",
+    };
+
+    // Nếu sản phẩm hiện tại không thuộc loại mới chọn thì xóa sản phẩm
+    if (currentProduct && currentProduct.maLoaiSanPham !== maLoaiSanPham) {
+      patch.maSanPham = "";
+      patch.donGia = "0";
+    }
+
+    updateItem(index, patch);
   }
 
   async function submit() {
@@ -288,7 +327,8 @@ export default function PurchaseOrdersPage() {
         return;
       }
 
-      if (!item.maDonViTinh) {
+      const unitId = item.maDonViTinh || productTypes.find(pt => pt.maLoaiSanPham === item.maLoaiSanPham)?.maDonViTinh;
+      if (!unitId) {
         setFormError(t("purchaseOrders.unitRequired"));
         return;
       }
@@ -298,12 +338,15 @@ export default function PurchaseOrdersPage() {
       soPhieuMua: soPhieuMua.trim() || undefined,
       ngayLapPhieuMua,
       maNhaCungCap,
-      items: items.map((item) => ({
-        maSanPham: item.maSanPham,
-        soLuongMua: toPositiveInt(item.soLuongMua),
-        maDonViTinh: item.maDonViTinh,
-        donGia: toPositiveNumber(item.donGia),
-      })),
+      items: items.map((item) => {
+        const unitId = item.maDonViTinh || productTypes.find(pt => pt.maLoaiSanPham === item.maLoaiSanPham)?.maDonViTinh || "";
+        return {
+          maSanPham: item.maSanPham,
+          soLuongMua: toPositiveInt(item.soLuongMua),
+          maDonViTinh: unitId,
+          donGia: toPositiveNumber(item.donGia),
+        };
+      }),
     };
 
     setSubmitting(true);
@@ -398,7 +441,12 @@ export default function PurchaseOrdersPage() {
                               value={item.maSanPham || ""}
                               onValueChange={(value) => onProductChange(index, value)}
                               options={products
-                                .filter((p) => (p.isActive !== false || p.maSanPham === item.maSanPham) && !items.some((draftItem, idx) => idx !== index && draftItem.maSanPham === p.maSanPham))
+                                .filter(
+                                  (p) =>
+                                    (p.isActive !== false || p.maSanPham === item.maSanPham) &&
+                                    (!item.maLoaiSanPham || p.maLoaiSanPham === item.maLoaiSanPham) &&
+                                    !items.some((draftItem, idx) => idx !== index && draftItem.maSanPham === p.maSanPham),
+                                )
                                 .map((productOption) => ({
                                   value: productOption.maSanPham,
                                   label: productOption.tenSanPham,
@@ -413,30 +461,25 @@ export default function PurchaseOrdersPage() {
                               }}
                             />
                           </TableCell>
-                          <TableCell className="py-3.5 px-4 text-sm font-medium text-muted-foreground">
-                            {product?.loaiSanPham?.tenLoaiSanPham ?? "-"}
-                          </TableCell>
                           <TableCell className="py-3.5 px-4">
                             <Combobox
-                              value={item.maDonViTinh || ""}
-                              onValueChange={(v) => updateItem(index, { maDonViTinh: v })}
-                              options={units
-                                .filter((u) => u.isActive !== false || u.maDonViTinh === item.maDonViTinh)
-                                .map((u) => ({ value: u.maDonViTinh, label: u.tenDonViTinh }))}
+                              value={item.maLoaiSanPham || ""}
+                              onValueChange={(value) => onLoaiSanPhamChange(index, value)}
+                              options={productTypes
+                                .filter((pt) => pt.isActive !== false || pt.maLoaiSanPham === item.maLoaiSanPham)
+                                .map((pt) => ({
+                                  value: pt.maLoaiSanPham,
+                                  label: pt.tenLoaiSanPham,
+                                }))}
                               className="h-9"
-                              placeholder="Chọn đơn vị..."
-                              onCreateNew={async (name) => {
-                                try {
-                                  const created = await backendApi.units.create({ tenDonViTinh: name });
-                                  setUnits((prev) => [...prev, created]);
-                                  useToastStore.getState().success(`Đã tạo đơn vị "${created.tenDonViTinh}"`);
-                                  return { value: created.maDonViTinh, label: created.tenDonViTinh };
-                                } catch (err) {
-                                  useToastStore.getState().error(getApiErrorMessage(err, "Không thể tạo đơn vị"));
-                                  return null;
-                                }
-                              }}
+                              placeholder="Chọn loại SP..."
                             />
+                          </TableCell>
+                          <TableCell className="py-3.5 px-4 text-sm font-medium text-muted-foreground">
+                            {(() => {
+                              const unitId = item.maDonViTinh || productTypes.find(pt => pt.maLoaiSanPham === item.maLoaiSanPham)?.maDonViTinh;
+                              return units.find((u) => u.maDonViTinh === unitId)?.tenDonViTinh ?? "-";
+                            })()}
                           </TableCell>
                           <TableCell className="py-3.5 px-4">
                             <div className="flex items-center w-28 h-9 border rounded-lg bg-background overflow-hidden focus-within:border-gold focus-within:ring-2 focus-within:ring-gold/25 focus-within:shadow-[0_0_8px_rgba(212,163,89,0.12)]">
@@ -697,9 +740,22 @@ export default function PurchaseOrdersPage() {
         productTypes={productTypes}
         units={units}
         onCreated={(product) => {
-          setProducts((prev) => [...prev, product]);
+          setProducts((prev) => {
+            const exists = prev.some(p => p.maSanPham === product.maSanPham);
+            return exists ? prev : [...prev, product];
+          });
           if (quickCreateTargetIndex >= 0) {
-            onProductChange(quickCreateTargetIndex, product.maSanPham);
+            let unitId = product.maDonViTinh;
+            if (!unitId && product.maLoaiSanPham) {
+              const pt = productTypes.find(t => t.maLoaiSanPham === product.maLoaiSanPham);
+              unitId = pt?.maDonViTinh ?? "";
+            }
+            updateItem(quickCreateTargetIndex, {
+              maSanPham: product.maSanPham,
+              maLoaiSanPham: product.maLoaiSanPham || "",
+              maDonViTinh: unitId || "",
+              donGia: String(product.donGiaMua ?? 0),
+            });
           }
           setQuickCreateOpen(false);
         }}

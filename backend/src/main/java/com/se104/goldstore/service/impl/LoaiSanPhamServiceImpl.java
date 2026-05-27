@@ -73,6 +73,7 @@ public class LoaiSanPhamServiceImpl implements LoaiSanPhamService {
         entity.setMaLoaiSanPham(maLoaiSanPham);
         entity.setTenLoaiSanPham(request.getTenLoaiSanPham().trim());
         entity.setTiLeLoiNhuan(request.getTiLeLoiNhuan());
+        entity.setMaDonViTinh(request.getMaDonViTinh().trim());
         entity.setIsActive(request.getIsActive() != null ? request.getIsActive() : true);
 
         return toResponse(loaiSanPhamRepository.save(entity));
@@ -90,6 +91,7 @@ public class LoaiSanPhamServiceImpl implements LoaiSanPhamService {
 
         entity.setTenLoaiSanPham(request.getTenLoaiSanPham().trim());
         entity.setTiLeLoiNhuan(request.getTiLeLoiNhuan());
+        entity.setMaDonViTinh(request.getMaDonViTinh().trim());
         if (request.getIsActive() != null) {
             entity.setIsActive(request.getIsActive());
         }
@@ -133,6 +135,10 @@ public class LoaiSanPhamServiceImpl implements LoaiSanPhamService {
         response.setTenLoaiSanPham(entity.getTenLoaiSanPham());
         response.setTiLeLoiNhuan(entity.getTiLeLoiNhuan());
         response.setIsActive(entity.getIsActive());
+        response.setMaDonViTinh(entity.getMaDonViTinh());
+        if (entity.getDonViTinh() != null) {
+            response.setTenDonViTinh(entity.getDonViTinh().getTenDonViTinh());
+        }
         return response;
     }
 }

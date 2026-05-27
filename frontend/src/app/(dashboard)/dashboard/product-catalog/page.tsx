@@ -160,7 +160,9 @@ export default function ProductCatalogPage() {
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <CardTitle className="text-xl">{t("productCatalog.title")}</CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">{t("productCatalog.subtitle")}</p>
+              {t("productCatalog.subtitle") && (
+                <p className="text-sm text-muted-foreground mt-1">{t("productCatalog.subtitle")}</p>
+              )}
             </div>
             <Button
               variant="outline"

@@ -165,7 +165,7 @@
     },
     "suppliers": {
         "title": "Nhà cung cấp",
-        "description": "Quản lý danh mục nhà cung cấp",
+        "description": "",
         "searchDesc": "Tìm theo mã, tên, SĐT",
         "name": "Tên nhà cung cấp",
         "addTitle": "Thêm nhà cung cấp",
@@ -178,7 +178,7 @@
     },
     "customers": {
         "title": "Khách hàng",
-        "description": "Quản lý danh mục khách hàng",
+        "description": "",
         "searchDesc": "Tìm theo mã, tên, SĐT",
         "name": "Tên khách hàng",
         "addTitle": "Thêm khách hàng",
@@ -191,7 +191,7 @@
     },
     "units": {
         "title": "Đơn vị tính",
-        "description": "Quản lý danh mục đơn vị tính",
+        "description": "",
         "searchDesc": "Tìm theo mã, tên, loại đơn vị",
         "name": "Tên đơn vị tính",
         "unitType": "Loại đơn vị",
@@ -207,7 +207,7 @@
     },
     "productTypes": {
         "title": "Loại sản phẩm",
-        "description": "Quản lý tỉ lệ lợi nhuận theo loại",
+        "description": "",
         "searchDesc": "Tìm theo mã, tên loại",
         "name": "Tên loại sản phẩm",
         "profitRate": "Tỉ lệ lợi nhuận (%)",
@@ -222,7 +222,7 @@
     },
     "serviceTypes": {
         "title": "Loại dịch vụ",
-        "description": "Quản lý danh mục loại dịch vụ",
+        "description": "",
         "searchDesc": "Tìm theo mã, tên loại dịch vụ",
         "name": "Tên loại dịch vụ",
         "price": "Đơn giá dịch vụ",
@@ -264,7 +264,7 @@
     },
     "productCatalog": {
         "title": "Catalog sản phẩm",
-        "subtitle": "Tra cứu sản phẩm bằng hình ảnh, giá bán và tồn kho",
+        "subtitle": "",
         "searchPlaceholder": "Tìm theo mã, tên hoặc loại sản phẩm...",
         "allStock": "Tất cả tồn kho",
         "inStock": "Còn hàng",

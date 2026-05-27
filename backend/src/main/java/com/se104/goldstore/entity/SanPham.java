@@ -24,9 +24,6 @@ public class SanPham {
     @Column(name = "ma_loai_san_pham", length = 20, nullable = false)
     private String maLoaiSanPham;
 
-    @Column(name = "ma_don_vi_tinh", length = 20, nullable = false)
-    private String maDonViTinh;
-
     @Column(name = "don_gia_mua", nullable = false, precision = 18, scale = 2)
     private BigDecimal donGiaMua;
 
@@ -48,10 +45,6 @@ public class SanPham {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "ma_loai_san_pham", referencedColumnName = "ma_loai_san_pham", insertable = false, updatable = false)
     private LoaiSanPham loaiSanPham;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "ma_don_vi_tinh", referencedColumnName = "ma_don_vi_tinh", insertable = false, updatable = false)
-    private DonViTinh donViTinh;
 
     public String getMaSanPham() {
         return maSanPham;
@@ -75,14 +68,6 @@ public class SanPham {
 
     public void setMaLoaiSanPham(String maLoaiSanPham) {
         this.maLoaiSanPham = maLoaiSanPham;
-    }
-
-    public String getMaDonViTinh() {
-        return maDonViTinh;
-    }
-
-    public void setMaDonViTinh(String maDonViTinh) {
-        this.maDonViTinh = maDonViTinh;
     }
 
     public BigDecimal getDonGiaMua() {
@@ -115,14 +100,6 @@ public class SanPham {
 
     public void setLoaiSanPham(LoaiSanPham loaiSanPham) {
         this.loaiSanPham = loaiSanPham;
-    }
-
-    public DonViTinh getDonViTinh() {
-        return donViTinh;
-    }
-
-    public void setDonViTinh(DonViTinh donViTinh) {
-        this.donViTinh = donViTinh;
     }
 
     public Boolean getIsActive() {

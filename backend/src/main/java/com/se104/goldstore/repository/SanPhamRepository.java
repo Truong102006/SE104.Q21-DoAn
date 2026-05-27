@@ -19,7 +19,8 @@ public interface SanPhamRepository extends JpaRepository<SanPham, String> {
 
     boolean existsByMaLoaiSanPham(String maLoaiSanPham);
 
-    boolean existsByMaDonViTinh(String maDonViTinh);
+    @Query("SELECT COUNT(sp) > 0 FROM SanPham sp WHERE sp.loaiSanPham.maDonViTinh = :maDonViTinh")
+    boolean existsByMaDonViTinh(@Param("maDonViTinh") String maDonViTinh);
 
     List<SanPham> findByMaLoaiSanPham(String maLoaiSanPham);
 
@@ -29,10 +30,10 @@ public interface SanPhamRepository extends JpaRepository<SanPham, String> {
 
     @Query(
         """
-        SELECT sp
+        SELECT DISTINCT sp
         FROM SanPham sp
         LEFT JOIN FETCH sp.loaiSanPham lsp
-        LEFT JOIN FETCH sp.donViTinh dvt
+        LEFT JOIN FETCH lsp.donViTinh dvt
         WHERE (:keyword = '' OR LOWER(sp.maSanPham) LIKE CONCAT('%', :keyword, '%')
             OR LOWER(sp.tenSanPham) LIKE CONCAT('%', :keyword, '%')
             OR LOWER(lsp.tenLoaiSanPham) LIKE CONCAT('%', :keyword, '%'))
@@ -47,10 +48,10 @@ public interface SanPhamRepository extends JpaRepository<SanPham, String> {
 
     @Query(
         """
-        SELECT sp
+        SELECT DISTINCT sp
         FROM SanPham sp
         LEFT JOIN FETCH sp.loaiSanPham lsp
-        LEFT JOIN FETCH sp.donViTinh dvt
+        LEFT JOIN FETCH lsp.donViTinh dvt
         WHERE (:keyword = '' OR LOWER(sp.maSanPham) LIKE CONCAT('%', :keyword, '%')
             OR LOWER(sp.tenSanPham) LIKE CONCAT('%', :keyword, '%')
             OR LOWER(lsp.tenLoaiSanPham) LIKE CONCAT('%', :keyword, '%'))
@@ -70,10 +71,10 @@ public interface SanPhamRepository extends JpaRepository<SanPham, String> {
 
     @Query(
         """
-        SELECT sp
+        SELECT DISTINCT sp
         FROM SanPham sp
         LEFT JOIN FETCH sp.loaiSanPham lsp
-        LEFT JOIN FETCH sp.donViTinh dvt
+        LEFT JOIN FETCH lsp.donViTinh dvt
         WHERE :keyword = '' OR LOWER(sp.maSanPham) LIKE CONCAT('%', :keyword, '%')
             OR LOWER(sp.tenSanPham) LIKE CONCAT('%', :keyword, '%')
             OR LOWER(lsp.tenLoaiSanPham) LIKE CONCAT('%', :keyword, '%')
