@@ -31,14 +31,17 @@ import { cn } from "@/lib/utils";
 
 function getStatusBadge(statusStr: string, ngayGiao?: string | null) {
   const displayStatus = formatVietnameseStatus(statusStr);
-  const isDone = displayStatus === "Đã giao";
 
-  if (isDone) {
-    return <StatusBadge tone="success">Đã giao</StatusBadge>;
+  if (displayStatus === "Hoàn thành") {
+    return <StatusBadge tone="success">Hoàn thành</StatusBadge>;
+  }
+  if (displayStatus === "Chưa hoàn thành") {
+    return <StatusBadge tone="warning">Chưa hoàn thành</StatusBadge>;
   }
 
-  if (displayStatus === "Đang giao") {
-    return <StatusBadge tone="info">Đang giao</StatusBadge>;
+  const isDone = displayStatus === "Đã giao";
+  if (isDone) {
+    return <StatusBadge tone="success">Đã giao</StatusBadge>;
   }
 
   // Logic cho phiếu chưa giao
@@ -61,20 +64,13 @@ function getStatusBadge(statusStr: string, ngayGiao?: string | null) {
 }
 
 function ServiceStatusStepper({ status, ngayGiao }: { status: string, ngayGiao?: string | null }) {
-  const steps = [
-    { label: "Tiếp nhận", desc: "Đã lập phiếu" },
-    { label: "Đang xử lý", desc: "Đang gia công" },
-    { label: "Sẵn sàng", desc: "Chờ bàn giao" },
-    { label: "Hoàn tất", desc: "Đã giao khách" }
-  ];
-
   const lowerStatus = status.toLowerCase().trim();
   const isCompleted = lowerStatus === "hoan thanh" || lowerStatus === "hoàn thành" || lowerStatus === "da giao" || lowerStatus === "đã giao";
 
   let activeStep = 1; // Mặc định là đang xử lý
 
   if (isCompleted) {
-    activeStep = 3; // Hoàn tất
+    activeStep = 3; // Hoàn thành đã giao (bước 3 đã hoàn tất)
   } else if (ngayGiao) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -82,17 +78,29 @@ function ServiceStatusStepper({ status, ngayGiao }: { status: string, ngayGiao?:
     delivery.setHours(0, 0, 0, 0);
 
     if (delivery <= today) {
-      activeStep = 2; // Sẵn sàng
+      activeStep = 2; // Sẵn sàng đợi giao (bước 2 đã hoàn tất)
     }
   }
+
+  const steps = [
+    { label: "Tiếp nhận", desc: "Đã lập phiếu" },
+    { label: activeStep > 1 ? "Xử lý" : "Đang xử lý", desc: activeStep > 1 ? "Đã hoàn thành" : "Đang thực hiện" },
+    {
+      label: isCompleted ? "Hoàn thành" : "Sẵn sàng",
+      desc: isCompleted ? "Đã giao khách" : (activeStep === 2 ? "Sẵn sàng bàn giao" : "Đến hẹn bàn giao")
+    }
+  ];
+
+  // Tiến độ nối tới bước hiện tại
+  const progressStep = activeStep;
 
   return (
     <div className="py-6 px-4 bg-muted/10 rounded-2xl border border-border/40 my-4 shadow-inner">
       <div className="relative flex justify-between items-center max-w-3xl mx-auto">
-        <div className="absolute top-[18px] left-[5%] right-[5%] h-1 bg-border/65 -z-0 rounded-full">
+        <div className="absolute top-[18px] left-[16.66%] right-[16.66%] h-1 bg-border/65 -z-0 rounded-full">
           <div
             className="h-full bg-gradient-to-r from-gold via-primary to-emerald-500 rounded-full transition-all duration-500"
-            style={{ width: `${(activeStep / (steps.length - 1)) * 100}%` }}
+            style={{ width: `${(Math.min(progressStep, steps.length - 1) / (steps.length - 1)) * 100}%` }}
           />
         </div>
 
