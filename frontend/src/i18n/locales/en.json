@@ -222,7 +222,7 @@
     },
     "serviceTypes": {
         "title": "Service Types",
-        "description": "Manage service type directory",
+        "description": "",
         "searchDesc": "Search by code, service type name",
         "name": "Service type name",
         "price": "Service unit price",

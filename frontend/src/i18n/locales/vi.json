@@ -222,7 +222,7 @@
     },
     "serviceTypes": {
         "title": "Loại dịch vụ",
-        "description": "Quản lý danh mục loại dịch vụ",
+        "description": "",
         "searchDesc": "Tìm theo mã, tên loại dịch vụ",
         "name": "Tên loại dịch vụ",
         "price": "Đơn giá dịch vụ",
