@@ -30,7 +30,7 @@ public interface SanPhamRepository extends JpaRepository<SanPham, String> {
 
     @Query(
         """
-        SELECT sp
+        SELECT DISTINCT sp
         FROM SanPham sp
         LEFT JOIN FETCH sp.loaiSanPham lsp
         LEFT JOIN FETCH lsp.donViTinh dvt
@@ -48,7 +48,7 @@ public interface SanPhamRepository extends JpaRepository<SanPham, String> {
 
     @Query(
         """
-        SELECT sp
+        SELECT DISTINCT sp
         FROM SanPham sp
         LEFT JOIN FETCH sp.loaiSanPham lsp
         LEFT JOIN FETCH lsp.donViTinh dvt
@@ -71,7 +71,7 @@ public interface SanPhamRepository extends JpaRepository<SanPham, String> {
 
     @Query(
         """
-        SELECT sp
+        SELECT DISTINCT sp
         FROM SanPham sp
         LEFT JOIN FETCH sp.loaiSanPham lsp
         LEFT JOIN FETCH lsp.donViTinh dvt
