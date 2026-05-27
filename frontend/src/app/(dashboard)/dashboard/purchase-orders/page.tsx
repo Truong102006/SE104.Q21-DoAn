@@ -13,6 +13,7 @@ import { ContactPanel, DetailGrid, DetailModal, LineError, StickySummaryBar, Vou
 import { Combobox } from "@/components/ui/combobox";
 import { Pagination } from "@/components/dashboard/pagination";
 import { QuickCreateProductDialog } from "@/components/dashboard/quick-create-product-dialog";
+import { QuickCreateSupplierDialog } from "@/components/dashboard/quick-create-supplier-dialog";
 import { useToastStore } from "@/stores/toast-store";
 import { backendApi } from "@/services/backend-api";
 import type {
@@ -59,6 +60,10 @@ export default function PurchaseOrdersPage() {
   const [quickCreateOpen, setQuickCreateOpen] = useState(false);
   const [quickCreateName, setQuickCreateName] = useState("");
   const [quickCreateTargetIndex, setQuickCreateTargetIndex] = useState(-1);
+
+  // Quick-Create Supplier Dialog state
+  const [quickCreateSupplierOpen, setQuickCreateSupplierOpen] = useState(false);
+  const [quickCreateSupplierName, setQuickCreateSupplierName] = useState("");
 
   const [purchaseList, setPurchaseList] = useState<PurchaseResponse[]>([]);
   const [totalRecords, setTotalRecords] = useState(0);
@@ -345,6 +350,11 @@ export default function PurchaseOrdersPage() {
                     .map((item) => ({ value: item.maNhaCungCap, label: item.tenNhaCungCap }))}
                   className="h-9"
                   placeholder="Chọn nhà cung cấp..."
+                  onCreateNew={async (name) => {
+                    setQuickCreateSupplierName(name);
+                    setQuickCreateSupplierOpen(true);
+                    return null;
+                  }}
                 />
               </div>
               <ContactPanel
@@ -696,6 +706,18 @@ export default function PurchaseOrdersPage() {
         onClose={() => setQuickCreateOpen(false)}
         onProductTypeCreated={(pt) => setProductTypes((prev) => [...prev, pt])}
         onUnitCreated={(u) => setUnits((prev) => [...prev, u])}
+      />
+
+      {/* Quick-Create Supplier Dialog */}
+      <QuickCreateSupplierDialog
+        open={quickCreateSupplierOpen}
+        defaultName={quickCreateSupplierName}
+        onCreated={(supplier) => {
+          setSuppliers((prev) => [...prev, supplier]);
+          setMaNhaCungCap(supplier.maNhaCungCap);
+          setQuickCreateSupplierOpen(false);
+        }}
+        onClose={() => setQuickCreateSupplierOpen(false)}
       />
     </div>
   );
