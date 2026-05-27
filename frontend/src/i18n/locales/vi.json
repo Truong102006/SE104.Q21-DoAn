@@ -207,7 +207,7 @@
     },
     "productTypes": {
         "title": "Loại sản phẩm",
-        "description": "Quản lý tỉ lệ lợi nhuận theo loại",
+        "description": "",
         "searchDesc": "Tìm theo mã, tên loại",
         "name": "Tên loại sản phẩm",
         "profitRate": "Tỉ lệ lợi nhuận (%)",

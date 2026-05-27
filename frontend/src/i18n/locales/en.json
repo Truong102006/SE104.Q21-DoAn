@@ -207,7 +207,7 @@
     },
     "productTypes": {
         "title": "Product Types",
-        "description": "Manage profit rates by product type",
+        "description": "",
         "searchDesc": "Search by code, type name",
         "name": "Product type name",
         "profitRate": "Profit rate (%)",
