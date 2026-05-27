@@ -713,6 +713,8 @@ export default function ReportsPage() {
                                   data={productPieData}
                                   cx="50%"
                                   cy="50%"
+                                  startAngle={90}
+                                  endAngle={-270}
                                   innerRadius={50}
                                   outerRadius={75}
                                   paddingAngle={0}
@@ -879,6 +881,8 @@ export default function ReportsPage() {
                                   data={servicePieData}
                                   cx="50%"
                                   cy="50%"
+                                  startAngle={90}
+                                  endAngle={-270}
                                   innerRadius={50}
                                   outerRadius={75}
                                   paddingAngle={0}
