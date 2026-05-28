@@ -87,9 +87,10 @@ public class BaoCaoTonKhoServiceImpl implements BaoCaoTonKhoService {
         Optional<BaoCaoTonKho> existingReport = baoCaoTonKhoRepository.findByThangAndNam(thang, nam);
 
         BaoCaoTonKho report;
+        List<ChiTietBaoCaoTonKho> existingDetails = new ArrayList<>();
         if (existingReport.isPresent()) {
             report = existingReport.get();
-            chiTietBaoCaoTonKhoRepository.deleteByMaBaoCaoTonKho(report.getMaBaoCaoTonKho());
+            existingDetails = chiTietBaoCaoTonKhoRepository.findByMaBaoCaoTonKho(report.getMaBaoCaoTonKho());
         } else {
             String currentMaxCode = baoCaoTonKhoRepository
                 .findTopByMaBaoCaoTonKhoStartingWithOrderByMaBaoCaoTonKhoDesc(PREFIX)
@@ -101,6 +102,11 @@ public class BaoCaoTonKhoServiceImpl implements BaoCaoTonKhoService {
             report.setThang(thang);
             report.setNam(nam);
             report = baoCaoTonKhoRepository.save(report);
+        }
+
+        Map<String, ChiTietBaoCaoTonKho> existingMap = new HashMap<>();
+        for (ChiTietBaoCaoTonKho d : existingDetails) {
+            existingMap.put(d.getMaSanPham(), d);
         }
 
         Map<String, Integer> muaMap = toQuantityMap(chiTietPhieuMuaRepository.sumSoLuongMuaBySanPhamInMonth(thang, nam));
@@ -129,14 +135,21 @@ public class BaoCaoTonKhoServiceImpl implements BaoCaoTonKhoService {
                 tonDau = nonNegative(tonCuoi - soLuongMuaVao + soLuongBanRa);
             }
 
-            ChiTietBaoCaoTonKho detail = new ChiTietBaoCaoTonKho();
-            detail.setMaBaoCaoTonKho(report.getMaBaoCaoTonKho());
-            detail.setMaSanPham(maSanPham);
+            ChiTietBaoCaoTonKho detail = existingMap.remove(maSanPham);
+            if (detail == null) {
+                detail = new ChiTietBaoCaoTonKho();
+                detail.setMaBaoCaoTonKho(report.getMaBaoCaoTonKho());
+                detail.setMaSanPham(maSanPham);
+            }
             detail.setTonDau(tonDau);
             detail.setSoLuongMuaVao(soLuongMuaVao);
             detail.setSoLuongBanRa(soLuongBanRa);
             detail.setTonCuoi(tonCuoi);
             details.add(detail);
+        }
+
+        if (!existingMap.isEmpty()) {
+            chiTietBaoCaoTonKhoRepository.deleteAll(existingMap.values());
         }
 
         chiTietBaoCaoTonKhoRepository.saveAll(details);

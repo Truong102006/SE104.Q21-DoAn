@@ -237,7 +237,7 @@
     },
     "products": {
         "title": "Sản phẩm",
-        "description": "Tra cứu và quản lý sản phẩm",
+        "description": "",
         "searchDesc": "Tìm theo mã, tên, loại sản phẩm",
         "image": "Ảnh",
         "selectImage": "Chọn ảnh",

@@ -18,6 +18,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -87,9 +88,10 @@ public class BaoCaoDoanhThuDichVuServiceImpl implements BaoCaoDoanhThuDichVuServ
         Optional<BaoCaoDoanhThuDichVu> existingReport = baoCaoDoanhThuDichVuRepository.findByThangAndNam(thang, nam);
 
         BaoCaoDoanhThuDichVu report;
+        List<ChiTietBaoCaoDoanhThuDichVu> existingDetails = new ArrayList<>();
         if (existingReport.isPresent()) {
             report = existingReport.get();
-            chiTietBaoCaoDoanhThuDichVuRepository.deleteByMaBaoCaoDoanhThuDv(report.getMaBaoCaoDoanhThuDv());
+            existingDetails = chiTietBaoCaoDoanhThuDichVuRepository.findByMaBaoCaoDoanhThuDv(report.getMaBaoCaoDoanhThuDv());
         } else {
             String currentMaxCode = baoCaoDoanhThuDichVuRepository
                 .findTopByMaBaoCaoDoanhThuDvStartingWithOrderByMaBaoCaoDoanhThuDvDesc(PREFIX)
@@ -102,6 +104,11 @@ public class BaoCaoDoanhThuDichVuServiceImpl implements BaoCaoDoanhThuDichVuServ
             report.setNam(nam);
             report.setTongDoanhThuDichVu(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP));
             report = baoCaoDoanhThuDichVuRepository.save(report);
+        }
+
+        Map<String, ChiTietBaoCaoDoanhThuDichVu> existingMap = new HashMap<>();
+        for (ChiTietBaoCaoDoanhThuDichVu d : existingDetails) {
+            existingMap.put(d.getMaLoaiDichVu(), d);
         }
 
         List<Object[]> rows = chiTietPhieuDichVuRepository.sumRevenueByLoaiDichVuInMonth(thang, nam);
@@ -128,13 +135,20 @@ public class BaoCaoDoanhThuDichVuServiceImpl implements BaoCaoDoanhThuDichVuServ
             BigDecimal doanhThu = extractRevenue(row);
             BigDecimal tiLe = calculateRatio(doanhThu, tongDoanhThu);
 
-            ChiTietBaoCaoDoanhThuDichVu detail = new ChiTietBaoCaoDoanhThuDichVu();
-            detail.setMaBaoCaoDoanhThuDv(report.getMaBaoCaoDoanhThuDv());
-            detail.setMaLoaiDichVu(maLoaiDichVu);
+            ChiTietBaoCaoDoanhThuDichVu detail = existingMap.remove(maLoaiDichVu);
+            if (detail == null) {
+                detail = new ChiTietBaoCaoDoanhThuDichVu();
+                detail.setMaBaoCaoDoanhThuDv(report.getMaBaoCaoDoanhThuDv());
+                detail.setMaLoaiDichVu(maLoaiDichVu);
+            }
             detail.setDoanhThuDichVu(doanhThu);
             detail.setTiLeDichVu(tiLe);
             detail.setLoaiDichVu(serviceTypeMap.get(maLoaiDichVu));
             details.add(detail);
+        }
+
+        if (!existingMap.isEmpty()) {
+            chiTietBaoCaoDoanhThuDichVuRepository.deleteAll(existingMap.values());
         }
 
         chiTietBaoCaoDoanhThuDichVuRepository.saveAll(details);
