@@ -52,31 +52,43 @@ export function QuickCreateProductDialog({
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    const [pendingUnits, setPendingUnits] = useState<UnitResponse[]>([]);
+    const [pendingProductTypes, setPendingProductTypes] = useState<ProductTypeResponse[]>([]);
+
+    const allUnits = [...units, ...pendingUnits];
+    const allProductTypes = [...productTypes, ...pendingProductTypes];
+
     // Auto-select unit when product type changes
     function handleProductTypeChange(value: string) {
         setMaLoaiSanPham(value);
-        const pt = productTypes.find(t => t.maLoaiSanPham === value);
+        const pt = allProductTypes.find(t => t.maLoaiSanPham === value);
         if (pt?.maDonViTinh) {
             setMaDonViTinh(pt.maDonViTinh);
         }
     }
 
-    // Reset form when dialog opens with new name
+    // Reset form when dialog opens or name changes
+    const [prevOpen, setPrevOpen] = useState(open);
     const [prevName, setPrevName] = useState(defaultName);
-    if (defaultName !== prevName) {
+    if (open !== prevOpen || defaultName !== prevName) {
+        setPrevOpen(open);
         setPrevName(defaultName);
-        setTenSanPham(defaultName);
-        setMaLoaiSanPham("");
-        setMaDonViTinh("");
-        setDonGiaMua("0");
-        setError(null);
+        if (open) {
+            setTenSanPham(defaultName);
+            setMaLoaiSanPham("");
+            setMaDonViTinh("");
+            setDonGiaMua("0");
+            setError(null);
+            setPendingUnits([]);
+            setPendingProductTypes([]);
+        }
     }
 
-    const productTypeOptions = productTypes
+    const productTypeOptions = allProductTypes
         .filter((pt) => pt.isActive !== false)
         .map((pt) => ({ value: pt.maLoaiSanPham, label: pt.tenLoaiSanPham }));
 
-    const unitOptions = units
+    const unitOptions = allUnits
         .filter((u) => u.isActive !== false)
         .map((u) => ({ value: u.maDonViTinh, label: u.tenDonViTinh }));
 
@@ -98,9 +110,46 @@ export function QuickCreateProductDialog({
 
         setSubmitting(true);
         try {
+            // 1. Resolve unit creation if it's pending/temporary
+            let resolvedMaDonViTinh = maDonViTinh;
+            const tempUnitObj = pendingUnits.find(u => u.maDonViTinh === maDonViTinh);
+            if (tempUnitObj) {
+                const createdUnit = await backendApi.units.create({ tenDonViTinh: tempUnitObj.tenDonViTinh });
+                onUnitCreated(createdUnit);
+                resolvedMaDonViTinh = createdUnit.maDonViTinh;
+            }
+
+            // 2. Resolve product type creation if it's pending/temporary
+            let resolvedMaLoaiSanPham = maLoaiSanPham;
+            const tempPTObj = pendingProductTypes.find(pt => pt.maLoaiSanPham === maLoaiSanPham);
+            if (tempPTObj) {
+                let ptUnitId = tempPTObj.maDonViTinh;
+                if (ptUnitId.startsWith("temp_u_")) {
+                    if (ptUnitId === maDonViTinh) {
+                        ptUnitId = resolvedMaDonViTinh;
+                    } else {
+                        const otherUnitObj = pendingUnits.find(u => u.maDonViTinh === ptUnitId);
+                        if (otherUnitObj) {
+                            const createdOtherUnit = await backendApi.units.create({ tenDonViTinh: otherUnitObj.tenDonViTinh });
+                            onUnitCreated(createdOtherUnit);
+                            ptUnitId = createdOtherUnit.maDonViTinh;
+                        }
+                    }
+                }
+
+                const createdPT = await backendApi.productTypes.create({
+                    tenLoaiSanPham: tempPTObj.tenLoaiSanPham,
+                    tiLeLoiNhuan: 0.05,
+                    maDonViTinh: ptUnitId,
+                });
+                onProductTypeCreated(createdPT);
+                resolvedMaLoaiSanPham = createdPT.maLoaiSanPham;
+            }
+
+            // 3. Create the product
             const created = await backendApi.products.create({
                 tenSanPham: tenSanPham.trim(),
-                maLoaiSanPham,
+                maLoaiSanPham: resolvedMaLoaiSanPham,
                 donGiaMua: Number(parseVNCurrencyInput(donGiaMua)) || 0,
             });
             useToastStore.getState().success(`Đã tạo sản phẩm "${created.tenSanPham}"`);
@@ -153,15 +202,14 @@ export function QuickCreateProductDialog({
                                 placeholder="Chọn đơn vị tính..."
                                 className="h-9"
                                 onCreateNew={async (name) => {
-                                    try {
-                                        const created = await backendApi.units.create({ tenDonViTinh: name });
-                                        onUnitCreated(created);
-                                        useToastStore.getState().success(`Đã tạo đơn vị "${created.tenDonViTinh}"`);
-                                        return { value: created.maDonViTinh, label: created.tenDonViTinh };
-                                    } catch (err) {
-                                        useToastStore.getState().error(getApiErrorMessage(err, "Không thể tạo đơn vị"));
-                                        return null;
-                                    }
+                                    const tempId = `temp_u_${Date.now()}`;
+                                    const tempUnit = {
+                                        maDonViTinh: tempId,
+                                        tenDonViTinh: name,
+                                        isActive: true,
+                                    };
+                                    setPendingUnits((prev) => [...prev, tempUnit]);
+                                    return { value: tempId, label: name };
                                 }}
                             />
                         </div>
@@ -182,19 +230,16 @@ export function QuickCreateProductDialog({
                                         useToastStore.getState().error("Vui lòng chọn đơn vị tính trước khi tạo loại sản phẩm mới");
                                         return null;
                                     }
-                                    try {
-                                        const created = await backendApi.productTypes.create({
-                                            tenLoaiSanPham: name,
-                                            tiLeLoiNhuan: 0.05,
-                                            maDonViTinh: maDonViTinh,
-                                        });
-                                        onProductTypeCreated(created);
-                                        useToastStore.getState().success(`Đã tạo loại SP "${created.tenLoaiSanPham}"`);
-                                        return { value: created.maLoaiSanPham, label: created.tenLoaiSanPham };
-                                    } catch (err) {
-                                        useToastStore.getState().error(getApiErrorMessage(err, "Không thể tạo loại SP"));
-                                        return null;
-                                    }
+                                    const tempId = `temp_pt_${Date.now()}`;
+                                    const tempPT = {
+                                        maLoaiSanPham: tempId,
+                                        tenLoaiSanPham: name,
+                                        tiLeLoiNhuan: 0.05,
+                                        maDonViTinh: maDonViTinh,
+                                        isActive: true,
+                                    };
+                                    setPendingProductTypes((prev) => [...prev, tempPT]);
+                                    return { value: tempId, label: name };
                                 }}
                             />
                         </div>

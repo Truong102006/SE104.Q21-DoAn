@@ -507,25 +507,18 @@ export default function ReportsPage() {
       setLoading(true);
       setError(null);
       try {
-        // 1. Thu thập dữ liệu hiện có
-        const [inv, prod, serv] = await Promise.all([
-          backendApi.reports.inventoryGet(selectedMonth, selectedYear).catch(() => null),
-          backendApi.reports.revenueProductsGet(selectedMonth, selectedYear).catch(() => null),
-          backendApi.reports.revenueServicesGet(selectedMonth, selectedYear).catch(() => null),
-        ]);
-
-        // 2. Tự động tạo song song (dưới dạng tuple) nếu thiếu báo biểu
+        // Tự động tạo hoặc cập nhật báo cáo mới nhất song song
         const [genInv, genProd, genServ] = await Promise.all([
-          inv ? Promise.resolve(inv) : backendApi.reports.inventoryGenerate(selectedMonth, selectedYear).catch(() => null),
-          prod ? Promise.resolve(prod) : backendApi.reports.revenueProductsGenerate(selectedMonth, selectedYear).catch(() => null),
-          serv ? Promise.resolve(serv) : backendApi.reports.revenueServicesGenerate(selectedMonth, selectedYear).catch(() => null),
+          backendApi.reports.inventoryGenerate(selectedMonth, selectedYear),
+          backendApi.reports.revenueProductsGenerate(selectedMonth, selectedYear),
+          backendApi.reports.revenueServicesGenerate(selectedMonth, selectedYear),
         ]);
 
         setInventory(genInv);
         setProductRevenue(genProd);
         setServiceRevenue(genServ);
       } catch (err) {
-        setError(getApiErrorMessage(err, "Không thể nạp dữ liệu kỳ này"));
+        setError(getApiErrorMessage(err, "Không thể tải hoặc cập nhật báo cáo mới nhất"));
       } finally {
         setLoading(false);
       }

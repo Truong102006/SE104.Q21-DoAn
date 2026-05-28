@@ -267,6 +267,12 @@ public class BaoCaoTonKhoServiceImpl implements BaoCaoTonKhoService {
             .sorted(Comparator.comparing(ChiTietBaoCaoTonKho::getMaSanPham))
             .toList();
 
+        // Load all products in details to avoid Hibernate lazy load / session caching issues
+        java.util.Set<String> productIds = details.stream().map(ChiTietBaoCaoTonKho::getMaSanPham).collect(java.util.stream.Collectors.toSet());
+        Map<String, SanPham> sanPhamMap = sanPhamRepository.findAllById(productIds)
+            .stream()
+            .collect(java.util.stream.Collectors.toMap(SanPham::getMaSanPham, product -> product));
+
         List<BaoCaoTonKhoResponse.ChiTietTonKhoResponse> itemResponses = new ArrayList<>();
         for (int index = 0; index < details.size(); index++) {
             ChiTietBaoCaoTonKho detail = details.get(index);
@@ -278,7 +284,13 @@ public class BaoCaoTonKhoServiceImpl implements BaoCaoTonKhoService {
             item.setSoLuongBanRa(nonNegative(detail.getSoLuongBanRa()));
             item.setTonCuoi(nonNegative(detail.getTonCuoi()));
 
-            if (detail.getSanPham() != null) {
+            SanPham product = sanPhamMap.get(detail.getMaSanPham());
+            if (product != null) {
+                item.setTenSanPham(product.getTenSanPham());
+                if (product.getLoaiSanPham() != null && product.getLoaiSanPham().getDonViTinh() != null) {
+                    item.setTenDonViTinh(product.getLoaiSanPham().getDonViTinh().getTenDonViTinh());
+                }
+            } else if (detail.getSanPham() != null) {
                 item.setTenSanPham(detail.getSanPham().getTenSanPham());
                 if (detail.getSanPham().getLoaiSanPham() != null && detail.getSanPham().getLoaiSanPham().getDonViTinh() != null) {
                     item.setTenDonViTinh(detail.getSanPham().getLoaiSanPham().getDonViTinh().getTenDonViTinh());
