@@ -337,6 +337,110 @@ export default function ReportsPage() {
     name: "",
   });
 
+  const getAuthHeaders = () => {
+    const token = useAuthStore.getState().token;
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+    return headers;
+  };
+
+  const getBaseApiUrl = () => {
+    return process.env.NEXT_PUBLIC_API_BASE_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+  };
+
+  const triggerBlobDownload = (blob: Blob, filename: string) => {
+    const link = document.createElement("a");
+    if (link.download !== undefined) {
+      const downloadUrl = URL.createObjectURL(blob);
+      link.setAttribute("href", downloadUrl);
+      link.setAttribute("download", filename);
+      link.style.visibility = "hidden";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(downloadUrl);
+    }
+  };
+
+  const handleExportExcel = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const url = `${getBaseApiUrl()}/api/reports/inventory/excel/export?month=${selectedMonth}&year=${selectedYear}`;
+      const response = await fetch(url, {
+        method: "GET",
+        headers: getAuthHeaders(),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => "");
+        throw new Error(`HTTP ${response.status}: ${errorText || "Yêu cầu thất bại"}`);
+      }
+
+      const blob = await response.blob();
+      triggerBlobDownload(blob, `BaoCao_TonKho_${selectedMonth}_${selectedYear}.xlsx`);
+    } catch (err: any) {
+      console.error("Lỗi tải file Excel tồn kho:", err);
+      setError(`Không thể tải file báo cáo Excel tồn kho: ${err.message || err}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleExportProductRevenueExcel = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const url = `${getBaseApiUrl()}/api/reports/revenue/products/excel/export?month=${selectedMonth}&year=${selectedYear}`;
+      const response = await fetch(url, {
+        method: "GET",
+        headers: getAuthHeaders(),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => "");
+        throw new Error(`HTTP ${response.status}: ${errorText || "Yêu cầu thất bại"}`);
+      }
+
+      const blob = await response.blob();
+      triggerBlobDownload(blob, `BaoCao_DoanhThu_SanPham_${selectedMonth}_${selectedYear}.xlsx`);
+    } catch (err: any) {
+      console.error("Lỗi tải file Excel doanh thu sản phẩm:", err);
+      setError(`Không thể tải file báo cáo Excel doanh thu sản phẩm: ${err.message || err}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleExportServiceRevenueExcel = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const url = `${getBaseApiUrl()}/api/reports/revenue/services/excel/export?month=${selectedMonth}&year=${selectedYear}`;
+      const response = await fetch(url, {
+        method: "GET",
+        headers: getAuthHeaders(),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => "");
+        throw new Error(`HTTP ${response.status}: ${errorText || "Yêu cầu thất bại"}`);
+      }
+
+      const blob = await response.blob();
+      triggerBlobDownload(blob, `BaoCao_DoanhThu_DichVu_${selectedMonth}_${selectedYear}.xlsx`);
+    } catch (err: any) {
+      console.error("Lỗi tải file Excel doanh thu dịch vụ:", err);
+      setError(`Không thể tải file báo cáo Excel doanh thu dịch vụ: ${err.message || err}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
+
   const handleRegenerateReports = async () => {
     setLoading(true);
     setError(null);
@@ -403,25 +507,18 @@ export default function ReportsPage() {
       setLoading(true);
       setError(null);
       try {
-        // 1. Thu thập dữ liệu hiện có
-        const [inv, prod, serv] = await Promise.all([
-          backendApi.reports.inventoryGet(selectedMonth, selectedYear).catch(() => null),
-          backendApi.reports.revenueProductsGet(selectedMonth, selectedYear).catch(() => null),
-          backendApi.reports.revenueServicesGet(selectedMonth, selectedYear).catch(() => null),
-        ]);
-
-        // 2. Tự động tạo song song (dưới dạng tuple) nếu thiếu báo biểu
+        // Tự động tạo hoặc cập nhật báo cáo mới nhất song song
         const [genInv, genProd, genServ] = await Promise.all([
-          inv ? Promise.resolve(inv) : backendApi.reports.inventoryGenerate(selectedMonth, selectedYear).catch(() => null),
-          prod ? Promise.resolve(prod) : backendApi.reports.revenueProductsGenerate(selectedMonth, selectedYear).catch(() => null),
-          serv ? Promise.resolve(serv) : backendApi.reports.revenueServicesGenerate(selectedMonth, selectedYear).catch(() => null),
+          backendApi.reports.inventoryGenerate(selectedMonth, selectedYear),
+          backendApi.reports.revenueProductsGenerate(selectedMonth, selectedYear),
+          backendApi.reports.revenueServicesGenerate(selectedMonth, selectedYear),
         ]);
 
         setInventory(genInv);
         setProductRevenue(genProd);
         setServiceRevenue(genServ);
       } catch (err) {
-        setError(getApiErrorMessage(err, "Không thể nạp dữ liệu kỳ này"));
+        setError(getApiErrorMessage(err, "Không thể tải hoặc cập nhật báo cáo mới nhất"));
       } finally {
         setLoading(false);
       }
@@ -504,17 +601,6 @@ export default function ReportsPage() {
             <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
             Cập nhật dữ liệu
           </Button>
-
-          <Button
-            className="bg-emerald-600 hover:bg-emerald-700 text-white font-black shadow-lg shadow-emerald-600/20 rounded-xl h-10 px-5 gap-2 w-full sm:w-auto text-xs"
-            onClick={() => {
-              if (inventory) exportToCsv(`baocao_tonghop_${selectedMonth}_${selectedYear}.csv`, inventory.chiTiet);
-            }}
-            disabled={!inventory || loading}
-          >
-            <FileDown className="h-4 w-4" />
-            Xuất tổng hợp
-          </Button>
         </div>
       </div>
 
@@ -534,7 +620,8 @@ export default function ReportsPage() {
                   size="sm"
                   variant="outline"
                   className="border-emerald-600/30 dark:border-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:text-white hover:bg-emerald-600 dark:hover:bg-emerald-600 hover:border-emerald-600 font-bold gap-1.5 h-9 px-3.5 rounded-xl transition-all shadow-sm"
-                  onClick={() => inventory && exportToCsv(`kho_${selectedMonth}_${selectedYear}.csv`, inventory.chiTiet)}
+                  onClick={handleExportExcel}
+                  disabled={!inventory || loading}
                 >
                   <FileDown className="h-4 w-4" /> Xuất Excel
                 </Button>
@@ -627,7 +714,8 @@ export default function ReportsPage() {
                       size="sm"
                       variant="outline"
                       className="border-emerald-600/30 dark:border-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:text-white hover:bg-emerald-600 dark:hover:bg-emerald-600 hover:border-emerald-600 font-bold gap-1.5 h-9 px-3.5 rounded-xl transition-all shadow-sm"
-                      onClick={() => productRevenue && exportToCsv(`doanh_thu_sp_${selectedMonth}_${selectedYear}.csv`, productRevenue.chiTiet)}
+                      onClick={handleExportProductRevenueExcel}
+                      disabled={!productRevenue || loading}
                     >
                       <FileDown className="h-4 w-4" /> Xuất Excel
                     </Button>
@@ -852,7 +940,8 @@ export default function ReportsPage() {
                       size="sm"
                       variant="outline"
                       className="border-emerald-600/30 dark:border-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:text-white hover:bg-emerald-600 dark:hover:bg-emerald-600 hover:border-emerald-600 font-bold gap-1.5 h-9 px-3.5 rounded-xl transition-all shadow-sm"
-                      onClick={() => serviceRevenue && exportToCsv(`doanh_thu_dv_${selectedMonth}_${selectedYear}.csv`, serviceRevenue.chiTiet)}
+                      onClick={handleExportServiceRevenueExcel}
+                      disabled={!serviceRevenue || loading}
                     >
                       <FileDown className="h-4 w-4" /> Xuất Excel
                     </Button>

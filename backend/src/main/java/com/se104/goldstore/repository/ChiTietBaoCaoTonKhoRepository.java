@@ -10,5 +10,7 @@ public interface ChiTietBaoCaoTonKhoRepository extends JpaRepository<ChiTietBaoC
 
     List<ChiTietBaoCaoTonKho> findByMaBaoCaoTonKho(String maBaoCaoTonKho);
 
-    void deleteByMaBaoCaoTonKho(String maBaoCaoTonKho);
+    @org.springframework.data.jpa.repository.Modifying(clearAutomatically = true)
+    @org.springframework.data.jpa.repository.Query("DELETE FROM ChiTietBaoCaoTonKho c WHERE c.maBaoCaoTonKho = :maBaoCaoTonKho")
+    void deleteByMaBaoCaoTonKho(@org.springframework.data.repository.query.Param("maBaoCaoTonKho") String maBaoCaoTonKho);
 }

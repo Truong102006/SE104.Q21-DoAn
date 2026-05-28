@@ -8,5 +8,7 @@ public interface ChiTietBaoCaoDoanhThuDichVuRepository extends JpaRepository<Chi
 
     List<ChiTietBaoCaoDoanhThuDichVu> findByMaBaoCaoDoanhThuDv(String maBaoCaoDoanhThuDv);
 
-    void deleteByMaBaoCaoDoanhThuDv(String maBaoCaoDoanhThuDv);
+    @org.springframework.data.jpa.repository.Modifying(clearAutomatically = true)
+    @org.springframework.data.jpa.repository.Query("DELETE FROM ChiTietBaoCaoDoanhThuDichVu c WHERE c.maBaoCaoDoanhThuDv = :maBaoCaoDoanhThuDv")
+    void deleteByMaBaoCaoDoanhThuDv(@org.springframework.data.repository.query.Param("maBaoCaoDoanhThuDv") String maBaoCaoDoanhThuDv);
 }
