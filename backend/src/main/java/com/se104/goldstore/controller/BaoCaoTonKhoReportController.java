@@ -14,6 +14,12 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import com.alibaba.excel.EasyExcel;
+import com.se104.goldstore.dto.excel.BaoCaoTonKhoExcelDto;
+import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 @RestController
 @RequestMapping(ApiPaths.REPORTS_INVENTORY)
@@ -48,5 +54,40 @@ public class BaoCaoTonKhoReportController {
     public ResponseEntity<ApiResponse<BaoCaoTonKhoResponse>> getById(@PathVariable String maBaoCaoTonKho) {
         BaoCaoTonKhoResponse response = baoCaoTonKhoService.getById(maBaoCaoTonKho);
         return ResponseEntity.ok(ApiResponse.success("Lay chi tiet bao cao ton kho thanh cong", response));
+    }
+
+    @GetMapping("/excel/export")
+    public void exportExcel(
+        @RequestParam(name = "month") @Min(1) @Max(12) Integer month,
+        @RequestParam(name = "year") @Min(1) Integer year,
+        HttpServletResponse response
+    ) throws IOException {
+        BaoCaoTonKhoResponse report = baoCaoTonKhoService.getByMonthYear(month, year);
+
+        String fileName = String.format("baocao_tonkho_%02d_%d.xlsx", month, year);
+        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        response.setCharacterEncoding("utf-8");
+        response.setHeader("Content-Disposition", "attachment; filename=" + fileName);
+
+        List<BaoCaoTonKhoExcelDto> excelList = new ArrayList<>();
+        if (report != null && report.getChiTiet() != null) {
+            for (int i = 0; i < report.getChiTiet().size(); i++) {
+                BaoCaoTonKhoResponse.ChiTietTonKhoResponse ct = report.getChiTiet().get(i);
+                excelList.add(new BaoCaoTonKhoExcelDto(
+                    i + 1,
+                    ct.getMaSanPham(),
+                    ct.getTenSanPham(),
+                    ct.getTonDau(),
+                    ct.getSoLuongMuaVao(),
+                    ct.getSoLuongBanRa(),
+                    ct.getTonCuoi(),
+                    ct.getTenDonViTinh()
+                ));
+            }
+        }
+
+        EasyExcel.write(response.getOutputStream(), BaoCaoTonKhoExcelDto.class)
+            .sheet("Tồn Kho")
+            .doWrite(excelList);
     }
 }
