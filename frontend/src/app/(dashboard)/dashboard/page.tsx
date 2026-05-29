@@ -1188,14 +1188,6 @@ export default function DashboardPage() {
               {/* Footer */}
               <div className="border-t border-border/60 bg-muted/20 px-6 py-3.5 flex items-center justify-between text-xs text-muted-foreground">
                 <span>Hiển thị {filteredAllActivities.length} trên tổng số {allActivities.length} hoạt động</span>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setIsOpenAllActivities(false)}
-                  className="cursor-pointer text-xs font-semibold rounded-lg hover:bg-muted border h-8 px-4"
-                >
-                  Đóng
-                </Button>
               </div>
             </motion.div>
           </div>
