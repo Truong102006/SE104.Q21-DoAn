@@ -3,6 +3,7 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/i18n/i18n-context";
 
 interface PaginationProps {
   currentPage: number;
@@ -12,6 +13,7 @@ interface PaginationProps {
 }
 
 export function Pagination({ currentPage, totalPages, onPageChange, className }: PaginationProps) {
+  const { t } = useTranslation();
   if (totalPages <= 1) return null;
 
   const pages: (number | string)[] = [];
@@ -52,7 +54,7 @@ export function Pagination({ currentPage, totalPages, onPageChange, className }:
         className="h-9 gap-1 px-4 rounded-xl border-border/60 bg-card hover:bg-accent/50 cursor-pointer transition-all active:scale-95 disabled:opacity-40 shadow-xs"
       >
         <ChevronLeft className="h-4 w-4" />
-        <span className="font-bold text-xs uppercase tracking-wide">Trước</span>
+        <span className="font-bold text-xs uppercase tracking-wide">{t("common.prev")}</span>
       </Button>
 
       <div className="flex items-center gap-1.5">
@@ -93,7 +95,7 @@ export function Pagination({ currentPage, totalPages, onPageChange, className }:
         onClick={() => onPageChange(currentPage + 1)}
         className="h-9 gap-1 px-4 rounded-xl border-border/60 bg-card hover:bg-accent/50 cursor-pointer transition-all active:scale-95 disabled:opacity-40 shadow-xs"
       >
-        <span className="font-bold text-xs uppercase tracking-wide">Sau</span>
+        <span className="font-bold text-xs uppercase tracking-wide">{t("common.next")}</span>
         <ChevronRight className="h-4 w-4" />
       </Button>
     </div>

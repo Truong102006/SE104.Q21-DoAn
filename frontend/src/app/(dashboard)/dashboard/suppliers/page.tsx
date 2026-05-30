@@ -122,10 +122,10 @@ export default function SuppliersPage() {
         prev.map((u) => (u.maNhaCungCap === item.maNhaCungCap ? { ...u, isActive: newActive } : u))
       );
       useToastStore.getState().success(
-        newActive ? "Đã kích hoạt nhà cung cấp!" : "Đã ngưng kích hoạt nhà cung cấp!"
+        newActive ? t("toasts.activatedSupplier") : t("toasts.deactivatedSupplier")
       );
     } catch (err) {
-      useToastStore.getState().error(getApiErrorMessage(err, "Không thể cập nhật trạng thái nhà cung cấp"));
+      useToastStore.getState().error(getApiErrorMessage(err, t("toasts.updateSupplierStatusError")));
     }
   }
 

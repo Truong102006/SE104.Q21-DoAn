@@ -150,7 +150,7 @@ export default function PurchaseOrdersPage() {
         setTotalRecords(response.totalElements);
       }
     } catch (err) {
-      useToastStore.getState().error(getApiErrorMessage(err, "Không thể tải lịch sử phiếu mua"));
+      useToastStore.getState().error(getApiErrorMessage(err, t("toasts.loadPurchaseHistoryError")));
     }
   }
 
@@ -159,7 +159,7 @@ export default function PurchaseOrdersPage() {
       const response = await backendApi.purchases.getById(soPhieuMua);
       setSelectedPurchase(response);
     } catch (err) {
-      useToastStore.getState().error(getApiErrorMessage(err, "Không thể tải chi tiết phiếu mua"));
+      useToastStore.getState().error(getApiErrorMessage(err, t("toasts.loadPurchaseDetailError")));
     }
   }
 
@@ -219,8 +219,8 @@ export default function PurchaseOrdersPage() {
 
     setItems((prev) => prev.filter((_, i) => i !== index));
 
-    useToastStore.getState().success(`Đã xóa dòng sản phẩm: ${productName}`, {
-      label: "Hoàn tác",
+    useToastStore.getState().success(t("toasts.deletedProductRow").replace("{name}", productName), {
+      label: t("toasts.undo"),
       onClick: () => {
         setItems((prev) => {
           const updated = [...prev];
@@ -356,7 +356,7 @@ export default function PurchaseOrdersPage() {
       setSoPhieuMua("");
       setItems([createEmptyItem()]);
       await loadData();
-      useToastStore.getState().success(`Đã lập phiếu mua hàng ${created.soPhieuMua} thành công!`);
+      useToastStore.getState().success(t("toasts.createPurchaseSuccess").replace("{code}", created.soPhieuMua));
     } catch (err) {
       setFormError(getApiErrorMessage(err, t("purchaseOrders.createError")));
     } finally {
@@ -377,7 +377,7 @@ export default function PurchaseOrdersPage() {
       {/* KHỐI FORM LẬP PHIẾU MUA HÀNG - Ở TRÊN */}
       <Card className="glass-card hover-elevate shadow-sm">
         <CardContent className="space-y-6 p-6">
-          <VoucherSection title="Thông tin chung" icon={ClipboardList}>
+          <VoucherSection title={t("common.generalInfo")} icon={ClipboardList}>
             <div className="grid gap-4 lg:grid-cols-[220px_minmax(260px,1fr)_minmax(320px,1.2fr)] lg:items-end">
               <div className="space-y-2">
                 <Label className="text-sm font-semibold text-muted-foreground">{t("common.dateCreated")}</Label>
@@ -410,7 +410,7 @@ export default function PurchaseOrdersPage() {
             </div>
           </VoucherSection>
 
-          <VoucherSection title="Chi tiết sản phẩm" icon={ReceiptText}>
+          <VoucherSection title={t("common.productDetail")} icon={ReceiptText}>
             <div className="rounded-md border border-border/80 overflow-visible [&_[data-slot=table-container]]:overflow-visible mt-2">
               <Table>
                 <TableHeader className="bg-muted/30">
@@ -628,7 +628,7 @@ export default function PurchaseOrdersPage() {
               <Input
                 value={historyQuery}
                 onChange={(e) => setHistoryQuery(e.target.value)}
-                placeholder="Tìm mã phiếu hoặc nhà cung cấp"
+                placeholder={t("purchaseOrders.searchPlaceholder")}
                 className="h-9 pl-9 pr-4"
               />
             </div>
@@ -651,7 +651,7 @@ export default function PurchaseOrdersPage() {
                       <TableHead className="py-2 px-3 h-8 text-[11px] font-bold uppercase tracking-wider">{t("common.supplier")}</TableHead>
                       <TableHead className="py-2 px-3 h-8 text-[11px] font-bold uppercase tracking-wider text-center">{t("purchaseOrders.lineCount")}</TableHead>
                       <TableHead className="py-2 px-3 h-8 text-[11px] font-bold uppercase tracking-wider text-right">{t("common.total")}</TableHead>
-                      <TableHead className="py-2 px-3 h-8 text-[11px] font-bold uppercase tracking-wider text-right w-20">Thao tác</TableHead>
+                      <TableHead className="py-2 px-3 h-8 text-[11px] font-bold uppercase tracking-wider text-right w-20">{t("common.actions")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -666,7 +666,7 @@ export default function PurchaseOrdersPage() {
                         <TableCell className="py-1.5 px-3 text-xs text-center font-medium text-muted-foreground">{formatNumber(item.items?.length ?? 0)}</TableCell>
                         <TableCell className="py-1.5 px-3 text-xs font-bold text-emerald-600 dark:text-emerald-400 text-right">{formatCurrency(item.tongTien)}</TableCell>
                         <TableCell className="py-1.5 px-3 text-right">
-                          <Button variant="outline" size="sm" className="h-7 w-7 p-0 cursor-pointer" title="Xem chi tiết" onClick={() => openDetail(item.soPhieuMua)}>
+                          <Button variant="outline" size="sm" className="h-7 w-7 p-0 cursor-pointer" title={t("common.viewDetail")} onClick={() => openDetail(item.soPhieuMua)}>
                             <Eye className="h-3.5 w-3.5" />
                           </Button>
                         </TableCell>
@@ -690,8 +690,8 @@ export default function PurchaseOrdersPage() {
       </Card>
       <DetailModal
         open={Boolean(selectedPurchase)}
-        title={`Phiếu mua ${selectedPurchase?.soPhieuMua ?? ""}`}
-        subtitle="Chi tiết nhập hàng và tổng tiền"
+        title={`${t("nav.purchaseOrders") || "Phiếu mua"} ${selectedPurchase?.soPhieuMua ?? ""}`}
+        subtitle={t("purchaseOrders.detailSubtitle")}
         onClose={() => setSelectedPurchase(null)}
         onPrint={() => window.print()}
       >
@@ -699,21 +699,21 @@ export default function PurchaseOrdersPage() {
           <div className="space-y-4">
             <DetailGrid
               items={[
-                { label: "Ngày lập", value: selectedPurchase.ngayLapPhieuMua },
-                { label: "Nhà cung cấp", value: selectedPurchase.nhaCungCap?.tenNhaCungCap ?? selectedPurchase.maNhaCungCap },
-                { label: "SĐT", value: selectedPurchase.nhaCungCap?.soDienThoai },
-                { label: "Tổng tiền", value: formatCurrency(selectedPurchase.tongTien) },
+                { label: t("common.dateCreated"), value: selectedPurchase.ngayLapPhieuMua },
+                { label: t("common.supplier"), value: selectedPurchase.nhaCungCap?.tenNhaCungCap ?? selectedPurchase.maNhaCungCap },
+                { label: t("common.phone"), value: selectedPurchase.nhaCungCap?.soDienThoai },
+                { label: t("common.total"), value: formatCurrency(selectedPurchase.tongTien) },
               ]}
             />
             <div className="rounded-md border">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Sản phẩm</TableHead>
-                    <TableHead>Đơn vị</TableHead>
-                    <TableHead className="text-right">SL</TableHead>
-                    <TableHead className="text-right">Đơn giá mua</TableHead>
-                    <TableHead className="text-right">Thành tiền</TableHead>
+                    <TableHead>{t("common.product")}</TableHead>
+                    <TableHead>{t("common.unit")}</TableHead>
+                    <TableHead className="text-right">{t("productCatalog.qty")}</TableHead>
+                    <TableHead className="text-right">{t("products.purchasePrice")}</TableHead>
+                    <TableHead className="text-right">{t("common.subtotal")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

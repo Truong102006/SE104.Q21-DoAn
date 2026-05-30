@@ -1,6 +1,6 @@
-﻿"use client";
+"use client";
 
-import { useState, useEffect, type FormEvent } from "react";
+import { useState, useEffect, useRef, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/auth-store";
 import { fetchCurrentUser, loginWithPassword } from "@/services/auth-service";
@@ -14,7 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Gem, Eye, EyeOff, Loader2 } from "lucide-react";
+import { Gem, Eye, EyeOff, Loader2, Sparkles } from "lucide-react";
 import { useTranslation } from "@/i18n/i18n-context";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -29,6 +29,39 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const usernameRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    function handleGlobalKeyDown(e: KeyboardEvent) {
+      if (e.key === "Enter") {
+        const active = document.activeElement;
+        if (
+          active !== usernameRef.current &&
+          active !== passwordRef.current &&
+          active?.tagName !== "BUTTON" &&
+          active?.tagName !== "A"
+        ) {
+          e.preventDefault();
+          if (username.trim()) {
+            passwordRef.current?.focus();
+          } else {
+            usernameRef.current?.focus();
+          }
+        }
+      }
+    }
+    window.addEventListener("keydown", handleGlobalKeyDown);
+    return () => window.removeEventListener("keydown", handleGlobalKeyDown);
+  }, [username]);
+
+  function handleUsernameKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      passwordRef.current?.focus();
+    }
+  }
 
   useEffect(() => {
     hydrate();
@@ -57,11 +90,6 @@ export default function LoginPage() {
     }
   }
 
-  function fillDemo(role: "admin" | "staff") {
-    setUsername(role);
-    setPassword(role === "admin" ? "admin123" : "staff123");
-    setError("");
-  }
 
   if (!isHydrated) {
     return (
@@ -91,24 +119,30 @@ export default function LoginPage() {
             <Gem className="h-10 w-10 text-white animate-pulse" strokeWidth={1.5} />
           </div>
 
-          <h1 className="mb-4 text-4xl font-bold tracking-tight text-white">Gold Store</h1>
+          <h1 className="mb-4 text-4xl font-bold tracking-tight text-white">Jewman</h1>
           <p className="text-lg leading-relaxed text-[oklch(0.7_0.02_75)]">
             {t("auth.systemTitle")}
             <br />
             <span className="font-semibold text-gold-gradient">{t("auth.systemSubtitle")}</span>
           </p>
 
-          <div className="mt-12 grid grid-cols-3 gap-6">
-            {[
-              { label: t("nav.products"), value: "1,200+" },
-              { label: t("nav.salesOrders"), value: "8,500+" },
-              { label: t("nav.customers"), value: "3,200+" },
-            ].map((stat) => (
-              <div key={stat.label} className="text-center">
-                <p className="text-2xl font-bold text-[oklch(0.65_0.12_75)]">{stat.value}</p>
-                <p className="mt-1 text-sm text-[oklch(0.55_0.01_75)]">{stat.label}</p>
+          <div className="mt-12 animate-fade-in" style={{ animationDelay: "300ms" }}>
+            <div className="relative overflow-hidden rounded-2xl border border-[oklch(0.65_0.12_75_/_0.15)] bg-[oklch(1_0_0_/_0.03)] px-6 py-5 backdrop-blur-md transition-all duration-300 hover:border-[oklch(0.65_0.12_75_/_0.3)] hover:bg-[oklch(1_0_0_/_0.05)]">
+              <div className="absolute -left-10 -top-10 h-24 w-24 rounded-full bg-[oklch(0.65_0.12_75_/_0.15)] blur-2xl" />
+              <div className="flex items-start gap-4 text-left">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[oklch(0.65_0.12_75_/_0.15)] text-[oklch(0.65_0.12_75)] shadow-inner">
+                  <Sparkles className="h-5 w-5 animate-pulse" />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold text-white tracking-wide">
+                    {t("auth.welcomeQuoteTitle")}
+                  </p>
+                  <p className="text-xs leading-relaxed text-[oklch(0.75_0.02_75)]">
+                    {t("auth.welcomeQuoteBody")}
+                  </p>
+                </div>
               </div>
-            ))}
+            </div>
           </div>
         </div>
       </div>
@@ -119,7 +153,7 @@ export default function LoginPage() {
             <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-gold">
               <Gem className="h-7 w-7 text-white" strokeWidth={1.5} />
             </div>
-            <h1 className="text-2xl font-bold">Gold Store</h1>
+            <h1 className="text-2xl font-bold">Jewman</h1>
           </div>
 
           <Card className="border-0 shadow-xl shadow-black/5">
@@ -143,14 +177,17 @@ export default function LoginPage() {
                 <div className="space-y-2">
                   <Label htmlFor="username">{t("auth.username")}</Label>
                   <Input
+                    ref={usernameRef}
                     id="username"
                     type="text"
                     placeholder={t("auth.usernamePlaceholder")}
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
+                    onKeyDown={handleUsernameKeyDown}
                     autoComplete="username"
                     required
                     disabled={loading}
+                    autoFocus
                     className="h-11"
                   />
                 </div>
@@ -159,6 +196,7 @@ export default function LoginPage() {
                   <Label htmlFor="password">{t("auth.password")}</Label>
                   <div className="relative">
                     <Input
+                      ref={passwordRef}
                       id="password"
                       type={showPassword ? "text" : "password"}
                       placeholder={t("auth.passwordPlaceholder")}
@@ -196,27 +234,7 @@ export default function LoginPage() {
                 </Button>
               </form>
 
-              <div className="mt-6 border-t pt-6">
-                <p className="mb-3 text-center text-xs text-muted-foreground">{t("auth.demoAccounts")}</p>
-                <div className="flex gap-3">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => fillDemo("admin")}
-                    className="flex-1 cursor-pointer"
-                  >
-                    {t("auth.admin")}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => fillDemo("staff")}
-                    className="flex-1 cursor-pointer"
-                  >
-                    {t("auth.staff")}
-                  </Button>
-                </div>
-              </div>
+
             </CardContent>
           </Card>
         </div>

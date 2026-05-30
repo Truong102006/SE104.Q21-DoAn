@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { STATUS_DOT_CLASS, STATUS_TONE_CLASS } from "@/lib/status-styles";
 import { cn } from "@/lib/utils";
 import { useToastStore } from "@/stores/toast-store";
+import { useTranslation } from "@/i18n/i18n-context";
 import {
   AppNotification,
   NotificationType,
@@ -101,6 +102,7 @@ function getDateGroupLabel(isoDate: string): string {
 
 export default function NotificationsPage() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [notifications, setNotifications] = useState<AppNotification[]>(MOCK_NOTIFICATIONS);
   const [scopeFilter, setScopeFilter] = useState<NotificationScopeFilter>("ALL");
   const [typeFilter, setTypeFilter] = useState<NotificationTypeFilter>("ALL");
@@ -190,7 +192,7 @@ export default function NotificationsPage() {
         unread: false,
       })),
     );
-    toast.success("Đã đánh dấu tất cả thông báo là đã đọc.");
+    toast.success(t("toasts.markNotificationsRead"));
   }
 
   function handleToggleRead(id: string) {
@@ -209,7 +211,7 @@ export default function NotificationsPage() {
 
   function handleDeleteNotification(id: string) {
     setNotifications((previous) => previous.filter((n) => n.id !== id));
-    toast.success("Đã xóa thông báo thành công.");
+    toast.success(t("toasts.deleteNotificationSuccess"));
   }
 
   function handleResetFilters() {

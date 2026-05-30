@@ -136,10 +136,10 @@ export default function ProductTypesPage() {
         prev.map((u) => (u.maLoaiSanPham === item.maLoaiSanPham ? { ...u, isActive: newActive } : u))
       );
       useToastStore.getState().success(
-        newActive ? "Đã kích hoạt loại sản phẩm!" : "Đã ngưng kích hoạt loại sản phẩm!"
+        newActive ? t("toasts.activatedProductType") : t("toasts.deactivatedProductType")
       );
     } catch (err) {
-      useToastStore.getState().error(getApiErrorMessage(err, "Không thể cập nhật trạng thái loại sản phẩm"));
+      useToastStore.getState().error(getApiErrorMessage(err, t("toasts.updateProductTypeStatusError")));
     }
   }
 
@@ -152,7 +152,7 @@ export default function ProductTypesPage() {
     }
 
     if (!form.maDonViTinh?.trim()) {
-      useToastStore.getState().error("Đơn vị tính là bắt buộc");
+      useToastStore.getState().error(t("toasts.unitRequired"));
       return;
     }
 

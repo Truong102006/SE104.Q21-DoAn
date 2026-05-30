@@ -229,7 +229,7 @@ export default function DashboardPage() {
   const [purchasesList, setPurchasesList] = useState<PurchaseResponse[]>([]);
   const [isOpenAllActivities, setIsOpenAllActivities] = useState(false);
   const [activitySearchQuery, setActivitySearchQuery] = useState("");
-  const [activityTypeFilter, setActivityTypeFilter] = useState<"all" | "sale" | "service" | "purchase" | "system">("all");
+  const [activityTypeFilter, setActivityTypeFilter] = useState<"all" | "sale" | "service" | "purchase">("all");
 
 
 
@@ -448,7 +448,7 @@ export default function DashboardPage() {
   // Recent activity list
   const allActivities = useMemo(() => {
     const list: Array<{
-      type: "sale" | "service" | "purchase" | "system";
+      type: "sale" | "service" | "purchase";
       id: string;
       title: string;
       desc: string;
@@ -526,33 +526,6 @@ export default function DashboardPage() {
       return b.id.localeCompare(a.id);
     });
 
-    // Fallbacks to guarantee rich timeline if there are not enough real activities
-    if (sorted.length < 5) {
-      const systemLogs = [
-        {
-          type: "system" as const,
-          id: "SYS-01",
-          title: t("common.autoGoldSync") || "Đồng bộ giá vàng tự động",
-          desc: t("common.autoGoldSyncDesc") || "Đã đồng bộ giá thế giới qua cổng Kitco lúc 08:30 sáng.",
-          time: t("common.hoursAgo").replace("{n}", "2") || "2 giờ trước",
-          rawDate: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-          tagColor: "bg-blue-500/10 text-blue-600 border-blue-500/20",
-          label: t("common.system") || "Hệ thống",
-        },
-        {
-          type: "system" as const,
-          id: "SYS-02",
-          title: t("common.inventoryCheck") || "Kiểm tra kho hệ thống",
-          desc: t("common.inventoryCheckDesc") || "Hệ thống tự động kiểm kho chi nhánh, ghi nhận 100% tệp dữ liệu khớp.",
-          time: t("common.yesterday") || "Hôm qua",
-          rawDate: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-          tagColor: "bg-blue-500/10 text-blue-600 border-blue-500/20",
-          label: t("common.system") || "Hệ thống",
-        },
-      ];
-      systemLogs.forEach((log) => sorted.push(log));
-    }
-
     return sorted;
   }, [salesList, servicesList, purchasesList, t]);
 
@@ -595,8 +568,8 @@ export default function DashboardPage() {
         return sum + itemSum;
       }, 0);
 
-    return `+${currentMonthImportedUnits} sản phẩm nhập kho tháng này`;
-  }, [purchasesList]);
+    return `+${currentMonthImportedUnits} ${t("dashboard.growthStockSuffix")}`;
+  }, [purchasesList, t]);
 
   // 2. Dynamic product growth (sales transaction count difference this month vs last month)
   const productGrowthText = useMemo(() => {
@@ -621,8 +594,8 @@ export default function DashboardPage() {
     const lastMonthSalesCount = getSalesCountForPeriod(lastMonth, lastYear);
 
     const diff = thisMonthSalesCount - lastMonthSalesCount;
-    return `${diff >= 0 ? "+" : ""}${diff} đơn hàng so với tháng trước`;
-  }, [salesList]);
+    return `${diff >= 0 ? "+" : ""}${diff} ${t("dashboard.growthOrdersSuffix")}`;
+  }, [salesList, t]);
 
   // 3. Dynamic monthly revenue and growth compared to last month (sales + services combined)
   const monthlyRevenueStats = useMemo(() => {
@@ -661,16 +634,16 @@ export default function DashboardPage() {
     let growthText = "";
     if (lastMonthRev > 0) {
       const diff = ((thisMonthRev - lastMonthRev) / lastMonthRev) * 100;
-      growthText = `${diff >= 0 ? "+" : ""}${diff.toFixed(1)}% so với tháng trước`;
+      growthText = `${diff >= 0 ? "+" : ""}${diff.toFixed(1)}% ${t("dashboard.growthRevenueSuffix")}`;
     } else {
-      growthText = thisMonthRev > 0 ? "+100% so với tháng trước" : "+0.0% so với tháng trước";
+      growthText = thisMonthRev > 0 ? `+100% ${t("dashboard.growthRevenueSuffix")}` : `+0.0% ${t("dashboard.growthRevenueSuffix")}`;
     }
 
     return {
       thisMonthRevenue: thisMonthRev,
       revenueGrowthText: growthText
     };
-  }, [salesList, servicesList]);
+  }, [salesList, servicesList, t]);
 
   const summaryMetrics = useMemo(
     () => {
@@ -1098,12 +1071,12 @@ export default function DashboardPage() {
               <div className="border-b border-border/60 p-4 bg-muted/5 flex flex-col sm:flex-row gap-3 items-center justify-between">
                 {/* Tabs */}
                 <div className="flex flex-wrap gap-1 bg-muted/40 p-1 rounded-xl border w-full sm:w-auto">
-                  {(["all", "sale", "service", "purchase", "system"] as const).map((type) => {
+                  {(["all", "sale", "service", "purchase"] as const).map((type) => {
                     const label =
                       type === "all" ? "Tất cả" :
                         type === "sale" ? t("common.sale") || "Bán lẻ" :
                           type === "service" ? t("common.service") || "Dịch vụ" :
-                            type === "purchase" ? t("nav.purchaseOrders") || "Mua vào" : "Hệ thống";
+                            t("nav.purchaseOrders") || "Mua vào";
 
                     const count = allActivities.filter(a => type === "all" ? true : a.type === type).length;
                     const isActive = activityTypeFilter === type;
