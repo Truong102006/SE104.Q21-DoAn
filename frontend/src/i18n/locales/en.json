@@ -91,9 +91,6 @@
         "loggingIn": "Signing in...",
         "showPassword": "Show password",
         "hidePassword": "Hide password",
-        "demoAccounts": "Demo Accounts",
-        "staff": "Staff",
-        "admin": "Admin",
         "systemTitle": "Store Management System",
         "systemSubtitle": "Gold · Silver · Gems",
         "initLoading": "Initializing login page..."

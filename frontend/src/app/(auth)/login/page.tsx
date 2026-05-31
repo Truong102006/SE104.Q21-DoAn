@@ -57,11 +57,6 @@ export default function LoginPage() {
     }
   }
 
-  function fillDemo(role: "admin" | "staff") {
-    setUsername(role);
-    setPassword(role === "admin" ? "admin123" : "staff123");
-    setError("");
-  }
 
   if (!isHydrated) {
     return (
@@ -195,28 +190,6 @@ export default function LoginPage() {
                   )}
                 </Button>
               </form>
-
-              <div className="mt-6 border-t pt-6">
-                <p className="mb-3 text-center text-xs text-muted-foreground">{t("auth.demoAccounts")}</p>
-                <div className="flex gap-3">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => fillDemo("admin")}
-                    className="flex-1 cursor-pointer"
-                  >
-                    {t("auth.admin")}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => fillDemo("staff")}
-                    className="flex-1 cursor-pointer"
-                  >
-                    {t("auth.staff")}
-                  </Button>
-                </div>
-              </div>
             </CardContent>
           </Card>
         </div>
