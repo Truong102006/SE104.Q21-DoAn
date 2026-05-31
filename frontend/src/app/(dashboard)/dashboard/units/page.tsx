@@ -124,10 +124,10 @@ export default function UnitsPage() {
         prev.map((u) => (u.maDonViTinh === item.maDonViTinh ? { ...u, isActive: newActive } : u))
       );
       useToastStore.getState().success(
-        newActive ? "Đã kích hoạt đơn vị tính!" : "Đã ngưng kích hoạt đơn vị tính!"
+        newActive ? t("toasts.activatedUnit") : t("toasts.deactivatedUnit")
       );
     } catch (err) {
-      useToastStore.getState().error(getApiErrorMessage(err, "Không thể cập nhật trạng thái đơn vị tính"));
+      useToastStore.getState().error(getApiErrorMessage(err, t("toasts.updateUnitStatusError")));
     }
   }
 

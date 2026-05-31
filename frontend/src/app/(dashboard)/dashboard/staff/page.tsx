@@ -118,10 +118,10 @@ export default function StaffPage() {
         prev.map((u) => (u.tenDangNhap === item.tenDangNhap ? { ...u, isActive: newActive } : u))
       );
       useToastStore.getState().success(
-        newActive ? "Đã kích hoạt tài khoản nhân viên!" : "Đã ngưng kích hoạt tài khoản nhân viên!"
+        newActive ? t("toasts.activatedAccount") : t("toasts.deactivatedAccount")
       );
     } catch (err) {
-      useToastStore.getState().error(getApiErrorMessage(err, "Không thể cập nhật trạng thái tài khoản nhân viên"));
+      useToastStore.getState().error(getApiErrorMessage(err, t("toasts.updateAccountStatusError")));
     }
   }
 

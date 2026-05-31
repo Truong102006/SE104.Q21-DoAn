@@ -11,6 +11,7 @@ import { MonthPickerInput } from "@/components/ui/date-picker";
 import { backendApi } from "@/services/backend-api";
 import { Pagination } from "@/components/dashboard/pagination";
 import { useAuthStore } from "@/stores/auth-store";
+import { useTranslation } from "@/i18n/i18n-context";
 import type {
   InventoryReportResponse,
   ProductRevenueReportResponse,
@@ -61,17 +62,20 @@ function truncateChartLabel(value: string | number | null | undefined, maxChars 
   return `${text.slice(0, maxChars).trimEnd()}...`;
 }
 
-function formatCompactVND(value: number): string {
+function formatCompactVND(value: number, t?: (key: string) => string): string {
   const safe = Number(value ?? 0);
   if (safe === 0) return "0 ₫";
   if (safe >= 1_000_000_000) {
-    return `${(safe / 1_000_000_000).toFixed(1).replace(/\.0$/, "")} Tỷ`;
+    const label = t ? t("reports.billion") : "Tỷ";
+    return `${(safe / 1_000_000_000).toFixed(1).replace(/\.0$/, "")} ${label}`;
   }
   if (safe >= 1_000_000) {
-    return `${(safe / 1_000_000).toFixed(1).replace(/\.0$/, "")} Tr`;
+    const label = t ? t("common.million") : "Tr";
+    return `${(safe / 1_000_000).toFixed(1).replace(/\.0$/, "")} ${label}`;
   }
   if (safe >= 1_000) {
-    return `${(safe / 1_000).toFixed(0)}k`;
+    const label = t ? t("common.thousand") : "k";
+    return `${(safe / 1_000).toFixed(0)}${label}`;
   }
   return `${safe} ₫`;
 }
@@ -95,17 +99,18 @@ const renderActiveShape = (props: any) => {
 // Professional & Clean Tooltip
 /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
 const ChartTooltip = ({ active, payload, label }: any) => {
+  const { t } = useTranslation();
   if (active && payload && payload.length) {
     return (
       <div className="rounded-lg border bg-background p-2 shadow-md text-xs">
         <p className="font-bold border-b pb-1 mb-1">{label || payload[0].name}</p>
         <div className="flex items-center justify-between gap-4">
-          <span className="text-muted-foreground">Doanh thu:</span>
+          <span className="text-muted-foreground">{t("reports.revenue")}:</span>
           <span className="font-bold text-primary">{formatCurrency(payload[0].value)}</span>
         </div>
         {payload[0].payload.tiLe && (
           <div className="flex items-center justify-between gap-4 mt-0.5">
-            <span className="text-muted-foreground">Tỷ lệ:</span>
+            <span className="text-muted-foreground">{t("reports.ratio")}:</span>
             <span className="font-medium">{safeRatio(payload[0].payload.tiLe)}</span>
           </div>
         )}
@@ -171,6 +176,7 @@ interface DrillDownItem {
 }
 
 function DrillDownModal({ open, onOpenChange, type, id, name, month, year }: DrillDownProps) {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<DrillDownItem[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -201,27 +207,27 @@ function DrillDownModal({ open, onOpenChange, type, id, name, month, year }: Dri
         <DialogHeader className="p-6 pb-2">
           <DialogTitle className="flex items-center gap-2 text-xl font-black">
             <Layers className="h-5 w-5 text-emerald-600" />
-            Chi tiết giao dịch: <span className="text-emerald-700">{name}</span>
+            {t("reports.transactionDetails")} <span className="text-emerald-700">{name}</span>
           </DialogTitle>
-          <p className="text-sm text-muted-foreground font-medium">Kỳ báo cáo: Tháng {month}/{year}</p>
+          <p className="text-sm text-muted-foreground font-medium">{t("reports.reportingPeriod")} {t("reports.month")} {month}/{year}</p>
         </DialogHeader>
         <div className="flex-1 overflow-auto px-6 py-2 flex flex-col">
           <div className="rounded-xl border shadow-sm bg-card overflow-hidden flex-1">
             {loading ? (
-              <div className="p-12 text-center text-muted-foreground animate-pulse font-bold">Đang truy xuất dữ liệu...</div>
+              <div className="p-12 text-center text-muted-foreground animate-pulse font-bold">{t("reports.loadingData")}</div>
             ) : data.length === 0 ? (
-              <div className="p-12 text-center text-muted-foreground italic">Không có dữ liệu giao dịch trong khoảng thời gian này.</div>
+              <div className="p-12 text-center text-muted-foreground italic">{t("reports.noTransactionData")}</div>
             ) : (
               <Table>
                 <TableHeader className="bg-muted/50 sticky top-0 backdrop-blur-sm">
                   <TableRow className="hover:bg-transparent">
-                    <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400">Số phiếu</TableHead>
-                    <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400">Ngày lập</TableHead>
-                    <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400">{type.includes("purchase") ? "Nhà cung cấp" : "Khách hàng"}</TableHead>
-                    <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400 text-right">Số lượng</TableHead>
-                    <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400 text-right">Đơn giá</TableHead>
-                    <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400 text-right">Thành tiền</TableHead>
-                    {type === "service" && <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400">Tình trạng</TableHead>}
+                    <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400">{t("common.voucherNumber")}</TableHead>
+                    <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400">{t("common.dateCreated")}</TableHead>
+                    <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400">{type.includes("purchase") ? t("common.supplier") : t("common.customer")}</TableHead>
+                    <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400 text-right">{t("common.quantity")}</TableHead>
+                    <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400 text-right">{t("common.unitPrice")}</TableHead>
+                    <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400 text-right">{t("common.subtotal")}</TableHead>
+                    {type === "service" && <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400">{t("common.status")}</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -244,7 +250,7 @@ function DrillDownModal({ open, onOpenChange, type, id, name, month, year }: Dri
                                 : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
                             )}
                           >
-                            {item.tinhTrang === "Da giao" ? "Đã xong" : "Đang chờ"}
+                            {item.tinhTrang === "Da giao" ? t("reports.completed") : t("reports.pending")}
                           </Badge>
                         </TableCell>
                       )}
@@ -270,9 +276,9 @@ function DrillDownModal({ open, onOpenChange, type, id, name, month, year }: Dri
             onClick={() => exportToCsv(`chi_tiet_${id}_${month}_${year}.csv`, data)}
           >
             <FileDown className="h-5 w-5" />
-            TẢI FILE EXCEL (CSV)
+            {t("reports.downloadCsv")}
           </Button>
-          <Button variant="outline" className="px-8 rounded-xl font-bold h-11" onClick={() => onOpenChange(false)}>Đóng</Button>
+          <Button variant="outline" className="px-8 rounded-xl font-bold h-11" onClick={() => onOpenChange(false)}>{t("reports.close")}</Button>
         </div>
       </DialogContent>
     </Dialog>
@@ -280,6 +286,7 @@ function DrillDownModal({ open, onOpenChange, type, id, name, month, year }: Dri
 }
 
 export default function ReportsPage() {
+  const { t } = useTranslation();
   const role = useAuthStore((state) => state.user?.role ?? "STAFF");
   const isAdmin = role === "ADMIN";
 
@@ -473,13 +480,13 @@ export default function ReportsPage() {
       ...top5,
       {
         maSanPham: "OTHER",
-        tenSanPham: "Khác",
+        tenSanPham: t("reports.other"),
         soLuongBan: restSoLuong,
         doanhThu: restDoanhThu,
         tiLe: restTiLe,
       }
     ];
-  }, [productRevenue]);
+  }, [productRevenue, t]);
 
   const servicePieData = useMemo(() => {
     if (!serviceRevenue?.chiTiet) return [];
@@ -493,12 +500,12 @@ export default function ReportsPage() {
       ...top5,
       {
         maLoaiDichVu: "OTHER",
-        tenLoaiDichVu: "Khác",
+        tenLoaiDichVu: t("reports.other"),
         doanhThu: restDoanhThu,
         tiLe: restTiLe,
       }
     ];
-  }, [serviceRevenue]);
+  }, [serviceRevenue, t]);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -561,8 +568,8 @@ export default function ReportsPage() {
     return (
       <div className="flex h-[70vh] items-center justify-center">
         <EmptyState
-          title="Quyền truy cập bị từ chối"
-          description="Chỉ quản trị viên (Admin) mới có quyền xem các báo cáo doanh thu và tồn kho của hệ thống."
+          title={t("reports.accessDenied")}
+          description={t("reports.accessDeniedDesc")}
         />
       </div>
     );
@@ -575,7 +582,7 @@ export default function ReportsPage() {
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2 pr-3 border-r border-border/50">
             <Calendar className="h-5 w-5 text-primary" />
-            <span className="text-base font-black text-foreground uppercase tracking-wider">Kỳ báo cáo:</span>
+            <span className="text-base font-black text-foreground uppercase tracking-wider">{t("reports.reportingPeriod")}</span>
           </div>
           <div className="w-40">
             <MonthPickerInput
@@ -599,7 +606,7 @@ export default function ReportsPage() {
             disabled={loading}
           >
             <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
-            Cập nhật dữ liệu
+            {t("reports.updateData")}
           </Button>
         </div>
       </div>
@@ -613,7 +620,7 @@ export default function ReportsPage() {
             <CardHeader className="flex flex-row items-center justify-between border-b px-4 py-3 bg-muted/5">
               <CardTitle className="text-sm font-extrabold flex items-center gap-2 uppercase tracking-wide">
                 <Boxes className="h-5 w-5 text-primary" />
-                Tồn Kho Sản Phẩm
+                {t("reports.inventoryTitle")}
               </CardTitle>
               <div className="flex gap-2">
                 <Button
@@ -623,27 +630,27 @@ export default function ReportsPage() {
                   onClick={handleExportExcel}
                   disabled={!inventory || loading}
                 >
-                  <FileDown className="h-4 w-4" /> Xuất Excel
+                  <FileDown className="h-4 w-4" /> {t("reports.exportExcel")}
                 </Button>
               </div>
             </CardHeader>
             <CardContent className="px-0 py-0">
               {!inventory ? (
-                <div className="p-10"><EmptyState title="Không có dữ liệu tồn kho" description="Không có dữ liệu tồn kho cho tháng này." /></div>
+                <div className="p-10"><EmptyState title={t("reports.inventoryEmpty")} description={t("reports.inventoryEmptyDesc")} /></div>
               ) : (
                 <div className="flex flex-col">
                   <div className="overflow-x-auto">
                     <Table>
                       <TableHeader className="bg-muted/30">
                         <TableRow className="hover:bg-transparent">
-                          <TableHead className="w-14 text-center py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400">STT</TableHead>
-                          <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400">Mã SP</TableHead>
-                          <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400">Sản phẩm</TableHead>
-                          <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400 text-right">Tồn đầu</TableHead>
-                          <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400 text-right text-blue-600">Nhập</TableHead>
-                          <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400 text-right text-orange-600">Xuất</TableHead>
-                          <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400 text-right text-foreground">Tồn cuối</TableHead>
-                          <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400 text-center">ĐVT</TableHead>
+                          <TableHead className="w-14 text-center py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400">{t("common.stt")}</TableHead>
+                          <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400">{t("reports.productCode")}</TableHead>
+                          <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400">{t("common.product")}</TableHead>
+                          <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400 text-right">{t("reports.openingStock")}</TableHead>
+                          <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400 text-right text-blue-600">{t("reports.purchased")}</TableHead>
+                          <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400 text-right text-orange-600">{t("reports.sold")}</TableHead>
+                          <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400 text-right text-foreground">{t("reports.closingStock")}</TableHead>
+                          <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400 text-center">{t("reports.unit")}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -686,7 +693,7 @@ export default function ReportsPage() {
               <CardHeader className="flex flex-row items-center justify-between border-b px-4 py-3 bg-muted/5">
                 <CardTitle className="text-sm font-extrabold flex items-center gap-2 uppercase tracking-wide">
                   <BarChart3 className="h-5 w-5 text-primary" />
-                  Doanh Thu Sản Phẩm
+                  {t("reports.productRevenueTitle")}
                 </CardTitle>
                 <div className="flex items-center gap-4">
                   <div className="flex border rounded-lg overflow-hidden p-0.5 bg-muted/50">
@@ -697,7 +704,7 @@ export default function ReportsPage() {
                         bm11ChartType === "bar" ? "bg-primary text-primary-foreground shadow-sm" : "hover:bg-muted text-muted-foreground"
                       )}
                     >
-                      Cột ngang
+                      {t("reports.barChart")}
                     </button>
                     <button
                       onClick={() => setBm11ChartType("pie")}
@@ -706,7 +713,7 @@ export default function ReportsPage() {
                         bm11ChartType === "pie" ? "bg-primary text-primary-foreground shadow-sm" : "hover:bg-muted text-muted-foreground"
                       )}
                     >
-                      Hình tròn
+                      {t("reports.pieChart")}
                     </button>
                   </div>
                   <div className="flex gap-2">
@@ -717,14 +724,14 @@ export default function ReportsPage() {
                       onClick={handleExportProductRevenueExcel}
                       disabled={!productRevenue || loading}
                     >
-                      <FileDown className="h-4 w-4" /> Xuất Excel
+                      <FileDown className="h-4 w-4" /> {t("reports.exportExcel")}
                     </Button>
                   </div>
                 </div>
               </CardHeader>
               <CardContent className="p-4">
                 {!productRevenue ? (
-                  <div className="h-[180px] flex items-center justify-center text-muted-foreground italic font-medium">Chưa có số liệu doanh thu.</div>
+                  <div className="h-[180px] flex items-center justify-center text-muted-foreground italic font-medium">{t("reports.productRevenueEmpty")}</div>
                 ) : (
                   <div className="space-y-4">
                     <div className="h-[210px] w-full bg-muted/5 rounded-xl border border-dashed p-1.5">
@@ -776,10 +783,11 @@ export default function ReportsPage() {
                               onClick={(entry: any) => setDrillDown({ open: true, type: "product-sale", id: entry.maSanPham, name: entry.tenSanPham })}
                               className="cursor-pointer"
                             >
+                              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                               <LabelList
                                 dataKey="doanhThu"
                                 position="right"
-                                formatter={(val: any) => formatCompactVND(Number(val))}
+                                formatter={(val: any) => formatCompactVND(Number(val), t)}
                                 style={{ fontSize: '10px', fontWeight: 'bold', fill: 'currentColor', opacity: 0.8 }}
                               />
                             </Bar>
@@ -867,12 +875,12 @@ export default function ReportsPage() {
                       <Table>
                         <TableHeader className="bg-muted/40">
                           <TableRow className="hover:bg-transparent">
-                            <TableHead className="w-14 text-center py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400">STT</TableHead>
-                            <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400">Mã SP</TableHead>
-                            <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400">Sản phẩm</TableHead>
-                            <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400 text-right">Số lượng bán</TableHead>
-                            <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400 text-right">Doanh thu</TableHead>
-                            <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400 text-right w-16">Tỉ lệ</TableHead>
+                            <TableHead className="w-14 text-center py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400">{t("common.stt")}</TableHead>
+                            <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400">{t("reports.productCode")}</TableHead>
+                            <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400">{t("common.product")}</TableHead>
+                            <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400 text-right">{t("reports.soldQuantity")}</TableHead>
+                            <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400 text-right">{t("reports.revenue")}</TableHead>
+                            <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400 text-right w-16">{t("reports.ratio")}</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -887,7 +895,7 @@ export default function ReportsPage() {
                             </TableRow>
                           ))}
                           <TableRow className="bg-muted/10 font-bold hover:bg-muted/10">
-                            <TableCell colSpan={4} className="py-2 px-3 text-xs text-foreground uppercase tracking-wider">Tổng doanh thu:</TableCell>
+                            <TableCell colSpan={4} className="py-2 px-3 text-xs text-foreground uppercase tracking-wider">{t("reports.totalRevenue")}</TableCell>
                             <TableCell className="py-2 px-3 text-xs text-right text-emerald-600 font-extrabold">{formatCurrency(productRevenue.tongDoanhThuSanPham)}</TableCell>
                             <TableCell className="py-2 px-3 text-xs text-right text-slate-500">100%</TableCell>
                           </TableRow>
@@ -912,7 +920,7 @@ export default function ReportsPage() {
               <CardHeader className="flex flex-row items-center justify-between border-b px-4 py-3 bg-muted/5">
                 <CardTitle className="text-sm font-extrabold flex items-center gap-2 uppercase tracking-wide">
                   <PieChart className="h-5 w-5 text-primary" />
-                  Doanh Thu Dịch Vụ
+                  {t("reports.serviceRevenueTitle")}
                 </CardTitle>
                 <div className="flex items-center gap-4">
                   <div className="flex border rounded-lg overflow-hidden p-0.5 bg-muted/50">
@@ -923,7 +931,7 @@ export default function ReportsPage() {
                         bm12ChartType === "bar" ? "bg-primary text-primary-foreground shadow-sm" : "hover:bg-muted text-muted-foreground"
                       )}
                     >
-                      Cột ngang
+                      {t("reports.barChart")}
                     </button>
                     <button
                       onClick={() => setBm12ChartType("pie")}
@@ -932,7 +940,7 @@ export default function ReportsPage() {
                         bm12ChartType === "pie" ? "bg-primary text-primary-foreground shadow-sm" : "hover:bg-muted text-muted-foreground"
                       )}
                     >
-                      Hình tròn
+                      {t("reports.pieChart")}
                     </button>
                   </div>
                   <div className="flex gap-2">
@@ -943,14 +951,14 @@ export default function ReportsPage() {
                       onClick={handleExportServiceRevenueExcel}
                       disabled={!serviceRevenue || loading}
                     >
-                      <FileDown className="h-4 w-4" /> Xuất Excel
+                      <FileDown className="h-4 w-4" /> {t("reports.exportExcel")}
                     </Button>
                   </div>
                 </div>
               </CardHeader>
               <CardContent className="p-4">
                 {!serviceRevenue ? (
-                  <div className="h-[180px] flex items-center justify-center text-muted-foreground italic font-medium">Chưa có số liệu doanh thu dịch vụ.</div>
+                  <div className="h-[180px] flex items-center justify-center text-muted-foreground italic font-medium">{t("reports.serviceRevenueEmpty")}</div>
                 ) : (
                   <div className="space-y-4">
                     <div className="h-[210px] w-full flex items-center justify-center">
@@ -1078,10 +1086,11 @@ export default function ReportsPage() {
                               onClick={(entry: any) => setDrillDown({ open: true, type: "service", id: entry.maLoaiDichVu, name: entry.tenLoaiDichVu })}
                               className="cursor-pointer"
                             >
+                              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                               <LabelList
                                 dataKey="doanhThu"
                                 position="right"
-                                formatter={(val: any) => formatCompactVND(Number(val))}
+                                formatter={(val: any) => formatCompactVND(Number(val), t)}
                                 style={{ fontSize: '10px', fontWeight: 'bold', fill: 'currentColor', opacity: 0.8 }}
                               />
                             </Bar>
@@ -1093,11 +1102,11 @@ export default function ReportsPage() {
                       <Table>
                         <TableHeader className="bg-muted/40">
                           <TableRow className="hover:bg-transparent">
-                            <TableHead className="w-14 text-center py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400">STT</TableHead>
-                            <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400">Mã DV</TableHead>
-                            <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400">Dịch vụ</TableHead>
-                            <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400 text-right">Doanh thu</TableHead>
-                            <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400 text-right w-16">Tỉ lệ</TableHead>
+                            <TableHead className="w-14 text-center py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400">{t("common.stt")}</TableHead>
+                            <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400">{t("reports.serviceCode")}</TableHead>
+                            <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400">{t("reports.serviceType")}</TableHead>
+                            <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400 text-right">{t("reports.revenue")}</TableHead>
+                            <TableHead className="py-2 px-3 h-8 text-xs font-bold text-slate-500 dark:text-slate-400 text-right w-16">{t("reports.ratio")}</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -1111,7 +1120,7 @@ export default function ReportsPage() {
                             </TableRow>
                           ))}
                           <TableRow className="bg-muted/10 font-bold hover:bg-muted/10">
-                            <TableCell colSpan={3} className="py-2 px-3 text-xs text-foreground uppercase tracking-wider">Tổng doanh thu:</TableCell>
+                            <TableCell colSpan={3} className="py-2 px-3 text-xs text-foreground uppercase tracking-wider">{t("reports.totalRevenue")}</TableCell>
                             <TableCell className="py-2 px-3 text-xs text-right text-emerald-600 font-extrabold">{formatCurrency(serviceRevenue.tongDoanhThuDichVu)}</TableCell>
                             <TableCell className="py-2 px-3 text-xs text-right text-slate-500">100%</TableCell>
                           </TableRow>

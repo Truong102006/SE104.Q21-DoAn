@@ -278,7 +278,7 @@ export function CustomerSelect({
         ghiChu: modalForm.ghiChu?.trim() || undefined,
       });
 
-      toast.success(`Đã thêm mới khách hàng: ${created.tenKhachHang}`);
+      toast.success(t("toasts.customerAdded").replace("{name}", created.tenKhachHang));
 
       // Update local state and select newly created customer
       setCustomers((prev) => [created, ...prev]);
