@@ -311,8 +311,8 @@ export default function ServiceOrdersPage() {
 
     setItems((prev) => prev.filter((_, i) => i !== index));
 
-    useToastStore.getState().success(`Đã xóa dòng dịch vụ: ${serviceName}`, {
-      label: "Hoàn tác",
+    useToastStore.getState().success(t("toasts.deletedServiceRow").replace("{name}", serviceName), {
+      label: t("toasts.undo"),
       onClick: () => {
         setItems((prev) => {
           const updated = [...prev];
@@ -454,7 +454,7 @@ export default function ServiceOrdersPage() {
       setItems([createEmptyItem()]);
       await loadData();
       await loadHistory(0);
-      useToastStore.getState().success(`Đã lập phiếu dịch vụ ${created.soPhieuDichVu} thành công!`);
+      useToastStore.getState().success(t("toasts.createServiceSuccess").replace("{code}", created.soPhieuDichVu));
     } catch (err) {
       setFormError(getApiErrorMessage(err, t("serviceOrders.createError")));
     } finally {
@@ -467,7 +467,7 @@ export default function ServiceOrdersPage() {
       const updated = await backendApi.serviceTickets.deliverItem(soPhieuDichVu, maLoaiDichVu);
       setSelectedTicket(updated);
       await loadHistory(historyPage);
-      useToastStore.getState().success(`Đã bàn giao sản phẩm dịch vụ thành công cho phiếu ${soPhieuDichVu}!`);
+      useToastStore.getState().success(t("toasts.serviceDelivered").replace("{code}", soPhieuDichVu));
     } catch (err) {
       setError(getApiErrorMessage(err, t("serviceOrders.deliverError")));
     }
@@ -478,7 +478,7 @@ export default function ServiceOrdersPage() {
       const updated = await backendApi.serviceTickets.deliverAll(soPhieuDichVu);
       setSelectedTicket(updated);
       await loadHistory(historyPage);
-      useToastStore.getState().success(`Đã bàn giao toàn bộ sản phẩm dịch vụ cho phiếu ${soPhieuDichVu}!`);
+      useToastStore.getState().success(t("toasts.serviceDeliveredAll").replace("{code}", soPhieuDichVu));
     } catch (err) {
       setError(getApiErrorMessage(err, t("serviceOrders.deliverAllError")));
     }
@@ -504,7 +504,7 @@ export default function ServiceOrdersPage() {
       {/* KHỐI FORM LẬP PHIẾU DỊCH VỤ - Ở TRÊN */}
       <Card className="shadow-sm border-border/80">
         <CardContent className="space-y-6 p-6">
-          <VoucherSection title="Thông tin chung" description="" icon={ClipboardList}>
+          <VoucherSection title={t("common.generalInfo")} description="" icon={ClipboardList}>
             <div className="grid gap-4 lg:grid-cols-[180px_220px_1fr] lg:items-end">
               <div className="space-y-2">
                 <Label className="text-sm font-semibold text-muted-foreground">{t("common.dateCreated")}</Label>
@@ -516,20 +516,20 @@ export default function ServiceOrdersPage() {
                   value={maKhachHang || ""}
                   onValueChange={setMaKhachHang}
                   className="h-9"
-                  placeholder="Nhập Số điện thoại..."
+                  placeholder={t("common.enterPhoneNumber")}
                 />
               </div>
               <ContactPanel
-                emptyText="Chưa chọn khách hàng"
+                emptyText={t("common.noCustomerSelected")}
                 rows={selectedCustomer ? [
-                  { label: "Tên khách hàng", value: selectedCustomer.tenKhachHang },
+                  { label: t("common.customer"), value: selectedCustomer.tenKhachHang },
                   { label: t("common.address"), value: selectedCustomer.diaChiKhachHang },
                 ] : []}
               />
             </div>
           </VoucherSection>
 
-          <VoucherSection title="Chi tiết dịch vụ" description="" icon={ReceiptText}>
+          <VoucherSection title={t("common.serviceDetail")} description="" icon={ReceiptText}>
           <div className="rounded-md border border-border/80 overflow-visible [&_[data-slot=table-container]]:overflow-visible">
             <Table>
               <TableHeader className="bg-muted/30">
@@ -749,7 +749,7 @@ export default function ServiceOrdersPage() {
                 onKeyDown={(e) => {
                   if (e.key === "Enter") loadHistory(0);
                 }}
-                placeholder="Tìm theo số phiếu hoặc tên khách hàng..."
+                placeholder={t("serviceLookup.searchPlaceholder")}
                 className="pl-9 pr-8 h-10 w-full rounded-xl border border-input/90 bg-card text-sm shadow-xs focus:border-gold focus:ring-2 focus:ring-gold/20 transition-all duration-150"
               />
               {historyKeyword && (
@@ -833,7 +833,7 @@ export default function ServiceOrdersPage() {
       {/* Results Table Card */}
       <Card className="overflow-hidden border border-border/70 shadow-md rounded-2xl">
         <TableToolbar
-          title="Danh sách phiếu dịch vụ tra cứu"
+          title={t("serviceLookup.title")}
           actions={
             <div className="flex gap-2 items-center">
               <span className="text-xs font-semibold text-muted-foreground mr-1">
@@ -866,10 +866,10 @@ export default function ServiceOrdersPage() {
                     <TableHead className="font-bold py-2 px-3 h-8 text-[11px] uppercase tracking-wider">{t("common.dateCreated")}</TableHead>
                     <TableHead className="font-bold py-2 px-3 h-8 text-[11px] uppercase tracking-wider">{t("common.customer")}</TableHead>
                     <TableHead className="font-bold text-right py-2 px-3 h-8 text-[11px] uppercase tracking-wider">{t("common.total")}</TableHead>
-                    <TableHead className="font-bold text-right py-2 px-3 h-8 text-[11px] uppercase tracking-wider">Trả trước</TableHead>
-                    <TableHead className="font-bold text-right py-2 px-3 h-8 text-[11px] uppercase tracking-wider">Còn lại</TableHead>
-                    <TableHead className="font-bold text-center py-2 px-3 h-8 text-[11px] uppercase tracking-wider">Tình trạng</TableHead>
-                    <TableHead className="text-right font-bold py-2 px-3 h-8 text-[11px] uppercase tracking-wider w-28">Thao tác</TableHead>
+                    <TableHead className="font-bold text-right py-2 px-3 h-8 text-[11px] uppercase tracking-wider">{t("serviceOrders.prepaid")}</TableHead>
+                    <TableHead className="font-bold text-right py-2 px-3 h-8 text-[11px] uppercase tracking-wider">{t("serviceOrders.remaining")}</TableHead>
+                    <TableHead className="font-bold text-center py-2 px-3 h-8 text-[11px] uppercase tracking-wider">{t("serviceOrders.serviceStatus")}</TableHead>
+                    <TableHead className="text-right font-bold py-2 px-3 h-8 text-[11px] uppercase tracking-wider w-28">{t("common.actions")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -897,7 +897,7 @@ export default function ServiceOrdersPage() {
                               variant="outline"
                               onClick={() => openDetail(item.soPhieuDichVu)}
                               className="h-7 w-7 p-0 cursor-pointer hover-elevate transition-all duration-150 rounded-lg"
-                              title="Xem chi tiết"
+                              title={t("common.viewDetail")}
                             >
                               <Eye className="h-3.5 w-3.5" />
                             </Button>
@@ -938,15 +938,15 @@ export default function ServiceOrdersPage() {
       {selectedTicket && (
         <DetailModal
           open={Boolean(selectedTicket)}
-          title={`Phiếu dịch vụ ${selectedTicket.soPhieuDichVu}`}
-          subtitle="Chi tiết dịch vụ gia công, thanh toán và tiến độ xử lý"
+          title={`${t("nav.serviceOrders") || "Phiếu dịch vụ"} ${selectedTicket.soPhieuDichVu}`}
+          subtitle={t("serviceOrders.detailSubtitle")}
           onClose={() => setSelectedTicket(null)}
           onPrint={printTicket}
         >
           <div className="space-y-6">
             {/* Visual Stepper Progress Pipeline */}
             <div className="space-y-1">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Tiến độ thực hiện</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("serviceOrders.progress")}</p>
               <ServiceStatusStepper
                 status={selectedTicket.tinhTrangDichVu}
                 ngayGiao={selectedTicket.items
@@ -960,15 +960,15 @@ export default function ServiceOrdersPage() {
 
             {/* General Info Grid */}
             <div className="space-y-1.5">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Thông tin chung</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("common.generalInfo")}</p>
               <DetailGrid
                 items={[
-                  { label: "Ngày lập phiếu", value: selectedTicket.ngayLapPhieuDichVu },
-                  { label: "Khách hàng", value: selectedTicket.khachHang?.tenKhachHang ?? selectedTicket.maKhachHang },
-                  { label: "Số điện thoại", value: selectedTicket.khachHang?.soDienThoai ?? "-" },
-                  { label: "Tổng chi phí", value: <span className="font-bold text-foreground">{formatCurrency(selectedTicket.tongTien)}</span> },
-                  { label: "Đã thanh toán trước", value: <span className="font-semibold text-emerald-600 dark:text-emerald-400">{formatCurrency(selectedTicket.tongTienTraTruoc)}</span> },
-                  { label: "Số dư còn lại", value: <span className={cn("font-bold", selectedTicket.tongTienConLai > 0 ? "text-amber-600 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400")}>{formatCurrency(selectedTicket.tongTienConLai)}</span> },
+                  { label: t("common.dateCreated"), value: selectedTicket.ngayLapPhieuDichVu },
+                  { label: t("common.customer"), value: selectedTicket.khachHang?.tenKhachHang ?? selectedTicket.maKhachHang },
+                  { label: t("common.phone"), value: selectedTicket.khachHang?.soDienThoai ?? "-" },
+                  { label: t("common.total"), value: <span className="font-bold text-foreground">{formatCurrency(selectedTicket.tongTien)}</span> },
+                  { label: t("serviceOrders.prepaid"), value: <span className="font-semibold text-emerald-600 dark:text-emerald-400">{formatCurrency(selectedTicket.tongTienTraTruoc)}</span> },
+                  { label: t("serviceOrders.remaining"), value: <span className={cn("font-bold", selectedTicket.tongTienConLai > 0 ? "text-amber-600 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400")}>{formatCurrency(selectedTicket.tongTienConLai)}</span> },
                 ]}
               />
             </div>
@@ -976,7 +976,7 @@ export default function ServiceOrdersPage() {
             {/* Items Table */}
             <div className="space-y-2">
               <div className="flex justify-between items-center">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Danh sách dịch vụ chi tiết</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("serviceOrders.detailsList")}</p>
                 {!selectedTicket.tinhTrangDichVu.toLowerCase().includes("hoan thanh") && (
                   <Button
                     variant="outline"
@@ -985,7 +985,7 @@ export default function ServiceOrdersPage() {
                     onClick={() => deliverAll(selectedTicket.soPhieuDichVu)}
                   >
                     <Truck className="h-4 w-4" />
-                    Bàn giao tất cả
+                    {t("serviceOrders.deliverAll")}
                   </Button>
                 )}
               </div>
@@ -998,10 +998,10 @@ export default function ServiceOrdersPage() {
                       <TableHead className="text-center font-bold">{t("common.quantity")}</TableHead>
                       <TableHead className="text-right font-bold">{t("serviceOrders.calculatedPrice")}</TableHead>
                       <TableHead className="text-right font-bold">{t("common.subtotal")}</TableHead>
-                      <TableHead className="text-right font-bold">Trả trước</TableHead>
-                      <TableHead className="text-right font-bold">Còn lại</TableHead>
-                      <TableHead className="text-center font-bold">Trạng thái</TableHead>
-                      <TableHead className="text-right font-bold w-24">Thao tác</TableHead>
+                      <TableHead className="text-right font-bold">{t("serviceOrders.prepaid")}</TableHead>
+                      <TableHead className="text-right font-bold">{t("serviceOrders.remaining")}</TableHead>
+                      <TableHead className="text-center font-bold">{t("common.status")}</TableHead>
+                      <TableHead className="text-right font-bold w-24">{t("common.actions")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1031,10 +1031,10 @@ export default function ServiceOrdersPage() {
                                 className="h-7 text-[11px] px-2 font-semibold hover:bg-muted/40 cursor-pointer"
                                 onClick={() => deliverItem(selectedTicket.soPhieuDichVu, item.maLoaiDichVu)}
                               >
-                                Bàn giao
+                                {t("serviceOrders.deliver")}
                               </Button>
                             ) : (
-                              <span className="text-[10px] text-muted-foreground italic font-semibold px-2">Đã giao</span>
+                              <span className="text-[10px] text-muted-foreground italic font-semibold px-2">{t("serviceLookup.completed")}</span>
                             )}
                           </TableCell>
                         </TableRow>

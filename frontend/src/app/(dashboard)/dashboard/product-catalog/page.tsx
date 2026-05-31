@@ -118,11 +118,11 @@ export default function ProductCatalogPage() {
 
   function handleAddToDraft(product: ProductResponse) {
     if (!canAddToSalesDraft) {
-      useToastStore.getState().error("Bạn không có quyền thêm vào phiếu bán tạm");
+      useToastStore.getState().error(t("toasts.noPermissionDraft"));
       return;
     }
     if ((product.tonKho ?? 0) <= 0) {
-      useToastStore.getState().error("Sản phẩm đã hết hàng");
+      useToastStore.getState().error(t("toasts.outOfStock"));
       return;
     }
 
@@ -137,12 +137,12 @@ export default function ProductCatalogPage() {
       tonKho: Number(product.tonKho ?? 0),
       imageUrl: product.imageUrl,
     });
-    useToastStore.getState().success("Đã thêm sản phẩm vào phiếu bán tạm");
+    useToastStore.getState().success(t("toasts.addedToDraft"));
   }
 
   function handleCreateSaleVoucher() {
     if (!draftItems.length) {
-      useToastStore.getState().error("Phiếu bán tạm đang trống");
+      useToastStore.getState().error(t("toasts.draftEmpty"));
       return;
     }
     prepareHandoff();

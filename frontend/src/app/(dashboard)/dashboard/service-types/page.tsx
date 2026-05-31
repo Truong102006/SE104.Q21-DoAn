@@ -117,10 +117,10 @@ export default function ServiceTypesPage() {
         prev.map((u) => (u.maLoaiDichVu === item.maLoaiDichVu ? { ...u, isActive: newActive } : u))
       );
       useToastStore.getState().success(
-        newActive ? "Đã kích hoạt loại dịch vụ!" : "Đã ngưng kích hoạt loại dịch vụ!"
+        newActive ? t("toasts.activatedServiceType") : t("toasts.deactivatedServiceType")
       );
     } catch (err) {
-      useToastStore.getState().error(getApiErrorMessage(err, "Không thể cập nhật trạng thái loại dịch vụ"));
+      useToastStore.getState().error(getApiErrorMessage(err, t("toasts.updateServiceTypeStatusError")));
     }
   }
 

@@ -120,11 +120,11 @@ export default function ProductsPage() {
     if (!file) return;
 
     if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
-      useToastStore.getState().error("Chỉ hỗ trợ ảnh JPG, PNG hoặc WEBP");
+      useToastStore.getState().error(t("toasts.onlyImageSupported"));
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
-      useToastStore.getState().error("Kích thước ảnh tối đa là 5MB");
+      useToastStore.getState().error(t("toasts.imageSizeLimit"));
       return;
     }
 
@@ -246,10 +246,10 @@ export default function ProductsPage() {
         prev.map((p) => (p.maSanPham === item.maSanPham ? { ...p, isActive: newActive } : p))
       );
       useToastStore.getState().success(
-        newActive ? "Đã kích hoạt sản phẩm!" : "Đã ngưng kích hoạt sản phẩm!"
+        newActive ? t("toasts.activatedProduct") : t("toasts.deactivatedProduct")
       );
     } catch (err) {
-      useToastStore.getState().error(getApiErrorMessage(err, "Không thể cập nhật trạng thái sản phẩm"));
+      useToastStore.getState().error(getApiErrorMessage(err, t("toasts.updateProductStatusError")));
     }
   }
 
@@ -283,7 +283,7 @@ export default function ProductsPage() {
         await backendApi.products.create(payload);
       }
 
-      useToastStore.getState().success(editing ? "Đã cập nhật sản phẩm!" : "Đã thêm sản phẩm mới!");
+      useToastStore.getState().success(editing ? t("toasts.productUpdated") : t("toasts.productAdded"));
       setOpenForm(false);
       resetImageState();
       await loadData();

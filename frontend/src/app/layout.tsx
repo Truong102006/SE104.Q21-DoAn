@@ -12,7 +12,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Gold Store - Quản lý cửa hàng vàng bạc đá quý",
+  title: "Jewman - Quản lý cửa hàng vàng bạc đá quý",
   description:
     "Hệ thống quản lý cửa hàng vàng bạc đá quý - quản lý sản phẩm, đơn hàng, khách hàng và giá vàng.",
 };
