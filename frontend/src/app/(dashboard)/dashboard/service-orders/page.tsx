@@ -530,8 +530,8 @@ export default function ServiceOrdersPage() {
           </VoucherSection>
 
           <VoucherSection title={t("common.serviceDetail")} description="" icon={ReceiptText}>
-          <div className="rounded-md border border-border/80 overflow-visible [&_[data-slot=table-container]]:overflow-visible">
-            <Table>
+          <div className="rounded-md border border-border/80">
+            <Table className="min-w-[1260px]">
               <TableHeader className="bg-muted/30">
                 <TableRow className="hover:bg-transparent">
                   <TableHead className="w-14 text-center py-3 px-4 h-10 text-xs font-bold uppercase tracking-wider">{t("common.stt")}</TableHead>
